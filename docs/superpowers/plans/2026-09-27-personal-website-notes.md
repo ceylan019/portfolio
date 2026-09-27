@@ -88,3 +88,14 @@ Commit `66308b4`. The scaffold, configs, temporary page and foundation test were
 - Minor: `@types/node` 26 is pulled in transitively while the runtime is Node 22. Left as is, and noted for the final review.
 - Minor: the Stryker 10 compatibility is still unproven. It is checked in Task 11.
 - The reviewer could not confirm the `@REQ-PERF-02` tag from this diff alone. Task 11 creates the registry entry.
+
+## Task 2: Dates and certification rules
+
+Commits `4c70b07` and `d908717`. `src/lib/dates.ts` and `src/lib/certifications.ts` were implemented as planned, with 15 unit tests. The unit suite passes 16 of 16.
+
+**Decisions not in the plan:**
+- `vitest.config.ts` pins `TZ=America/New_York` for every Vitest run (Stryker's Vitest runner included).
+
+**Reviewer findings:**
+- Important, fixed: on a UTC machine such as a GitHub runner, the tests could not tell `getUTCMonth` from `getMonth`. Review Focus 5 (expiry near midnight at UTC minus 5) was therefore not really proven, and the matching mutants would survive. With the timezone pinned, swapping one UTC accessor for its local version fails 2 tests ("February 2024" instead of "March 2024"). A scoped re-review confirmed the red and green evidence.
+- Minor, deferred to the final review: the "expired" branch of `validity()` is asserted only through its label text.
