@@ -1,8 +1,8 @@
 # Personal website: phase 1 design
 
 Date: 2026-09-27
-Status: approved design; CEO review and engineering review complete; ready for the implementation plan
-Review record: CEO review decisions are cited as D1 to D29, engineering review decisions as E1 to E23 (section 13).
+Status: approved design; CEO, engineering and design reviews complete; ready for the implementation plan
+Review record: CEO review decisions are cited as D1 to D29, engineering review decisions as E1 to E23 (section 13), design review decisions as G1 to G12 (section 14). Visual rules live in `DESIGN.md` (G9).
 
 ## 1. Purpose
 
@@ -47,6 +47,7 @@ A personal portfolio for Ceylan Akyol, a QA automation engineer who is employed 
 | Git-based content with Pages CMS | Content as files in the repo, optional browser editor |
 | CI/CD with a full test suite | Nothing deploys unless every check passes |
 | Reviewer README, decision log, runbook | For hiring managers reading the repo, and for recovery (D4, D27) |
+| `DESIGN.md` | The design system: tokens, type and spacing scales, components, motion, accessibility, copy rules (G9) |
 
 ### Backlog (not designed here)
 
@@ -127,7 +128,7 @@ A personal portfolio for Ceylan Akyol, a QA automation engineer who is employed 
 
 ## 4. Pages
 
-Approved mockups: `assets/quality-mockups.html` and `assets/quality-mockups.png` (proof strip, `/quality` desktop, dark mode, `/quality` at 375px). Home page layout: `assets/direction-b-layout.png`, with the approved ring in `assets/photo-mark.svg`. The proof strip and verdict text in the mockups predate E13; the wording in this section wins.
+Approved mockups: **`assets/final-mockups.html` / `.png`** (home at 1280px and 375px, `/quality` desktop, fallback states; the current reference), plus `assets/quality-mockups.html` / `.png` for dark mode and the matrix at 375px, and `assets/photo-mark.svg` for the ring. Where an older mockup differs from `final-mockups`, the final one wins; where any mockup differs from this text, this text wins.
 
 ### Terms used on both pages (E13)
 
@@ -139,18 +140,18 @@ Approved mockups: `assets/quality-mockups.html` and `assets/quality-mockups.png`
 
 ### `/` (single page)
 
-In order, top to bottom:
+In order, top to bottom (G2):
 
-1. **Hero:** name, title, a one-sentence tagline, a **Download CV (PDF)** button, and links to LinkedIn, GitHub and email. The photo sits on the right, inside the rose brush mark (section 6). On narrow screens the photo moves above the name. The name scales down so a 40-character name never overflows (D19).
-2. **About:** a few short paragraphs rendered from Markdown.
-3. **Certifications:** a heading with the note "A tick means you can verify it with the issuer." Then one entry per visible certification, newest first (rules in section 5). With zero visible certifications the whole section is omitted (D19).
-4. **Proof strip (D3, E2, E13):** heading "How this site is tested" and one sentence built from `/quality.json`: "This site's code passed **N test runs** across 3 browser engines and 5 device profiles, with **0 automated accessibility violations** (axe) and a Lighthouse mobile score of **N** in CI." Below it, a link: "See every requirement and the tests behind it".
+1. **Hero:** name, title, the optional availability line (G6, shown only when switched on), a one-sentence tagline, then the action row: the **Download CV (PDF)** button followed by Email, LinkedIn, GitHub, in that order everywhere (G10). The photo sits on the right inside the rose brush mark; on narrow screens it moves above the name, the button goes full width and the three links sit on one row below it. The photo's square is reserved with the blush circle and ring, and the image appears without a fade (G5). The name scales down so a 40-character name never overflows (D19).
+2. **Certifications:** the heading, and the note "A tick means you can verify it with the issuer." only when at least one visible entry has a tick (G5). One tick row per visible certification, newest first (layout per `DESIGN.md`, G1): name; "Issued by {issuer}, {Month Year}", followed by "Valid until {Month Year}" or "Expired {Month Year}" when an expiry date exists (G4); the credential ID when present; **Verify credential** on the right (under the meta line below 900px). Expired entries show the title in `--muted` plus a quiet outlined "Expired" label. With zero visible certifications the whole section is omitted (D19).
+3. **How this site is tested (D3, E2, E13):** one sentence built from `/quality.json`: "This site's code passed **N test runs** across 3 browser engines and 5 device profiles, with **0 automated accessibility violations** (axe) and a Lighthouse mobile score of **N** in CI." Below it: "See every requirement and the tests behind it".
    - **Test runs:** passed (test, project) executions in the fixture build, excluding unit and `@smoke` tests.
    - **Accessibility violations:** axe violation count on the real build, both themes.
    - **Lighthouse mobile score:** the real build's median performance score from CI.
-   - **States:** `data-state` on the root is `unavailable` in the server-rendered markup (link only). The loader upgrades it to `ready` when `/quality.json` loads and validates; any failure leaves it `unavailable`. The loader always sets `data-settled="true"` in a `finally` block (E14). The strip reserves its final height so loading causes no layout shift.
-5. **Contact:** email, LinkedIn and GitHub again.
-6. **Footer:** "This site is tested on every change. See how", linking to `/quality`.
+   - **States:** the server-rendered markup (`data-state="unavailable"`) holds a true, number-free sentence in the reserved space (G3): "Every change runs through automated tests in 3 browser engines and 5 device profiles before it deploys." The loader swaps it for the numbered sentence (`ready`) when `/quality.json` loads and validates; any failure keeps the fallback. The loader always sets `data-settled="true"` in a `finally` block (E14).
+4. **About:** at most about 90 words of Markdown. It never repeats the tagline; a content test fails the build on a shared sentence (G1).
+5. **Contact:** Download CV (PDF), Email, LinkedIn, GitHub.
+6. **Footer:** "Ceylan Akyol, {year}" only (G1).
 
 There are no navigation links or "coming soon" placeholders for backlog items.
 
@@ -158,6 +159,7 @@ There are no navigation links or "coming soon" placeholders for backlog items.
 
 Reads like a signed test report, not a dashboard. In order:
 
+0. **Top line (G7):** the name on the left, linking to `/`, and a "Download CV (PDF)" text link on the right. No menu.
 1. **Verdict:** heading "How this site is tested", then "Every promise this site makes is tied to the checks that prove it. This build covered **all N requirements** with **N tests** (**N test runs**), and nothing ships unless every one passes." Beside it: deploy time, commit (linked), the CI run, and the source. Then the glossary line (E13) and one sentence explaining the two builds: behavior is tested on fixed test content in every engine and device profile; the real content is checked for accessibility, performance, links and key behavior before deploy.
 2. **Requirements (the traceability matrix, D6):** one row per requirement, each with the brush tick, the requirement ID and text, and coverage (test count, suites, device profiles). Covering tests link to GitHub permalinks pinned to the deployed commit, using `file:line` from the reporters. There is no pass or fail column, because only fully green builds deploy; the page says so. Below 640px each row becomes a stacked block (D19).
 3. **Deploy integrity (E15):** "The previous deploy was verified live: every file served matched the tested build (N files, checked at time)." Read from `quality.json`, which carries the result of the last post-deploy hash check. On the first deploy it says the check runs after this deploy.
@@ -166,23 +168,23 @@ Reads like a signed test report, not a dashboard. In order:
 6. **The suites:** a short description of each suite.
 7. **Pipeline duration** of the deployed run (D25).
 
-All data blocks use the loader's state pattern, including `data-settled`. Charts and rows are built with DOM APIs and `textContent` only: no `innerHTML`, no `style` attributes (D24).
+All data blocks use the loader's state pattern, including `data-settled`, and each settles independently, so one failed block never hides the others (G3). Fallback copy: the verdict says "Every promise this site makes is tied to the checks that prove it. Live results could not be loaded; the source and CI history are linked here." with links to the repo and its Actions page; the matrix, trends, integrity and mutation blocks each say their numbers are unavailable and link to the latest CI run. Charts and rows are built with DOM APIs and `textContent` only: no `innerHTML`, no `style` attributes (D24).
 
 Claims on this page must match what the pipeline does. For example, it says "mutation-tested business logic", never "mutation-tested site".
 
 ### `/cv.pdf`
 
-The CV as a static file at a stable URL, so links in old emails keep working. It is a public version with no phone number or home address (E18). Served with `Cache-Control: no-cache` so an updated CV is never stale (D18).
+The CV as a static file at a stable URL, so links in old emails keep working. Both CV links use `download="Ceylan-Akyol-CV.pdf"`, so the file is saved with the owner's name (G8). It is a public version with no phone number or home address (E18). Served with `Cache-Control: no-cache` so an updated CV is never stale (D18).
 
 ### `/404`
 
-A short, custom not-found page with a link home. It returns HTTP 404 and carries a noindex robots tag.
+A short, custom not-found page: a large "404", then "This page doesn't exist. It may have moved, or the link has a typo." and a "Go to the home page" link. It returns HTTP 404 and carries a noindex robots tag.
 
 ### Metadata and previews (D7)
 
 - `/` and `/quality`: Open Graph, Twitter card and canonical tags, all absolute URLs built from Astro `site`, without trailing slashes (E22).
-- `/` also carries JSON-LD `Person` (name, jobTitle, image, `sameAs` LinkedIn and GitHub). The serializer escapes `<` as `<` (D21).
-- `/og.png`: 1200x630 image from a static endpoint `src/pages/og.png.ts`, built from the photo, name, title and brush mark. The photo is converted to PNG with sharp first.
+- `/` also carries JSON-LD `Person` (name, jobTitle, image, `sameAs` LinkedIn and GitHub). The serializer escapes `<` as `\u003c` (D21).
+- `/og.png`: 1200x630 image from a static endpoint `src/pages/og.png.ts`: petal background, the name as the loudest element on the left with the title and site address below, the photo in the brush ring on the right (as in `assets/final-mockups`). The photo is converted to PNG with sharp first. `/quality` uses the same card.
 - Favicon: SVG brush mark with a `prefers-color-scheme` media query in an internal `<style>` (allowed, E22), plus 180x180 and 32x32 PNG fallbacks.
 
 ## 5. Content model
@@ -203,9 +205,11 @@ Frontmatter:
 | email | yes | valid email |
 | linkedinUrl | yes | valid URL |
 | githubUrl | yes | valid URL |
+| availability | no | one line, at most 100 characters, e.g. "Based in <city>, open to remote. Available from November." (G6) |
+| showAvailability | no | boolean, default false; the line renders only when true (G6) |
 | placeholder | no | boolean; while true, deploy refuses (launch gate) |
 
-Body: the About text in Markdown.
+Body: the About text in Markdown, at most about 90 words, never repeating the tagline (G1).
 
 ### `certifications/*.yaml` (one file per certification)
 
@@ -217,7 +221,6 @@ Body: the About text in Markdown.
 | expiryDate | no | valid date, not before issueDate |
 | credentialId | no | shown on the entry when present |
 | verifyUrl | no | valid URL when present |
-| badge | no | jpg, png, webp or avif (D14); no GPS EXIF (E18) |
 | hidden | no | boolean, default false |
 | placeholder | no | boolean; while true, deploy refuses (launch gate) |
 
@@ -229,6 +232,8 @@ The CV must be a PDF (D14) and a public version without phone number or home add
 - Visible entries are sorted by `issueDate`, newest first.
 - An entry is expired when `expiryDate` is strictly before today. An entry expiring today is still valid. Expired entries show an "Expired" label.
 - An entry gets the ink tick and a **Verify credential** link only when `verifyUrl` is present.
+- An entry with an expiry date shows "Valid until {Month Year}" or "Expired {Month Year}" (G4).
+- Badge images are not stored or displayed (G1).
 - Functions take `today` as a parameter and never read the system clock.
 
 ### Launch gate
@@ -243,7 +248,7 @@ Real content starts as placeholder files marked `placeholder: true`. The deploy 
 
 ## 6. Visual design
 
-Direction B, "Proof marks": a reviewer's rose ink on warm petal paper.
+Direction B, "Proof marks": a reviewer's rose ink on warm petal paper. **`DESIGN.md` is the authoritative design system** (G9): tokens including hover, pressed and visited colors, the type and spacing scales, component anatomy, motion, accessibility and copy rules. This section summarizes it.
 
 ### Color tokens
 
@@ -285,7 +290,10 @@ Dark mode follows `prefers-color-scheme`. There is no manual toggle in phase 1.
 
 - Left-aligned content, max width about 1120px, 16px side gutters on mobile, no horizontal scroll at 375px.
 - A skip link, a visible focus ring (2px `--rose-text` outline with offset), and a logical tab order.
-- Semantic HTML: one `h1` per page, `h2` for sections.
+- Semantic HTML: one `h1` per page, `h2` for sections; landmarks `header`, `main`, `footer`, and each section labelled by its heading (G11).
+- Every link target is at least 44px tall; the CV button at least 48px. Links open in the same tab. Visited links use `--visited` (G11).
+- Repeated links have unique accessible names, for example "Verify credential: ISTQB Certified Tester, Foundation Level" (G11).
+- Layout rules (G10): 220px label column and 48px gap; below 900px the label sits above the content and row actions move under the meta line; credential IDs never break mid-token.
 
 ### Performance budget (D26, E22)
 
@@ -298,7 +306,9 @@ Dark mode follows `prefers-color-scheme`. There is no manual toggle in phase 1.
 
 All workflows run on GitHub Actions. Third-party actions are pinned to commit SHAs and updated by Dependabot. Workflow-level `permissions: contents: read`; the report job adds `actions: read` (E19). Every job sets `timeout-minutes` at about twice its normal duration (E9).
 
-### `ci.yml`: every push to `main` and every pull request
+### `ci.yml`: every push to `main`, every pull request, and daily
+
+A scheduled run rebuilds and redeploys `main` once a day at a quiet hour through the same gates, so the certification expiry rules are never more than a day old (G4). History records one point per commit: a scheduled rebuild of a commit already in history leaves history unchanged.
 
 Five jobs; the first three run in parallel (D25). Budget: under 10 minutes from push to live; the measured duration is recorded in `quality.json`.
 
@@ -339,7 +349,7 @@ Checks every external URL, including each `verifyUrl`, with 3 retries and backof
 
 The content directory is chosen at build time by an environment variable. The glob loader resolves `base` from the working directory, and a wrong path silently yields an empty collection; the `@real` check that rendered certifications equal the non-hidden files on disk catches this before deploy.
 
-Fixture content is fixed and covers: an expired certification, one expiring today, a hidden one, one with every optional field empty, one with a very long name, one without a badge, a 40-character profile name, a WebP profile photo and an AVIF badge (so the sharp to satori conversion is exercised).
+Fixture content is fixed and covers: an expired certification, one expiring today, a hidden one, one with every optional field empty, one with a very long name, one expiring in the future ("Valid until"), a 40-character profile name, the availability line switched on, and a WebP profile photo (so the sharp to satori conversion is exercised).
 
 Content states that need different data (zero certifications, one, many; sparse and full history; matrix at many rows) are tested with the Astro Container API in Vitest, and rendered for screenshots on a test-only states page that exists only in the fixture build (D20). The Container API is experimental; Dependabot bumps that break it fail on their PR, never on `main`.
 
@@ -389,6 +399,13 @@ Missing, malformed, oversized and hostile `quality.json` variants are served wit
 | REQ-CERT-02 | Hidden certifications are not rendered | unit, E2E |
 | REQ-CERT-03 | Expired only when expiry is strictly before today; expired entries are labeled | unit, E2E |
 | REQ-CERT-04 | Tick and Verify link appear only when `verifyUrl` is present | unit, E2E |
+| REQ-CERT-05 | Entries with an expiry date show "Valid until" or "Expired" with the month and year; expired titles are muted | unit, E2E |
+| REQ-CERT-06 | The tick note appears only when at least one visible entry has a tick | component |
+| REQ-CV-02 | Both CV links download as `Ceylan-Akyol-CV.pdf`; Contact includes the CV link | E2E |
+| REQ-NAV-01 | `/quality` has a top line linking home and to the CV | E2E |
+| REQ-AVAIL-01 | The availability line renders only when switched on | component, E2E |
+| REQ-CONTENT-03 | About is at most about 90 words and shares no sentence with the tagline | unit |
+| REQ-A11Y-04 | Landmarks are present and repeated links have unique accessible names | E2E |
 | REQ-STATE-01 | Empty, sparse and overflow states render as specified (D19) | component, visual |
 | REQ-CONTENT-01 | Invalid content, including disallowed file types and small photos, fails the build | unit |
 | REQ-CONTENT-02 | CMS config and content schemas define the same fields | unit |
@@ -426,7 +443,7 @@ Missing, malformed, oversized and hostile `quality.json` variants are served wit
 - **History (D9, D28, E9, E19):** before deploy, the report job fetches the live `/quality.json` with a 10-second timeout.
   - A 404 means no history yet: start from this run.
   - Any other failure (timeout, 5xx, invalid): retry 3 times with backoff; if still failing, use the `quality-json` artifact of the last successful `main` run; only if that is also unavailable, start from this run with a job-summary warning.
-  - Older `schemaVersion` entries are upgraded with tested functions. This run is appended and the last 50 are kept.
+  - Older `schemaVersion` entries are upgraded with tested functions. This run is appended (one point per commit; a scheduled rebuild of an already-recorded commit appends nothing, G4) and the last 50 are kept.
   - Two runs deploying close together can drop one history point; this is accepted and recorded in the decision log.
   - History never blocks a deploy.
 - Served with `Cache-Control: no-cache` (D18).
@@ -496,7 +513,8 @@ The email address is shown as a plain `mailto:` link. Some spam is accepted as t
 ## 12. Inputs Ceylan must provide
 
 - A photo (head and shoulders, good light, at least 800px on the short side, JPG, PNG, WebP or AVIF, with location metadata removed) and its alt text
-- Each certification: name, issuer, issue date, expiry date if any, credential ID if any, verification URL if any, badge image if any
+- Each certification: name, issuer, issue date, expiry date if any, credential ID if any, verification URL if any
+- Optionally, an availability line (location, remote preference, start date), kept switched off until Ceylan chooses to show it
 - The CV as a PDF: a public version without phone number or home address
 - The job title as it should appear, and material for the tagline and About text (Claude drafts them, Ceylan approves)
 - LinkedIn URL, GitHub username and a contact email
@@ -529,3 +547,29 @@ Accounts, all free: GitHub (with 2FA), Cloudflare, Pages CMS (GitHub login) and 
 | E21 | No walking skeleton; first production deploy at launch (accepted risk) |
 | E22 | JS budget in brotli bytes via build test; `build.format: 'file'` with `trailingSlash: 'never'`; dist scan covers HTML only (SVG favicon style allowed); one-rerun Lighthouse policy |
 | E23 | Playwright container tag from the lockfile; grouped Playwright updates; manual baseline workflow; monthly keepalive for scheduled workflows |
+
+## 14. Design review decisions (2026-09-27)
+
+| ID | Decision |
+|---|---|
+| G1 | Certification entry layout A (tick row, no badge images; `badge` field removed); no repeated statements: About at most about 90 words, never restating the tagline (tested); footer is name and year only |
+| G2 | Home order: hero, certifications, how this site is tested, about, contact |
+| G3 | Every data block has a true, number-free fallback sentence in its reserved space; `/quality` blocks settle independently |
+| G4 | Daily scheduled rebuild and deploy; entries show "Valid until" or "Expired" dates; history records one point per commit |
+| G5 | Tick note only when a tick is shown; photo square reserved with blush circle and ring, no fade |
+| G6 | Optional availability line under the title, switched off by default in the CMS |
+| G7 | `/quality` top line: name links home, "Download CV (PDF)" on the right |
+| G8 | CV links download as `Ceylan-Akyol-CV.pdf`; Contact starts with the CV link |
+| G9 | `DESIGN.md` extracted as the authoritative design system |
+| G10 | Hero action row: button, then Email, LinkedIn, GitHub in that order everywhere; certification row rules and the 900px breakpoint |
+| G11 | Button hover and pressed tokens, visited link color, same-tab links, unique accessible names, landmarks, muted expired titles, "Month Year" dates |
+| G12 | Home and `/quality` mockups regenerated after the review and approved (`assets/final-mockups`) |
+
+### Approved mockups
+
+| Screen | Mockup | Direction | Notes |
+|---|---|---|---|
+| Home, 1280px and 375px | `docs/superpowers/specs/assets/final-mockups.png` (also `~/.gstack/projects/website/designs/home-composition-20260927/final-v2.png`) | Proof marks, reordered | Availability line shown switched on as a sample; sample names, dates and numbers |
+| `/quality` desktop and fallbacks | same file, sections 2 and 3 | Signed test report | Top line, verdict, glossary, integrity line, matrix |
+| `/quality` at 375px, dark mode | `docs/superpowers/specs/assets/quality-mockups.png` | Proof marks | Proof strip wording in this mockup is outdated; section 4 wins |
+| Brush ring | `docs/superpowers/specs/assets/photo-mark.svg` | Two-pass brush | Colors come from tokens |
