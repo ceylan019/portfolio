@@ -52,7 +52,6 @@ A personal portfolio for Ceylan Akyol, a QA automation engineer who is employed 
 - Experimentation QA demo project (feature flags, bucketing tests), as a portfolio project, not on this site
 - Preview deploys for pull requests (worth adding when the study hub arrives)
 - Custom domain: buy it (Cloudflare Registrar suggested) **before the URL is put on a CV that gets sent out**
-- Turkish translation
 
 ### Considered and rejected
 
