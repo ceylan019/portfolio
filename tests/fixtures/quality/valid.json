@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "commit": "e5cdb92a1b2c3d4e5f60718293a4b5c6d7e8f901",
+  "builtAt": "2026-09-27T09:14:00Z",
+  "repoUrl": "https://github.com/example/ceylan-akyol-site",
+  "ciRunUrl": "https://github.com/example/ceylan-akyol-site/actions/runs/1",
+  "pipelineSeconds": 512,
+  "counts": { "requirements": 4, "tests": 148, "testRuns": 312, "axeViolations": 0 },
+  "lighthouse": { "performance": 100, "accessibility": 100, "bestPractices": 100, "seo": 100 },
+  "mutation": { "score": 100, "killed": 86, "total": 86, "reportUrl": "https://dashboard.stryker-mutator.io/reports/github.com/example/ceylan-akyol-site/e5cdb92a1b2c3d4e5f60718293a4b5c6d7e8f901" },
+  "liveCheck": { "commit": "0c1d2e3", "checkedAt": "2026-09-26T09:20:00Z", "files": 64, "ok": true },
+  "matrix": [
+    { "id": "REQ-CV-01", "text": "CV downloads in one click from the hero", "phase": "pre-deploy", "checks": [],
+      "tests": [{ "title": "hero CV link returns a PDF", "file": "tests/e2e/home.spec.ts", "line": 12, "suite": "e2e", "projects": ["chromium", "firefox", "webkit", "iphone", "pixel"] }] },
+    { "id": "REQ-CERT-03", "text": "Expired only when expiry is strictly before today", "phase": "pre-deploy", "checks": [],
+      "tests": [{ "title": "expiring today is still valid", "file": "tests/unit/certifications.test.ts", "line": 27, "suite": "unit", "projects": [] }] },
+    { "id": "REQ-PERF-01", "text": "Mobile Lighthouse in CI: performance at least 95", "phase": "pre-deploy", "checks": ["lighthouse"], "tests": [] },
+    { "id": "REQ-DEPLOY-01", "text": "Every file served live matches the tested build", "phase": "post-deploy", "checks": [], "tests": [] }
+  ],
+  "history": [
+    { "commit": "1111111", "date": "2026-09-16T09:00:00Z", "testRuns": 248, "mutationScore": 96, "lighthousePerformance": 97 },
+    { "commit": "2222222", "date": "2026-09-17T09:00:00Z", "testRuns": 248, "mutationScore": 97, "lighthousePerformance": 98 },
+    { "commit": "3333333", "date": "2026-09-18T09:00:00Z", "testRuns": 256, "mutationScore": 97, "lighthousePerformance": 98 },
+    { "commit": "4444444", "date": "2026-09-19T09:00:00Z", "testRuns": 262, "mutationScore": 98, "lighthousePerformance": 99 },
+    { "commit": "5555555", "date": "2026-09-20T09:00:00Z", "testRuns": 262, "mutationScore": 100, "lighthousePerformance": 98 },
+    { "commit": "6666666", "date": "2026-09-21T09:00:00Z", "testRuns": 270, "mutationScore": 100, "lighthousePerformance": 99 },
+    { "commit": "7777777", "date": "2026-09-22T09:00:00Z", "testRuns": 276, "mutationScore": 100, "lighthousePerformance": 100 },
+    { "commit": "8888888", "date": "2026-09-23T09:00:00Z", "testRuns": 284, "mutationScore": 99, "lighthousePerformance": 99 },
+    { "commit": "9999999", "date": "2026-09-24T09:00:00Z", "testRuns": 284, "mutationScore": 100, "lighthousePerformance": 100 },
+    { "commit": "aaaaaaa", "date": "2026-09-25T09:00:00Z", "testRuns": 296, "mutationScore": 100, "lighthousePerformance": 100 },
+    { "commit": "bbbbbbb", "date": "2026-09-26T09:00:00Z", "testRuns": 304, "mutationScore": 100, "lighthousePerformance": 99 },
+    { "commit": "e5cdb92", "date": "2026-09-27T09:14:00Z", "testRuns": 312, "mutationScore": 100, "lighthousePerformance": 100 }
+  ]
+}
