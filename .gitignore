@@ -3,3 +3,12 @@
 node_modules/
 dist/
 .DS_Store
+dist-fixture/
+dist-served/
+reports/
+.lighthouseci/
+.astro/
+.stryker-tmp/
+test-results/
+playwright-report/
+.wrangler/
