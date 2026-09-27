@@ -46,6 +46,15 @@ test('@REQ-QUAL-02 too many history points are rejected', () => {
   expect(parseQualityReport(doc).ok).toBe(false);
 });
 
+test('@REQ-QUAL-02 too many covering tests on one requirement are rejected', () => {
+  const doc = valid();
+  doc.matrix[0].tests = Array.from(
+    { length: LIMITS.testsPerRequirement + 1 },
+    () => doc.matrix[0].tests[0],
+  );
+  expect(parseQualityReport(doc).ok).toBe(false);
+});
+
 test('@REQ-QUAL-02 overlong strings are rejected', () => {
   const doc = valid(); doc.matrix[0].text = 'x'.repeat(LIMITS.string + 1);
   expect(parseQualityReport(doc).ok).toBe(false);
