@@ -385,3 +385,33 @@ Commits `afb3ef7` and `93d76f6`. New files: `TopLine.astro`, `DataBlock.astro`, 
 **Reviewer findings:**
 - Important, fixed: two new tests had no requirement tag, which the CI gate would reject. They are now tagged `@REQ-QUAL-01`, the closest registered requirement. A scoped re-review confirmed the fix.
 - Minor, deferred: some small layout values differ from the plan (for example, a 22px margin that aligns the verdict columns). They are documented in the implementer's report.
+
+## Task 18: 404, link preview image, favicons, headers and robots
+
+Commits `1abfe0e`, `152f1c6` and `bf33b8e`. New files:
+- the 404 page
+- the link preview card (`src/og/card.ts` and `src/og/profile-photo.ts`) and three image endpoints (`/og.png`, `/apple-touch-icon.png`, `/favicon-32.png`)
+- `public/favicon.svg`, `public/_headers` and `public/robots.txt`
+- the Schibsted Grotesk TTFs with `OFL.txt`
+- the shared `src/lib/content-paths.ts`
+
+The suite passes 318 of 318, and both builds succeed.
+
+**Changes from the plan:**
+- Ruling P26: the 404 numeral uses the DESIGN.md display size (96px desktop, 60px mobile) instead of 120px.
+- Ruling P19: TypeScript 6 rejects a Node `Buffer` as a `Response` body, so the three image endpoints wrap it in `Uint8Array`.
+- The plan's preview card had no handling for long names. With the fixture's 40-character name, the photo and ring were pushed almost entirely off the 1200x630 canvas (I checked the image). The card now has a fixed photo column and a text column with a maximum width, and the name's font size scales down with its length. A pixel-level test decodes the PNG and checks the ring is present for both a 40-character name and "Ceylan Akyol". The short-name card still matches `final-mockups.png`.
+- Ruling P27: one shared path resolver (`src/lib/content-paths.ts`) now serves the content check, the preview card and `/cv.pdf`.
+
+**Verified against real tools:**
+- satori 0.33.5 needed no API changes from the plan's code, which was written for 0.18.
+- `wrangler dev` (the reviewer repeated this independently):
+  - `/cv.pdf` and `/og.png` return `Cache-Control: no-cache`, and `/_astro/*` returns `public, max-age=31536000, immutable`. Other paths get wrangler's default, `public, max-age=0, must-revalidate`.
+  - The CSP and HSTS headers are on every path, and no path gets a duplicate `Cache-Control`.
+  - `/does-not-exist` returns a real 404 with the custom page and a noindex tag.
+  - Production Workers behaviour is confirmed only by the smoke run at launch.
+- The favicon's literal colours equal the `--rose-mark` and `--peach` token values in both themes.
+- The fonts are genuine TrueType files carrying the Schibsted Grotesk OFL copyright. The implementer's report records their download URLs and hashes.
+
+**Reviewer findings:**
+- Important, fixed: the preview card read the photo path only relative to `profile.md`. The leading-slash path Pages CMS writes would have broken `/og.png` on the first real upload. A scoped re-review confirmed the fix, and a scoped Stryker run on the new resolver killed 5 of 5 mutants.
