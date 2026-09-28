@@ -3,8 +3,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import sharp from 'sharp';
 import {
-  checkContent, checkImage, checkProfilePhoto, normalizePhotoFormat, resolvePhotoPath,
+  checkContent, checkImage, checkProfilePhoto, normalizePhotoFormat,
 } from '../../scripts/check-content';
+import { resolvePhotoPath } from '../../src/lib/content-paths';
 
 const withGpsExif = {
   IFD0: { Artist: 'Ceylan Akyol' },

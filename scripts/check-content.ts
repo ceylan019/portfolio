@@ -3,7 +3,7 @@
 // type or too small, and an About text that repeats the tagline or runs long (E18, G1,
 // D14, REQ-CONTENT-01). Exits 1 with one plain message per problem found.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, extname, dirname, resolve } from 'node:path';
+import { join, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import sharp from 'sharp';
 import exifr from 'exifr';
@@ -12,6 +12,7 @@ import { isRecord } from '../src/lib/guards';
 import { identifyingExifKeys } from '../src/lib/exif';
 import { aboutProblems } from '../src/lib/content-rules';
 import { splitFrontmatter } from '../src/lib/frontmatter';
+import { resolvePhotoPath } from '../src/lib/content-paths';
 import { photoProblem } from '../src/content-schemas';
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.heic']);
@@ -68,14 +69,6 @@ export async function checkImage(file: string): Promise<string | null> {
   return keys.length > 0
     ? `${file} contains identifying metadata (${keys.join(', ')}). Strip it first: see docs/runbook.md.`
     : null;
-}
-
-/** Resolves the profile's `photo` field the same way content.config.ts / Astro's image()
- * resolves it: relative to profile.md's own directory, except a leading slash, which
- * .pages.yml's media.output and src/pages/cv.pdf.ts both treat as repo-root-relative
- * (T13-C, T13-D), not a literal filesystem-root path. */
-export function resolvePhotoPath(profilePath: string, photo: string): string {
-  return photo.startsWith('/') ? resolve(photo.slice(1)) : resolve(dirname(profilePath), photo);
 }
 
 // sharp 0.35.5 reports every AVIF file with format "heif", not "avif" (its own type

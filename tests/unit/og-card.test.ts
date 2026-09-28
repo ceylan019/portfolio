@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import sharp from 'sharp';
 import { renderOgCard, ringSvg } from '../../src/og/card';
+import { profilePhotoPng } from '../../src/og/profile-photo';
 
 test('@REQ-PREV-01 the preview card is a 1200x630 PNG', async () => {
   const photoPng = await sharp({ create: { width: 400, height: 400, channels: 3, background: '#F2B9C4' } }).png().toBuffer();
@@ -48,5 +52,45 @@ test('@REQ-PREV-01 the ring and photo stay on canvas for a 40-character name, sa
     const png = await renderOgCard({ name, title: 'QA Automation Engineer', site: 'ceylan-akyol.example.workers.dev', photoPng, fonts });
     const { data, info } = await sharp(png).raw().toBuffer({ resolveWithObject: true });
     expect(hasRoseInk(data, info)).toBe(true);
+  }
+});
+
+// Fix round 1 review: src/og/profile-photo.ts used to resolve the photo path itself,
+// implementing only the relative-path half of the codebase's convention. A leading-slash
+// path (what Pages CMS writes, .pages.yml's media.output is /src/assets/uploads) resolved
+// to a literal filesystem-root path and threw ENOENT. profilePhotoPng now resolves through
+// the shared resolvePhotoPath (src/lib/content-paths.ts), the same helper
+// scripts/check-content.ts uses, so both cases work here too.
+test('@REQ-PREV-01 profilePhotoPng resolves a relative photo path against profile.md\'s own directory', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'og-photo-relative-'));
+  try {
+    await mkdir(join(dir, 'profile'), { recursive: true });
+    await mkdir(join(dir, 'assets'), { recursive: true });
+    await sharp({ create: { width: 20, height: 20, channels: 3, background: '#CF3F68' } }).png().toFile(join(dir, 'assets/photo.png'));
+    await writeFile(join(dir, 'profile/profile.md'), '---\nname: Test\nphoto: ../assets/photo.png\n---\nBody.\n');
+
+    const png = await profilePhotoPng(dir, 64);
+    const meta = await sharp(png).metadata();
+    expect([meta.format, meta.width, meta.height]).toEqual(['png', 64, 64]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('@REQ-PREV-01 profilePhotoPng resolves a leading-slash Pages CMS photo path against the repo root, not the filesystem root', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'og-photo-leading-slash-'));
+  try {
+    await mkdir(join(dir, 'profile'), { recursive: true });
+    // src/assets/uploads/photo.jpg is the real placeholder photo already committed to the
+    // repo, at exactly the repo-root-relative path Pages CMS writes with a leading slash.
+    // Before this fix, resolving this path threw ENOENT (it tried to read
+    // /src/assets/uploads/photo.jpg as a literal filesystem-root path).
+    await writeFile(join(dir, 'profile/profile.md'), '---\nname: Test\nphoto: /src/assets/uploads/photo.jpg\n---\nBody.\n');
+
+    const png = await profilePhotoPng(dir, 64);
+    const meta = await sharp(png).metadata();
+    expect([meta.format, meta.width, meta.height]).toEqual(['png', 64, 64]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
   }
 });
