@@ -60,3 +60,27 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
 .foot { margin-top: var(--section-gap); padding-top: 24px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 
 .defs { position: absolute; }
+
+/* Photo frame: the blush square is reserved before the image loads (G5). */
+.photo-frame { position: relative; width: 250px; aspect-ratio: 1; }
+.photo-frame::before { content: ""; position: absolute; inset: 15.3%; border-radius: 50%; background: var(--blush); }
+.photo-frame .photo, .photo-frame .photo img { position: absolute; inset: 15.3%; width: 69.4%; height: 69.4%; border-radius: 50%; object-fit: cover; }
+.photo-frame .ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+@media (max-width: 899px) { .photo-frame { width: 150px; } }
+
+/* T12-B: colors come from tokens.css, not photo-mark.svg's own stop colors.
+   The main stroke is a gradient from --rose-mark to --coral (spec section 6,
+   "the main stroke goes from rose to coral"); the second pass is a flat
+   --peach fill rather than a gradient, because tokens.css has no
+   --rose-start or --peach-end token. */
+.ring-stop-start { stop-color: var(--rose-mark); }
+.ring-stop-end { stop-color: var(--coral); }
+.ring-main { fill: url(#ring-main-gradient); }
+.ring-second { fill: var(--peach); }
+
+/* One motion per page load: the ring draws itself, main stroke then second pass (about 900ms). */
+.ring-sweep { fill: none; stroke: #fff; stroke-width: 44; stroke-dasharray: 805; stroke-dashoffset: 0; transform-origin: 150px 150px; }
+.ring-sweep-main { transform: rotate(-50deg) scaleY(-1); animation: ring-draw 600ms cubic-bezier(.6, 0, .3, 1) both; }
+.ring-sweep-second { transform: rotate(-20deg) scaleY(-1); animation: ring-draw 400ms cubic-bezier(.6, 0, .3, 1) 500ms both; }
+@keyframes ring-draw { from { stroke-dashoffset: 805; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .ring-sweep-main, .ring-sweep-second { animation: none; } }

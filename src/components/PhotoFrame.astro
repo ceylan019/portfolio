@@ -1,0 +1,40 @@
+---
+import { Picture } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { RING_MAIN, RING_SECOND } from '../lib/brush-ring';
+interface Props { photo: ImageMetadata; alt: string }
+const { photo, alt } = Astro.props;
+---
+<div class="photo-frame">
+  <Picture
+    class="photo"
+    src={photo}
+    alt={alt}
+    formats={['avif', 'webp']}
+    widths={[160, 320, 480, 640]}
+    sizes="(max-width: 899px) 104px, 173px"
+    loading="eager"
+    fetchpriority="high"
+  />
+  <svg class="ring" viewBox="0 0 300 300" aria-hidden="true">
+    <defs>
+      <!-- T12-B: the main stroke gradient runs rose-mark to coral (spec
+           section 6, "the main stroke goes from rose to coral"); tokens.css
+           has no --rose-start, so the gradient starts at --rose-mark
+           instead of photo-mark.svg's own lighter start stop. -->
+      <linearGradient id="ring-main-gradient" gradientUnits="userSpaceOnUse" x1="30" y1="30" x2="270" y2="270">
+        <stop offset="0" class="ring-stop-start" />
+        <stop offset="1" class="ring-stop-end" />
+      </linearGradient>
+      <!-- Draw-in (spec section 6): a thick circular stroke inside each mask sweeps from the stroke start, revealing the filled brush. -->
+      <mask id="ring-mask-main" maskUnits="userSpaceOnUse" x="0" y="0" width="300" height="300">
+        <circle class="ring-sweep ring-sweep-main" cx="150" cy="150" r="128" />
+      </mask>
+      <mask id="ring-mask-second" maskUnits="userSpaceOnUse" x="0" y="0" width="300" height="300">
+        <circle class="ring-sweep ring-sweep-second" cx="150" cy="150" r="128" />
+      </mask>
+    </defs>
+    <path d={RING_SECOND} class="ring-second" mask="url(#ring-mask-second)" />
+    <path d={RING_MAIN} class="ring-main" mask="url(#ring-mask-main)" />
+  </svg>
+</div>
