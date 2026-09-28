@@ -21,7 +21,8 @@ None yet.
 
 ### Known gaps
 
-- Package majors are newer than the plan text (Vitest 5, Stryker 10, TypeScript 6, Playwright 1.63); see Task 1. Stryker 10 is first exercised in Task 11.
+- Package majors are newer than the plan text (Vitest 5, Stryker 10, TypeScript 6, Playwright 1.63); see Task 1.
+- The Stryker Vitest runner 10.0.0 is patched locally (Task 11) because it silently skipped nested tests under Vitest 5. Remove the patch when a fixed runner is released.
 
 ## Environment
 
@@ -248,3 +249,24 @@ Commits `988d18e` and `06fc90b`. New modules: `src/lib/quality-client.ts`, `dom.
 - Minor, deferred: several DOM and renderer branches are not asserted, so Stryker mutants may survive there. Task 11 runs Stryker for the first time.
 - Minor, deferred: invalid ISO dates render "NaN" text. The home page renderer imports a helper from the `/quality` renderer module, which may cost JavaScript budget (checked in Task 21). Also, rounding of the mutation score and small duplications.
 - Carried to Task 22: the history must include the current deploy, otherwise the page would say "This is deploy 0".
+
+## Task 11: Requirements registry, test tag helper and mutation testing
+
+Commits `d92d365`, `7d70c8d`, `f287a5d` and `128c512`. New files: `tests/requirements.ts` (all 43 spec requirements), `tests/tag.ts`, `stryker.config.mjs` and `vitest.unit.config.ts`. The unit suite passes 260 of 260. Stryker scores 99.93 on `src/lib`: 1,335 mutants killed, 2 timeouts, 1 survivor and 11 ignored. It runs in about 51 seconds.
+
+**Changes from the plan:**
+- Ruling P24. Each requirement's text is the spec section 8 table text word for word, with Markdown backticks removed. The plan's texts had drifted: for example, CERT-03 had lost "strictly" and PERF-01 had lost the byte budgets. A unit test now parses the table from the spec file, so any future drift fails CI.
+- `ignoreStatic` is `false`. The plan had `true`, which left 123 mutants in module-level constants unmeasured, including the gate regexes themselves. Measuring them costs about 16 seconds per run.
+- `stryker.config.mjs` needs `plugins: ['@stryker-mutator/vitest-runner']`, because pnpm's strict layout hides the runner from Stryker's default plugin lookup.
+- About 70 unit tests were added across the `src/lib` modules to kill surviving mutants. Small refactors in 12 files removed redundant guards. A reviewer checked every one and found no behavior change. Three split regexes were rewritten into equivalent forms, so no disable comment is needed on them. That equivalence was checked against 200,000 random strings.
+- `vitest.unit.config.ts` pins `TZ=America/New_York`, like the main config. Without that, the date tests would stop proving UTC behavior under Stryker.
+
+**Verified against real tools:**
+- `@stryker-mutator/vitest-runner` 10.0.0 has a bug with Vitest 5: it joins nested test names with a space, but Vitest 5 matches them joined with " > ". As a result, no test inside a `describe` block ever ran against a mutant, and the first run falsely scored 32.88. No newer runner exists, so the runner is patched with `pnpm patch` (`patches/@stryker-mutator__vitest-runner@10.0.0.patch`, recorded in `package.json` and the lockfile). The reviewer read the runner source and confirmed the patch can only lower a score, never raise it. **Remove the patch** once a released runner joins names with " > ", then check that the score does not change.
+- Every Stryker option key in the plan still exists in Stryker 10.
+- The 1 survivor is a real limitation of the runner, not a gap in the tests. The mutant `new Intl.NumberFormat("")` throws while the test file is being imported, and the tests do fail when it is applied by hand, but the runner records it as survived. It is left counted against the score instead of hidden.
+- The 11 ignored mutants are each disabled with a one-line reason, and a reviewer checked each one as equivalent.
+
+**Reviewer findings:**
+- Important, fixed: three regex disable comments also hid mutants that are not equivalent (8 in total), which the tests do kill. The regexes were rewritten and the comments removed. A scoped re-review confirmed this from `mutation.json`.
+- Minor, deferred: one disable comment's reason is worded inaccurately. Several renderer tests pin attribute order through `innerHTML`, which will cause churn on harmless refactors. The config comment does not state when to remove the patch.
