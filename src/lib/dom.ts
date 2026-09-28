@@ -7,6 +7,18 @@ import { TICK_PATH } from './brush-tick';
 const ATTRS = new Set(['class', 'href', 'aria-label', 'datetime', 'aria-hidden', 'hidden']);
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+// A root-relative href must start with a single "/" followed by something other
+// than "/" or "\": both "//host/x" and "/\host" are browser tricks that resolve
+// to a different, cross-origin host, not a same-site path.
+function isSafeHref(v: string): boolean {
+  if (v.startsWith('https://')) return true;
+  if (v.startsWith('/')) {
+    const next = v.charAt(1);
+    return next !== '/' && next !== '\\';
+  }
+  return false;
+}
+
 export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K, text?: string, attrs: Record<string, string> = {},
 ): HTMLElementTagNameMap[K] {
@@ -16,7 +28,7 @@ export function el<K extends keyof HTMLElementTagNameMap>(
     tag === 'a' ? { ...attrs, class: attrs.class ? `${attrs.class} lnk` : 'lnk' } : attrs;
   for (const [k, v] of Object.entries(resolved)) {
     if (!ATTRS.has(k)) continue;
-    if (k === 'href' && !(v.startsWith('https://') || v.startsWith('/'))) continue;
+    if (k === 'href' && !isSafeHref(v)) continue;
     node.setAttribute(k, v);
   }
   return node;

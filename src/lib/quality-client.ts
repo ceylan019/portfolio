@@ -24,15 +24,19 @@ export async function hydrate(root: ParentNode, renderers: Record<string, Render
   if (blocks.length === 0) return;
   const data = await loadQuality(fetchFn, url);
   for (const block of blocks) {
+    const live = block.querySelector<HTMLElement>('[data-slot="live"]');
     try {
       const render = renderers[block.dataset.block ?? ''];
-      const live = block.querySelector<HTMLElement>('[data-slot="live"]');
       if (data && render && live) {
         live.replaceChildren();
         render(live, data);
         block.dataset.state = 'ready';
       }
     } catch {
+      // A renderer that throws partway may have already appended nodes to the
+      // live slot. Clear them so a failure truly keeps the fallback (G3),
+      // never a half-built live block.
+      live?.replaceChildren();
       block.dataset.state = 'unavailable';
     } finally {
       block.dataset.settled = 'true';

@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { readFileSync } from 'node:fs';
+import { el } from '../../src/lib/dom';
 import { parseQualityReport, type QualityReport } from '../../src/lib/quality-schema';
 import { renderProofStrip } from '../../src/lib/render-home';
 import {
@@ -47,6 +48,14 @@ test('@REQ-QUAL-01 every anchor a renderer creates carries class lnk', () => {
   expect(anchors.length).toBeGreaterThan(0);
   for (const a of anchors) expect(a.classList.contains('lnk')).toBe(true);
 });
+test('@REQ-SEC-02 el rejects javascript, data and protocol-relative hrefs', () => {
+  for (const href of ['javascript:alert(1)', 'data:text/html,x', '//evil.example', '/\\evil.example']) {
+    expect(el('a', 'x', { href }).hasAttribute('href')).toBe(false);
+  }
+  for (const href of ['https://example.com', '/quality']) {
+    expect(el('a', 'x', { href }).getAttribute('href')).toBe(href);
+  }
+});
 test('@REQ-SEC-02 hostile strings render as text and create no elements', () => {
   // T10-A: hostile.json is now schema-invalid, so this test exercises the
   // schema-valid hostile-valid fixture, whose HTML and javascript: strings
@@ -71,6 +80,7 @@ test('@REQ-STATE-01 trends show lines with 3 or more points and a message below 
   const d = fixture('valid');
   const full = live(); renderTrends(full, d);
   expect(full.querySelectorAll('polyline')).toHaveLength(3);
+  expect(squash(full.textContent)).toContain('Lighthouse mobile score');
   const sparse = live(); renderTrends(sparse, { ...d, history: d.history.slice(0, 2) });
   expect(squash(sparse.textContent)).toBe('Trends appear after 3 deploys. This is deploy 2.');
   expect(sparse.querySelector('polyline')).toBeNull();

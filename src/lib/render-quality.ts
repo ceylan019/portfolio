@@ -96,7 +96,7 @@ export const renderMatrix: Renderer = (live, d) => {
 const SERIES = [
   { key: 'testRuns', label: 'Test runs passed', caption: 'Across 5 device profiles', max: null },
   { key: 'mutationScore', label: 'Mutation score', caption: 'Share of planted bugs the tests caught', max: 100 },
-  { key: 'lighthousePerformance', label: 'Lighthouse mobile', caption: 'Median of 3 runs in CI', max: 100 },
+  { key: 'lighthousePerformance', label: 'Lighthouse mobile score', caption: 'Median of 3 runs in CI', max: 100 },
 ] as const;
 
 export const renderTrends: Renderer = (live, d) => {

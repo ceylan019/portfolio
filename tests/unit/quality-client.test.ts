@@ -38,9 +38,13 @@ test('@REQ-QUAL-01 hydrate leaves blocks unavailable but settled when data fails
 });
 test('@REQ-QUAL-01 one failing renderer does not affect other blocks', async () => {
   const bad = block('bad'); const good = block('good');
-  await hydrate(document, { bad: () => { throw new Error('boom'); }, good: (l) => { l.textContent = 'ok'; } }, fetchJson(text('valid')));
+  await hydrate(document, {
+    bad: (l) => { l.append(document.createElement('span')); throw new Error('boom'); },
+    good: (l) => { l.textContent = 'ok'; },
+  }, fetchJson(text('valid')));
   expect(bad.dataset.state).toBe('unavailable');
   expect(bad.dataset.settled).toBe('true');
+  expect(bad.querySelector('[data-slot="live"]')!.childElementCount).toBe(0);
   expect(good.dataset.state).toBe('ready');
 });
 test('@REQ-QUAL-01 blocks without a renderer settle as unavailable', async () => {
