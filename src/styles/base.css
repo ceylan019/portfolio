@@ -36,7 +36,10 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
 .row { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; padding: 16px 0; border-top: 1px solid var(--line); align-items: start; }
 .row:last-child { border-bottom: 1px solid var(--line); }
 .row .meta { display: block; color: var(--muted); font-size: 16px; }
-.row .cid { display: block; color: var(--muted); font-size: 14px; white-space: nowrap; }
+/* G10: the ID token never breaks mid-token, but the "Credential ID" label may
+   wrap before it, so a long ID cannot scroll the page sideways at 375px. */
+.row .cid { display: block; color: var(--muted); font-size: 14px; }
+.row .cid-token { white-space: nowrap; }
 /* T12-C: 19px snapped to the 20px type-scale row ("Role, tagline"). */
 .row .title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.35; overflow-wrap: anywhere; }
 .row.expired .title { color: var(--muted); }

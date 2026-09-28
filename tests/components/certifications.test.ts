@@ -35,7 +35,8 @@ test('@REQ-CERT-05 validity dates and the expired label', async () => {
 test('@REQ-CERT-01 renders in newest-first order with the credential ID', async () => {
   const html = await render([c({ id: 'o', name: 'Older', issueDate: d('2020-01-01') }), c({ id: 'n', name: 'Newer', credentialId: 'ID-1' })]);
   expect(html.indexOf('Newer')).toBeLessThan(html.indexOf('Older'));
-  expect(html).toContain('Credential ID ID-1');
+  // G10: the ID sits in its own unbreakable token after a wrappable label.
+  expect(html).toContain('Credential ID <span class="cid-token">ID-1</span>');
 });
 test('@REQ-A11Y-04 the section is labelled by its heading', async () => {
   const html = await render([c({})]);

@@ -14,7 +14,7 @@ const meta = `Issued by ${entry.issuer}, ${formatMonthYear(entry.issueDate)}${la
   <div>
     <span class="title">{entry.name}</span>{v.kind === 'expired' && <> <span class="expired-label">Expired</span></>}
     <span class="meta">{meta}</span>
-    {entry.credentialId && <span class="cid">Credential ID {entry.credentialId}</span>}
+    {entry.credentialId && <span class="cid">Credential ID <span class="cid-token">{entry.credentialId}</span></span>}
   </div>
   {verifiable ? (
     <a class="lnk" href={entry.verifyUrl} aria-label={`Verify credential: ${entry.name}`}>Verify credential</a>
