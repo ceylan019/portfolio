@@ -1,6 +1,6 @@
 import { frontmatterOf } from './frontmatter';
 
-const FLAG = /^placeholder:\s*['"]?true['"]?\s*$/m;
+const FLAG = /^placeholder:\s*['"]?true['"]?\s*(#.*)?$/im;
 
 /** Content files still marked `placeholder: true` (REQ-GATE-03, the launch gate). Markdown
  * files are checked by their frontmatter only, so the word in body text never triggers it. */

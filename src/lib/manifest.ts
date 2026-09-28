@@ -13,11 +13,11 @@ export function diffManifest(expected: Manifest, actual: Manifest, ignore: strin
   const extra: string[] = [];
   for (const [path, hash] of Object.entries(expected)) {
     if (skip.has(path)) continue;
-    if (!(path in actual)) missing.push(path);
+    if (!Object.hasOwn(actual, path)) missing.push(path);
     else if (actual[path] !== hash) changed.push(path);
   }
   for (const path of Object.keys(actual)) {
-    if (!skip.has(path) && !(path in expected)) extra.push(path);
+    if (!skip.has(path) && !Object.hasOwn(expected, path)) extra.push(path);
   }
   return { changed: changed.sort(), missing: missing.sort(), extra: extra.sort() };
 }

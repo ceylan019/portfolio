@@ -45,6 +45,17 @@ describe('manifest', () => {
   test('@REQ-GATE-02 parseManifest rejects a hash with trailing whitespace', () => {
     expect(parseManifest(JSON.stringify({ 'index.html': `${h('a')} ` }))).toBeNull();
   });
+  test('@REQ-GATE-02 an extra file named toString is not swallowed by the prototype chain', () => {
+    const d = diffManifest(expected, { ...expected, toString: h('e') });
+    expect(d.extra).toEqual(['toString']);
+    expect(manifestMatches(d)).toBe(false);
+  });
+  test('@REQ-GATE-02 a missing file named constructor is reported missing, not changed', () => {
+    const d = diffManifest({ ...expected, constructor: h('f') }, { ...expected });
+    expect(d.missing).toEqual(['constructor']);
+    expect(d.changed).toEqual([]);
+    expect(manifestMatches(d)).toBe(false);
+  });
 });
 
 describe('placeholders', () => {
@@ -72,6 +83,18 @@ describe('placeholders', () => {
   });
   test('@REQ-GATE-03 Markdown with no frontmatter fence is never a placeholder', () => {
     expect(findPlaceholders([{ path: 'p.md', text: 'placeholder: true\nJust a body.' }])).toEqual([]);
+  });
+  test('@REQ-GATE-03 matches true case-insensitively, and tolerates a trailing comment', () => {
+    expect(findPlaceholders([{ path: 'a.yaml', text: 'placeholder: True\n' }])).toEqual(['a.yaml']);
+    expect(findPlaceholders([{ path: 'b.yaml', text: 'placeholder: TRUE\n' }])).toEqual(['b.yaml']);
+    expect(findPlaceholders([{ path: 'c.yaml', text: 'placeholder: true  # remove before launch\n' }])).toEqual(['c.yaml']);
+  });
+  test('@REQ-GATE-03 a non-boolean word starting with true never triggers it', () => {
+    expect(findPlaceholders([{ path: 'a.yaml', text: 'placeholder: true-ish\n' }])).toEqual([]);
+  });
+  test('@REQ-GATE-03 CRLF line endings still find the frontmatter fence', () => {
+    const text = '---\r\nname: X\r\nplaceholder: true\r\n---\r\nBody';
+    expect(findPlaceholders([{ path: 'p.md', text }])).toEqual(['p.md']);
   });
 });
 
