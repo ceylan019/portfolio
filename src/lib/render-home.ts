@@ -1,6 +1,6 @@
 import type { Renderer } from './quality-client';
 import { el } from './dom';
-import { plural } from './render-quality';
+import { plural } from './format';
 
 export const renderProofStrip: Renderer = (live, d) => {
   const p = el('p', undefined, { class: 'big' });

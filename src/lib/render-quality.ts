@@ -2,13 +2,10 @@ import type { Renderer } from './quality-client';
 import type { MatrixRow, QualityReport } from './quality-schema';
 import { el, svgEl, tick } from './dom';
 import { MONTHS } from './dates';
+import { plural } from './format';
 
 const nf = new Intl.NumberFormat('en-US');
 const pad = (n: number) => String(n).padStart(2, '0');
-
-export function plural(n: number, one: string, many: string): string {
-  return `${nf.format(n)} ${n === 1 ? one : many}`;
-}
 
 export function formatDeployTime(iso: string): string {
   const d = new Date(iso);
@@ -115,7 +112,7 @@ export const renderTrends: Renderer = (live, d) => {
     const svg = svgEl('svg', { viewBox: '0 0 220 56', class: 'spark', 'aria-hidden': 'true' });
     svg.append(svgEl('polyline', { points, class: 'spark-line', fill: 'none' }));
     const current = values[values.length - 1]!;
-    item.append(el('h3', s.label), el('p', s.max === 100 ? `${current}${s.key === 'mutationScore' ? '%' : ''}` : new Intl.NumberFormat('en-US').format(current), { class: 'now' }), svg, el('p', s.caption, { class: 'cap' }));
+    item.append(el('h3', s.label), el('p', s.max === 100 ? `${current}${s.key === 'mutationScore' ? '%' : ''}` : nf.format(current), { class: 'now' }), svg, el('p', s.caption, { class: 'cap' }));
     grid.append(item);
   }
   live.append(grid);

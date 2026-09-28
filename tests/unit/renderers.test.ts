@@ -2,10 +2,11 @@
 import { readFileSync } from 'node:fs';
 import { TICK_PATH } from '../../src/lib/brush-tick';
 import { el, svgEl, tick } from '../../src/lib/dom';
+import { plural } from '../../src/lib/format';
 import { parseQualityReport, type QualityReport } from '../../src/lib/quality-schema';
 import { renderProofStrip } from '../../src/lib/render-home';
 import {
-  formatDeployTime, plural, renderDuration, renderIntegrity, renderMatrix, renderMutation, renderTrends, renderVerdict,
+  formatDeployTime, renderDuration, renderIntegrity, renderMatrix, renderMutation, renderTrends, renderVerdict,
 } from '../../src/lib/render-quality';
 
 const fixture = (name: string): QualityReport => {
