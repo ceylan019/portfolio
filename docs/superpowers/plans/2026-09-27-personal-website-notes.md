@@ -225,3 +225,26 @@ Commits `d70d157` and `d85635b`. New files: `src/lib/exif.ts`, `content-rules.ts
 - Important, fixed: there was no AVIF test, although the code claimed AVIF support. A scoped re-review confirmed both fixes.
 - Minor, deferred: when `profile/profile.md` is missing, the checker crashes with ENOENT instead of printing a plain message. It still exits non-zero.
 - Minor, deferred: `.heic` is accepted, although the spec lists only jpg, png, webp and avif.
+
+## Task 10: Browser loader and renderers
+
+Commits `988d18e` and `06fc90b`. New modules: `src/lib/quality-client.ts`, `dom.ts`, `render-home.ts`, `render-quality.ts` and `brush-tick.ts`. The unit suite passes 187 of 187, and `astro check` is clean.
+
+**Changes from the plan:**
+- Ruling P11. The renderer injection test uses the schema-valid `hostile-valid.json`. New loader tests show that the invalid `hostile.json`, and a document over the size limits, both leave every block `unavailable` with `data-settled="true"`.
+- Ruling P12. The integrity sentence uses the spec's wording: "every file served matched the tested build (N files, checked ...)". The plan said "all N files served matched".
+- Ruling P12. Every link a renderer creates carries the `lnk` class, which gives it the link colour and a 44px target. The plan left four renderer links unstyled and too small.
+- Ruling P27. `MONTHS` is exported once, from `src/lib/dates.ts`.
+- The trend label reads "Lighthouse mobile score" (the spec's wording). The plan said "Lighthouse mobile".
+- When a renderer throws partway through, the loader now clears the partly built content. That keeps the fallback sentence on its own, as the spec says ("any failure keeps the fallback").
+- The link guard in `el()` accepted `//evil.example` and `/\evil.example`, which browsers treat as links to another site. It now accepts only `https://` URLs or site-relative paths, with a test for each rejected form. No current data could reach this path, because the schema forces `https://`, so the fix is defence in depth.
+
+**Verified against real tools:**
+- happy-dom 20.14.5 needed no changes to the plan's tests.
+
+**Reviewer findings:**
+- Important, fixed: the link guard (above).
+- Ruled in and fixed: the trend label wording and the partial-render cleanup. A scoped re-review confirmed all three fixes.
+- Minor, deferred: several DOM and renderer branches are not asserted, so Stryker mutants may survive there. Task 11 runs Stryker for the first time.
+- Minor, deferred: invalid ISO dates render "NaN" text. The home page renderer imports a helper from the `/quality` renderer module, which may cost JavaScript budget (checked in Task 21). Also, rounding of the mutation score and small duplications.
+- Carried to Task 22: the history must include the current deploy, otherwise the page would say "This is deploy 0".
