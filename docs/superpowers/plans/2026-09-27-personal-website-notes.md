@@ -366,3 +366,22 @@ Commit `4595748`. The home page is built from content in the approved order: her
 **Reviewer findings:**
 - No critical or important findings.
 - Minor, deferred: an Astro markdown deprecation warning prints during every component test that uses the Container API. It dates from an earlier task, and the final review will trace it. `About.astro` has no render test of its own. Some component props are typed `any`.
+
+## Task 17: The /quality page
+
+Commits `afb3ef7` and `93d76f6`. New files: `TopLine.astro`, `DataBlock.astro`, `src/pages/quality.astro`, the page styles and 11 component tests. The suite passes 313 of 313. Both builds succeed, and `quality.html` has no inline styles and one external script.
+
+**Changes from the plan:**
+- Ruling P12, with spec section 4 winning over the plan and the mockup:
+  - The page runs in the spec's order: top line, verdict, requirements, deploy integrity, trends, mutation testing, the suites, pipeline duration. The plan and the approved mockup put deploy integrity before the requirements, but the spec says its text wins over any mockup.
+  - The verdict fallback uses the spec sentence and links to both the repository and its Actions page. `DataBlock` now accepts a list of links.
+  - Every other block's fallback says its numbers are unavailable and links to the latest CI run.
+  - Pipeline duration now has a real fallback sentence instead of an empty one.
+  - "The suites" describes all 11 suites from spec section 8, not the plan's four. The wording matches what the pipeline does: "mutation-tested business logic", visual regression on desktop Chromium and emulated Pixel only, axe in both themes, Lighthouse mobile with 3 runs.
+  - The page says there is no pass or fail column because only fully green builds deploy.
+- The glossary line uses the spec's terms: test, test run, browser engines and the five device profiles. It is set at 14px with a 62-character cap (DESIGN.md), where the plan had 15px and 66 characters.
+- The footer year comes from `buildToday`.
+
+**Reviewer findings:**
+- Important, fixed: two new tests had no requirement tag, which the CI gate would reject. They are now tagged `@REQ-QUAL-01`, the closest registered requirement. A scoped re-review confirmed the fix.
+- Minor, deferred: some small layout values differ from the plan (for example, a 22px margin that aligns the verdict columns). They are documented in the implementer's report.
