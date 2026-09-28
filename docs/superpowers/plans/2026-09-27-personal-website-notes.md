@@ -415,3 +415,17 @@ The suite passes 318 of 318, and both builds succeed.
 
 **Reviewer findings:**
 - Important, fixed: the preview card read the photo path only relative to `profile.md`. The leading-slash path Pages CMS writes would have broken `/og.png` on the first real upload. A scoped re-review confirmed the fix, and a scoped Stryker run on the new resolver killed 5 of 5 mutants.
+
+## Task 19: Test-only states page
+
+Commits `758db92` and `09466f4`. `src/pages/[states].astro` renders the long-name hero and the one, many and long certification lists, plus the proof strip fallback, for visual tests. It exists only in the fixture build. The unit suite passes 319 of 319.
+
+**Changes from the plan:**
+- Ruling P3: the test is tagged `@REQ-STATE-01` instead of `@REQ-CSP-01`. The requirement that the real build contains no states page stays with the real dist-scan check.
+- The page's "today" is the shared `FIXTURE_TODAY`.
+- The plan's test changed `BUILD_KIND` and did not restore it when an assertion failed, so it could leak into other tests. It now restores the previous value in a `finally` block.
+
+**Decisions not in the plan:**
+- Spec section 8 also lists sparse and full history and a matrix with many rows. Those are drawn in the browser from `quality.json`, so they are covered in Task 20's `/quality` tests with routed data variants, not on this page.
+
+**Verified:** `dist-fixture/__states.html` has no inline style, and `dist/__states.html` does not exist.
