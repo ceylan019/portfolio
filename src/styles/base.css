@@ -101,3 +101,58 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
   .role, .tag { font-size: 18px; }
   .acts { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 24px; }
 }
+
+/* /quality (Task 17). Section order and copy follow spec section 4 "/quality"
+   and controller rulings T17-A to T17-D. */
+.topline { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 48px; font-size: 16px; }
+.homelink { font-weight: 800; letter-spacing: -0.02em; font-size: 18px; color: var(--ink); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+.qhead .qh1 { font-size: 64px; font-weight: 800; line-height: .95; letter-spacing: -0.035em; }
+.lede { font-size: 21px; line-height: 1.5; margin-top: 22px; max-width: 46ch; }
+.lede b { font-weight: 800; }
+/* The verdict block's live slot is a two column grid (lede, then deploy meta)
+   so the meta line sits beside the verdict sentence, per spec section 4
+   ("Beside it: deploy time, commit...") and the approved /quality mockup's
+   .qhead layout; renderVerdict (Task 10) appends the two paragraphs as
+   siblings, so the grid, not the renderer, does the column split. */
+[data-block="verdict"] [data-slot="live"] { display: grid; grid-template-columns: 1fr 260px; gap: 48px; align-items: start; }
+.meta2 { font-size: 16px; color: var(--muted); line-height: 1.8; margin-top: 22px; }
+/* T17-D: the glossary line uses the DESIGN.md "Labels, IDs, glossary" size
+   (14px) and a 62ch cap, not the brief's 15px / 66ch. */
+.gloss { font-size: 14px; color: var(--muted); margin-top: 16px; max-width: 62ch; }
+.gloss b { color: var(--ink); }
+.integrity { display: flex; gap: 10px; align-items: center; margin-top: 32px; font-size: 16px; }
+[data-block="duration"] { margin-top: 32px; }
+.reqs { list-style: none; padding: 0; border-top: 1px solid var(--line); }
+.req { display: grid; grid-template-columns: 40px 1fr 240px; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); align-items: start; }
+/* T17-D: the brief's 13px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
+.rq-id { font-size: 14px; font-weight: 700; color: var(--muted); }
+/* T17-D: the brief's flat 17px snapped to the 18px "Body" desktop size; the 899px query below restores 17px on mobile. */
+.rq-text { font-size: 18px; font-weight: 500; margin-top: 2px; overflow-wrap: anywhere; }
+.rq-cov { display: flex; flex-direction: column; font-size: 14px; overflow-wrap: anywhere; }
+.rq-cov .dim { color: var(--muted); }
+.rq-cov details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--rose-text); }
+.trends { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+/* T17-D: the brief's 15px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
+.trend h3 { font-size: 14px; font-weight: 700; }
+.trend .now { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+.trend .cap { font-size: 14px; color: var(--muted); }
+/* T17-D: the brief bundled this with .trend .cap at 15px; snapped instead to
+   the 16px "Meta" row, matching .sub and .integrity and the approved mockup. */
+.unav { font-size: 16px; color: var(--muted); margin-top: 14px; }
+.spark { width: 100%; height: 56px; margin-top: 6px; }
+.spark-line { stroke: var(--rose-mark); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.sparse { border: 1.5px dashed var(--line); border-radius: 12px; padding: 18px 20px; color: var(--muted); max-width: 52ch; }
+.suites { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 40px; }
+.suites dt { font-weight: 700; }
+.suites dd { color: var(--muted); margin: 0; }
+@media (max-width: 899px) {
+  .qhead .qh1 { font-size: 40px; }
+  .lede { font-size: 18px; }
+  .rq-text { font-size: 17px; }
+  .trends, .suites { grid-template-columns: 1fr; }
+  [data-block="verdict"] [data-slot="live"] { grid-template-columns: 1fr; gap: 8px; }
+}
+@media (max-width: 639px) {
+  .req { grid-template-columns: 30px 1fr; }
+  .req > .rq-cov { grid-column: 2; }
+}

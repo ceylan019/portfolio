@@ -1,0 +1,92 @@
+---
+// /quality reads like a signed test report (spec section 4, "/quality"). Order
+// follows the spec exactly (ruling T17-A): top line; verdict, with the
+// glossary line and the two-builds sentence; requirements matrix; deploy
+// integrity; over time; mutation testing; the suites; pipeline duration.
+import Base from '../layouts/Base.astro';
+import TopLine from '../components/TopLine.astro';
+import DataBlock from '../components/DataBlock.astro';
+import Footer from '../components/Footer.astro';
+import { loadProfile } from '../lib/content';
+import { buildToday } from '../lib/build-date';
+
+const { data: profile } = await loadProfile();
+const today = buildToday(import.meta.env.BUILD_KIND ?? process.env.BUILD_KIND, new Date());
+const repo = process.env.REPO_URL ?? 'https://github.com/example/ceylan-akyol-site';
+const actions = `${repo}/actions/workflows/ci.yml`;
+
+// T17-B: the verdict fallback links both the repository and its Actions page.
+// Every other data block on this page links only the latest CI run.
+const verdictLinks = [
+  { href: repo, label: 'Browse the source' },
+  { href: actions, label: 'View the CI history' },
+];
+const ciLink = [{ href: actions, label: 'See the latest CI run' }];
+---
+<Base title="How this site is tested" description="Every promise this site makes is tied to the checks that prove it." path="/quality">
+  <div class="page q">
+    <TopLine name={profile.name} />
+    <main id="main">
+      <header class="qhead">
+        <h1 class="qh1">How this site<br />is tested</h1>
+        <DataBlock
+          name="verdict"
+          fallback="Every promise this site makes is tied to the checks that prove it. Live results could not be loaded; the source and CI history are linked here."
+          links={verdictLinks}
+          fallbackClass="lede"
+        />
+        <p class="gloss">A <b>test</b> is one test case. A <b>test run</b> is one test in one device profile. Browser engines: Chromium, Firefox and WebKit. Device profiles: desktop Chromium, desktop Firefox, desktop WebKit, emulated iPhone (WebKit) and emulated Pixel (Chromium). Behavior is tested on fixed test content in every engine and device profile; the real content is checked for accessibility, performance, links and key behavior before deploy.</p>
+      </header>
+      <section class="sec" aria-labelledby="req-heading">
+        <div class="side">
+          <h2 id="req-heading">Requirements</h2>
+          <p class="note">Every row links to the exact tests, pinned to the deployed commit. There is no pass or fail column, because only fully green builds deploy.</p>
+        </div>
+        <DataBlock name="matrix" fallback="Requirement coverage is unavailable right now." links={ciLink} />
+      </section>
+      <DataBlock name="integrity" fallback="The live file check result is unavailable right now." links={ciLink} />
+      <section class="sec" aria-labelledby="trend-heading">
+        <div class="side">
+          <h2 id="trend-heading">Over time</h2>
+          <p class="note">The last 50 deploys.</p>
+        </div>
+        <DataBlock name="trends" fallback="Trend data is unavailable right now." links={ciLink} />
+      </section>
+      <section class="sec" aria-labelledby="mut-heading">
+        <div class="side">
+          <h2 id="mut-heading">Mutation testing</h2>
+          <p class="note">Covers the business logic in src/lib only.</p>
+        </div>
+        <DataBlock name="mutation" fallback="Mutation results are unavailable right now." links={ciLink} />
+      </section>
+      <section class="sec" aria-labelledby="suites-heading">
+        <div class="side">
+          <h2 id="suites-heading">The suites</h2>
+        </div>
+        <dl class="suites">
+          <div><dt>Unit</dt><dd>Vitest on src/lib: certification rules, schema checks, the traceability builder and more.</dd></div>
+          <div><dt>Component</dt><dd>Vitest with the Astro Container API, rendering components in their empty, single, many and long-text states.</dd></div>
+          <div><dt>Build</dt><dd>A check on the emitted bundle: first-party JavaScript stays under 5 KB brotli-compressed and never inlined.</dd></div>
+          <div><dt>Mutation</dt><dd>StrykerJS plants deliberate bugs in the mutation-tested business logic and checks that the tests catch them.</dd></div>
+          <div><dt>End to end</dt><dd>Playwright in 5 device profiles: desktop Chromium, desktop Firefox, desktop WebKit, emulated iPhone and emulated Pixel.</dd></div>
+          <div><dt>@real</dt><dd>Playwright on desktop Chromium against the real build: hero, CV, certification count, 404 and headers.</dd></div>
+          <div><dt>Accessibility</dt><dd>axe checks for zero automated WCAG 2.2 AA violations, in light and dark themes, on both builds.</dd></div>
+          <div><dt>Visual regression</dt><dd>Screenshots on desktop Chromium and emulated Pixel, in both themes, compared against approved baselines.</dd></div>
+          <div><dt>Performance</dt><dd>Lighthouse CI, mobile, 3 runs per page, on both builds. The real build's median is recorded.</dd></div>
+          <div><dt>Links</dt><dd>Internal links are checked on every run. External links, including verify links, are checked weekly.</dd></div>
+          <div><dt>Smoke</dt><dd>Playwright checks the live site after each deploy and daily: the page loads, the CV, 404, headers and the live file check.</dd></div>
+        </dl>
+      </section>
+      <DataBlock name="duration" fallback="Pipeline duration is unavailable right now." links={ciLink} />
+    </main>
+    <Footer name={profile.name} year={today.getUTCFullYear()} />
+  </div>
+</Base>
+<script>
+  import { hydrate } from '../lib/quality-client';
+  import { renderDuration, renderIntegrity, renderMatrix, renderMutation, renderTrends, renderVerdict } from '../lib/render-quality';
+  hydrate(document, {
+    verdict: renderVerdict, integrity: renderIntegrity, matrix: renderMatrix,
+    trends: renderTrends, mutation: renderMutation, duration: renderDuration,
+  }, (url) => fetch(url, { cache: 'no-cache' }));
+</script>

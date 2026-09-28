@@ -1,0 +1,9 @@
+---
+import { CV_FILENAME } from '../lib/site';
+interface Props { name: string }
+const { name } = Astro.props;
+---
+<nav class="topline" aria-label="Site">
+  <a class="homelink" href="/">{name}</a>
+  <a class="lnk" href="/cv.pdf" download={CV_FILENAME}>Download CV (PDF)</a>
+</nav>

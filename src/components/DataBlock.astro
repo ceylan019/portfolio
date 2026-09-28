@@ -1,0 +1,22 @@
+---
+// A data block (DESIGN.md "Components"): server-rendered with a true,
+// number-free fallback sentence in reserved space (data-state="unavailable"),
+// upgraded to numbers when quality.json loads (data-state="ready"), and always
+// marked data-settled when the loader finishes (src/lib/quality-client.ts).
+//
+// T17-B: the verdict block's fallback links both the repository and its
+// Actions page, so `links` takes any number of entries, not just one. The
+// verdict fallback also reads as a lede sentence rather than a small
+// "unavailable" note, so `fallbackClass` lets a caller opt into that style.
+interface FallbackLink { href: string; label: string }
+interface Props { name: string; fallback: string; links?: FallbackLink[]; fallbackClass?: string }
+const { name, fallback, links = [], fallbackClass = 'unav' } = Astro.props;
+---
+<div data-block={name} data-state="unavailable">
+  <div data-slot="fallback">
+    <p class={fallbackClass}>{fallback}{links.map((link, i) => (
+      <>{' '}{i > 0 && 'and '}<a class="lnk" href={link.href}>{link.label}</a></>
+    ))}</p>
+  </div>
+  <div data-slot="live"></div>
+</div>
