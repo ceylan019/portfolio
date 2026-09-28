@@ -289,3 +289,42 @@ Commit `b30ea49`. New files: `src/styles/tokens.css`, `src/styles/base.css`, `sr
 - Minor, deferred: the "Expired" label keeps a 6px left margin, which is off the 4px spacing scale.
 
 **Open question for you:** `photo-mark.svg` uses its own gradient stop colours, which differ slightly from the DESIGN.md tokens. DESIGN.md says colours come from tokens, so the ring uses `--rose-mark`, `--coral` and `--peach`. If you want the SVG's exact shades, add two tokens to DESIGN.md and the ring can use them.
+
+## Task 13: Content collections, CMS config and placeholder content
+
+Commits `469edd6`, `c734189` and `8097a2b`. New files: content schemas, `src/content.config.ts`, `src/pages/cv.pdf.ts`, `.pages.yml`, `src/lib/build-date.ts`, the placeholder real content, the fixture content and the placeholder asset script. The whole suite passes 286 of 286, and both `build:real` and `build:fixture` succeed.
+
+**Changes from the plan:**
+- New helper `src/lib/build-date.ts`. The fixture build pins "today" to 27 September 2026, and the real build uses the real date. This lets the fixture include the spec's certification "expiring today" (spec section 8), which the plan had dropped. It also defuses a time bomb: a fixed "Valid until 2027" fixture would otherwise have turned into an expired one in 2027, breaking the E2E tests and the daily scheduled deploy. Later page tasks call `buildToday` instead of `new Date()`.
+- The fixture content now has seven certifications, and the list covers every item in spec section 8.
+- Astro 6.4.8 does not resolve `image()` while it validates content-layer collections: it hands the schema a placeholder string. So the plan's photo rule inside the schema crashed every build. The schema now skips the rule when real image data isn't available (with a comment explaining why), and the rule is enforced in `scripts/check-content.ts`, which CI runs. That check reads the real format and size with sharp and fails closed. So a photo under 800px, a GIF or a missing file still fails the pipeline, as REQ-CONTENT-01 requires.
+- sharp reports AVIF images as `heif` with `av1` compression, so the check maps that to AVIF. HEIC stays rejected.
+- `.pages.yml` differs from the plan's draft after a check against the live Pages CMS docs:
+  - `media.output` is the public path written into content.
+  - Certifications use `filename: "{primary}.yaml"`, so CMS-created entries match the `*.yaml` glob.
+  - `required` and `default` are top-level field keys.
+  - `showAvailability`, `hidden` and `placeholder` default to false.
+  - `cv.pdf.ts` strips the leading slash that Pages CMS writes.
+
+**Verified against real tools:**
+- Pages CMS docs, read live with `/browse`:
+  - media `output`: https://pagescms.org/docs/configuration/media.md
+  - collection `filename`: https://pagescms.org/docs/configuration/content/filename.md
+  - `format: yaml`: https://pagescms.org/docs/configuration/content.md
+  - top-level `required`: https://pagescms.org/docs/configuration/content/fields.md
+  - `default`: https://pagescms.org/docs/configuration/fields/boolean.md
+  - image and file options: the fields pages
+- A reviewer confirmed through context7 that `{primary}` falls back to the `name` field and is slugified.
+- Not verified: an upload through a live Pages CMS instance. The image path shape it writes is the remaining unknown until your first CMS upload (Task 26).
+- The launch gate works: `findPlaceholders` flags both real content files.
+- The placeholder images carry no identifying EXIF.
+
+**Reviewer findings:**
+- Spec gap, fixed: valid AVIF photos were rejected.
+- Important, fixed: no test would catch removal of the call that enforces the photo rule. A scoped re-review confirmed both fixes.
+- The reviewer also found your email address in this notes file (in the Environment section, from my own first draft). I removed it in `ede0f51`. It still appears as the commit author, as before.
+- Minor, deferred: no test pins that a missing CV fails the build (the code does fail it). The `cv` path resolves from the repository root while `photo` resolves relative to `profile.md`. The drift test ignores the About body field.
+- Carried to Task 23: `check-content.ts` must run in CI before deploy.
+
+**Needs me:**
+- After the first photo and CV upload through Pages CMS (Task 26), check that the build still finds both files. The CMS path format was taken from its docs, not from a live upload.
