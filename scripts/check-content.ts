@@ -1,8 +1,9 @@
 // Usage: tsx scripts/check-content.ts [content dir, default src/content] [--images-only file ...]
-// Blocks images that carry GPS or owner EXIF data, and an About text that repeats the
-// tagline or runs long (E18, G1). Exits 1 with one plain message per problem found.
+// Blocks images that carry GPS or owner EXIF data, a profile photo that is the wrong file
+// type or too small, and an About text that repeats the tagline or runs long (E18, G1,
+// D14, REQ-CONTENT-01). Exits 1 with one plain message per problem found.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { join, extname, dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import sharp from 'sharp';
 import exifr from 'exifr';
@@ -11,6 +12,7 @@ import { isRecord } from '../src/lib/guards';
 import { identifyingExifKeys } from '../src/lib/exif';
 import { aboutProblems } from '../src/lib/content-rules';
 import { splitFrontmatter } from '../src/lib/frontmatter';
+import { photoProblem } from '../src/content-schemas';
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.heic']);
 
@@ -68,6 +70,33 @@ export async function checkImage(file: string): Promise<string | null> {
     : null;
 }
 
+/** Resolves the profile's `photo` field the same way content.config.ts / Astro's image()
+ * resolves it: relative to profile.md's own directory, except a leading slash, which
+ * .pages.yml's media.output and src/pages/cv.pdf.ts both treat as repo-root-relative
+ * (T13-C, T13-D), not a literal filesystem-root path. */
+export function resolvePhotoPath(profilePath: string, photo: string): string {
+  return photo.startsWith('/') ? resolve(photo.slice(1)) : resolve(dirname(profilePath), photo);
+}
+
+/** Reads the profile photo's real dimensions and format through sharp and reports it as a
+ * problem under the same rule content-schemas.ts's photoProblem enforces (D14). Fails
+ * closed: a photo sharp cannot read, including one that does not exist, is a problem too
+ * (T13-D), never a silent pass, since content.config.ts's schema check cannot see real
+ * metadata for a loader-based collection in this Astro version (see content.config.ts). */
+export async function checkProfilePhoto(photoPath: string): Promise<string | null> {
+  let meta: { width?: number; height?: number; format?: string };
+  try {
+    meta = await sharp(photoPath).metadata();
+  } catch {
+    return `${photoPath}: could not read the profile photo.`;
+  }
+  if (meta.width === undefined || meta.height === undefined || !meta.format) {
+    return `${photoPath}: could not read the profile photo.`;
+  }
+  const problem = photoProblem({ width: meta.width, height: meta.height, format: meta.format });
+  return problem ? `${photoPath}: ${problem}` : null;
+}
+
 /** Runs the content checks for the given CLI arguments and returns the problems found.
  * Never throws for a content problem: those come back as strings for the caller to print
  * and exit on. */
@@ -90,8 +119,14 @@ export async function checkContent(args: string[]): Promise<string[]> {
     if (!split) {
       problems.push(`${profilePath} has no frontmatter. Cannot check the About rules.`);
     } else {
-      const fm = parseYaml(split.frontmatter) as { tagline?: string };
+      const fm = parseYaml(split.frontmatter) as { tagline?: string; photo?: string };
       problems.push(...aboutProblems(split.body, fm.tagline ?? ''));
+      if (typeof fm.photo !== 'string' || fm.photo.length === 0) {
+        problems.push(`${profilePath}: missing "photo". Cannot check the photo rules.`);
+      } else {
+        const photoProblemMessage = await checkProfilePhoto(resolvePhotoPath(profilePath, fm.photo));
+        if (photoProblemMessage) problems.push(photoProblemMessage);
+      }
     }
   }
 

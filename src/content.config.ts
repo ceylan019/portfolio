@@ -13,9 +13,12 @@ const base = process.env.CONTENT_DIR ?? 'src/content';
 // schema time in this Astro version, only a path marker string; real metadata is
 // resolved later, when a page actually renders the image. Without this guard,
 // photoProblem crashes on that marker string instead of judging it (Task 13 report,
-// "Changes from the plan"). Kept here, rather than dropped, in case a future Astro
-// release starts passing real metadata through this path; it would then start
-// failing the build on a bad photo for free, with no code change needed.
+// "Changes from the plan"). The rule is still enforced for real: scripts/check-content.ts
+// reads the profile's declared photo through sharp and calls this same photoProblem
+// (ruling T13-D), and CI runs that script on every build. This guard is kept, rather than
+// dropped, in case a future Astro release starts passing real metadata through this path;
+// it would then start failing the build on a bad photo for free, with no code change
+// needed, on top of the check-content.ts enforcement.
 const isImageMeta = (v: unknown): v is { width: number; height: number; format: string } =>
   typeof v === 'object' && v !== null
   && typeof (v as { width: unknown }).width === 'number'

@@ -1,8 +1,10 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import sharp from 'sharp';
-import { checkContent, checkImage } from '../../scripts/check-content';
+import {
+  checkContent, checkImage, checkProfilePhoto, resolvePhotoPath,
+} from '../../scripts/check-content';
 
 const withGpsExif = {
   IFD0: { Artist: 'Ceylan Akyol' },
@@ -120,6 +122,14 @@ describe('checkContent (CLI orchestration)', () => {
     await writeFile(join(contentDir, 'profile/profile.md'), raw, 'utf8');
   };
 
+  // A photo that passes photoProblem's own rule (JPG, 800px+ on the short side), so tests
+  // that are not about the photo rule itself do not pick up an unrelated photo problem.
+  const writeValidPhoto = async (contentDir: string) => {
+    await sharp({ create: { width: 800, height: 900, channels: 3, background: { r: 251, g: 225, b: 227 } } })
+      .jpeg()
+      .toFile(join(contentDir, 'profile/photo.jpg'));
+  };
+
   beforeAll(async () => {
     root = await mkdtemp(join(tmpdir(), 'check-content-cli-'));
   });
@@ -140,8 +150,9 @@ describe('checkContent (CLI orchestration)', () => {
     const contentDir = join(root, 'valid');
     await writeProfile(
       contentDir,
-      `---\nname: Ceylan Akyol\ntagline: ${tagline}\n---\nFor five years I tested web and API products in small teams.\n`,
+      `---\nname: Ceylan Akyol\ntagline: ${tagline}\nphoto: photo.jpg\n---\nFor five years I tested web and API products in small teams.\n`,
     );
+    await writeValidPhoto(contentDir);
 
     expect(await checkContent([contentDir])).toEqual([]);
   });
@@ -149,7 +160,8 @@ describe('checkContent (CLI orchestration)', () => {
   test('@REQ-CONTENT-03 an About that repeats the tagline is reported', async () => {
     const contentDir = join(root, 'repeats-tagline');
     const about = `${tagline} For five years I tested products.`;
-    await writeProfile(contentDir, `---\nname: Ceylan Akyol\ntagline: ${tagline}\n---\n${about}\n`);
+    await writeProfile(contentDir, `---\nname: Ceylan Akyol\ntagline: ${tagline}\nphoto: photo.jpg\n---\n${about}\n`);
+    await writeValidPhoto(contentDir);
 
     const problems = await checkContent([contentDir]);
     expect(problems).toEqual(['About repeats the tagline: "i build test automation that teams can read trust and keep running"']);
@@ -159,8 +171,9 @@ describe('checkContent (CLI orchestration)', () => {
     const contentDir = join(root, 'with-image');
     await writeProfile(
       contentDir,
-      `---\nname: Ceylan Akyol\ntagline: ${tagline}\n---\nFor five years I tested web and API products in small teams.\n`,
+      `---\nname: Ceylan Akyol\ntagline: ${tagline}\nphoto: photo.jpg\n---\nFor five years I tested web and API products in small teams.\n`,
     );
+    await writeValidPhoto(contentDir);
     const nestedDir = join(contentDir, 'photos', 'profile');
     await mkdir(nestedDir, { recursive: true });
     const imagePath = join(nestedDir, 'gps.jpeg');
@@ -173,5 +186,74 @@ describe('checkContent (CLI orchestration)', () => {
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain(imagePath);
     expect(problems[0]).toContain('contains identifying metadata');
+  });
+
+  test('@REQ-CONTENT-01 a missing "photo" field fails closed', async () => {
+    const contentDir = join(root, 'no-photo-field');
+    await writeProfile(
+      contentDir,
+      `---\nname: Ceylan Akyol\ntagline: ${tagline}\n---\nFor five years I tested web and API products in small teams.\n`,
+    );
+
+    const problems = await checkContent([contentDir]);
+    expect(problems).toEqual([`${join(contentDir, 'profile/profile.md')}: missing "photo". Cannot check the photo rules.`]);
+  });
+});
+
+// resolvePhotoPath and checkProfilePhoto are the units content.config.ts's schema guard
+// leans on (T13-D): Astro's content-layer glob loader never hands the schema real photo
+// metadata, so this is the check that actually fails a build over a bad profile photo.
+describe('resolvePhotoPath and checkProfilePhoto (@REQ-CONTENT-01)', () => {
+  let dir: string;
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'check-content-photo-'));
+  });
+
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  test('a relative photo path resolves against profile.md\'s own directory', () => {
+    const profilePath = join(dir, 'profile/profile.md');
+    expect(resolvePhotoPath(profilePath, '../assets/photo.jpg')).toBe(join(dir, 'assets/photo.jpg'));
+  });
+
+  test('a leading-slash photo path resolves against the repo root, not the filesystem root', () => {
+    const profilePath = join(dir, 'profile/profile.md');
+    expect(resolvePhotoPath(profilePath, '/src/assets/uploads/photo.jpg')).toBe(resolve('src/assets/uploads/photo.jpg'));
+  });
+
+  test('a photo 799px on its short side fails', async () => {
+    const photoPath = join(dir, 'too-small.jpg');
+    await sharp({ create: { width: 799, height: 1200, channels: 3, background: { r: 251, g: 225, b: 227 } } })
+      .jpeg()
+      .toFile(photoPath);
+
+    expect(await checkProfilePhoto(photoPath)).toBe(`${photoPath}: The photo must be at least 800px on its shorter side (it is 799px).`);
+  });
+
+  test('a photo exactly 800px on its short side passes', async () => {
+    const photoPath = join(dir, 'exactly-800.jpg');
+    await sharp({ create: { width: 800, height: 1200, channels: 3, background: { r: 251, g: 225, b: 227 } } })
+      .jpeg()
+      .toFile(photoPath);
+
+    expect(await checkProfilePhoto(photoPath)).toBeNull();
+  });
+
+  test('a GIF photo fails regardless of size', async () => {
+    const photoPath = join(dir, 'photo.gif');
+    await sharp({ create: { width: 900, height: 900, channels: 3, background: { r: 251, g: 225, b: 227 } } })
+      .gif()
+      .toFile(photoPath);
+
+    expect(await checkProfilePhoto(photoPath)).toBe(`${photoPath}: The photo must be JPG, PNG, WebP or AVIF.`);
+  });
+
+  test('a missing photo file fails closed', async () => {
+    const photoPath = join(dir, 'does-not-exist.jpg');
+
+    expect(await checkProfilePhoto(photoPath)).toBe(`${photoPath}: could not read the profile photo.`);
   });
 });
