@@ -186,3 +186,15 @@ Commits `980dcf7` and `10f5e0b`. New modules: `src/lib/manifest.ts`, `placeholde
 **Reviewer findings:**
 - Critical, fixed: both fail-open paths above.
 - Minor, fixed under a ruling: the CRLF case, which is the same fail-open class. A scoped re-review confirmed all three fixes.
+
+## Task 8: Monitoring issue logic
+
+Commit `1c1854a`. `src/lib/issue-state.ts` has 21 unit tests, and the unit suite passes 144 of 144.
+
+**Changes from the plan:**
+- Ruling P9. The plan kept the link-check failure counts in the GitHub Actions cache until an issue exists. GitHub evicts cache entries that go unused for 7 days, which is exactly the weekly interval, so a link might never reach the two-failure threshold. The spec (D15) says the issue body holds the state. `renderLinksBody` now embeds the full state as a hidden HTML comment, and a new `parseLinkState` reads it back. Before any issue exists, the workflow will keep the state in an artifact from the previous run (Task 24).
+- As a result, one plan assertion changed. The test that a URL failing only once is not reported used to check that the URL appears nowhere in the body. The URL now legitimately sits in the hidden state comment, so the test checks that it is not in the visible list of broken links. The reviewer judged this still proves the original point, and a mutant that removes the threshold would still fail it.
+
+**Reviewer findings:**
+- No critical or important findings.
+- Minor, deferred: the state-comment regex stops at the first `-->`, so a URL containing `-->` would be truncated. This is not realistic for this content.
