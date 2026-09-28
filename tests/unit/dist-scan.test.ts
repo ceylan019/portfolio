@@ -42,3 +42,19 @@ test('@REQ-GATE-01 the states page is forbidden in the real build only', () => {
   expect(scanFiles(files, { forbidStatesPage: true }).findings.map((f) => f.rule)).toEqual(['states-page']);
   expect(scanFiles(files, { forbidStatesPage: false }).findings).toEqual([]);
 });
+test('@REQ-GATE-01 JSON-LD type must match exactly, not as prefix', () => {
+  expect(rules('<script type="application/ld+jsonp">alert(1)</script>')).toEqual(['inline-script']);
+  expect(rules('<script type="application/ld+json-evil">alert(1)</script>')).toEqual(['inline-script']);
+  expect(rules('<script type="application/ld+jsonx">alert(1)</script>')).toEqual(['inline-script']);
+  expect(rules('<script type="application/ld+json">alert(1)</script>')).toEqual([]);
+  expect(rules("<script type='application/ld+json'>alert(1)</script>")).toEqual([]);
+  expect(rules('<script type=application/ld+json>alert(1)</script>')).toEqual([]);
+});
+test('@REQ-GATE-01 script tag and attribute names are case-insensitive', () => {
+  expect(rules('<SCRIPT>alert(1)</SCRIPT>')).toEqual(['inline-script']);
+  expect(rules('<SCRIPT SRC="/a.js"></SCRIPT>')).toEqual([]);
+  expect(rules('<script TYPE="APPLICATION/LD+JSON">{}</script>')).toEqual([]);
+});
+test('@REQ-GATE-01 data-src is not treated as src attribute', () => {
+  expect(rules('<script data-src="x">alert(1)</script>')).toEqual(['inline-script']);
+});

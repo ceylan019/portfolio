@@ -7,7 +7,7 @@ const STYLE_ATTR = /<[a-z][^>]*?\sstyle\s*=/gi;
 const STYLE_ELEMENT = /<style[\s>]/gi;
 const SCRIPT_OPEN = /<script\b([^>]*)>/gi;
 const HAS_SRC = /\ssrc\s*=/i;
-const IS_JSON_LD = /\stype\s*=\s*["']?application\/ld\+json["']?/i;
+const IS_JSON_LD = /\stype\s*=\s*(?:(["'])application\/ld\+json\1|application\/ld\+json(?=\s|$|[/>]))/i;
 
 const excerpt = (html: string, index: number | undefined) => html.slice(index ?? 0, (index ?? 0) + 80);
 
