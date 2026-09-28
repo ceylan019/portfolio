@@ -8,7 +8,7 @@ Work in progress. This section is updated after every task.
 
 ### Spec deviations
 
-None yet.
+None so far. Where the plan and the spec disagreed, the spec was followed; the pre-flight table and each task section list those plan changes (P11 hostile fixture, P22 retries, Task 5 malformed tags, Task 6 JSON-LD type, Task 7 fail-open gates).
 
 ### Open questions
 
@@ -17,10 +17,11 @@ None yet.
 ### Things you must do
 
 - Task 26 (launch) is yours. Its steps are listed under "Needs me" at the end of this file.
+- Enable the local EXIF pre-commit hook: `git config core.hooksPath .githooks` (Task 9).
 
 ### Known gaps
 
-None yet.
+- Package majors are newer than the plan text (Vitest 5, Stryker 10, TypeScript 6, Playwright 1.63); see Task 1. Stryker 10 is first exercised in Task 11.
 
 ## Environment
 
@@ -198,3 +199,29 @@ Commit `1c1854a`. `src/lib/issue-state.ts` has 21 unit tests, and the unit suite
 **Reviewer findings:**
 - No critical or important findings.
 - Minor, deferred: the state-comment regex stops at the first `-->`, so a URL containing `-->` would be truncated. This is not realistic for this content.
+
+## Task 9: Privacy, content rules and JSON-LD
+
+Commits `d70d157` and `d85635b`. New files: `src/lib/exif.ts`, `content-rules.ts`, `jsonld.ts`, `scripts/check-content.ts` and `.githooks/pre-commit`, plus `splitFrontmatter` in `src/lib/frontmatter.ts`. The unit suite passes 164 of 164, and `astro check` is clean.
+
+**Changes from the plan:**
+- Ruling P17. exifr 7 cannot read WebP, and the plan swallowed its error with `.catch(() => null)`, so a WebP photo with GPS data would have passed the privacy check. The fixture photo is WebP. `check-content` now reads each image's EXIF through sharp and parses that with exifr. It fails closed: an image whose metadata cannot be read is reported as a problem.
+- The JSON-LD escaping test is tagged `@REQ-PREV-01` instead of `@REQ-CSP-01` (ruling P3). The spec has no separate requirement ID for JSON-LD escaping (D21), so PREV-01 is the closest fit.
+- The body split lives in the shared `src/lib/frontmatter.ts` (ruling P27). A `profile.md` without frontmatter is now reported as a problem instead of silently skipping the About rules.
+
+**Decisions not in the plan:**
+- Added `tests/unit/check-content.test.ts`. It builds real JPEG, WebP and AVIF images with and without GPS data in a temporary folder, and runs the checker end to end. No mocking is involved.
+
+**Verified against real tools:**
+- sharp 0.35.5 returns the EXIF block of JPEG, WebP and AVIF files with a 6-byte `Exif\0\0` prefix, which exifr 7.1.3 rejects until it is stripped.
+- exifr does not always throw on corrupt input. Sometimes it resolves with `{ errors: [...] }`, and that case now also fails closed.
+- The JSON-LD serializer source holds a literal `\\u003c`. This was checked byte by byte, and a test proves the output never contains `<`.
+
+**Needs me:**
+- To turn on the local pre-commit EXIF hook, run `git config core.hooksPath .githooks` once. I did not change your repository configuration. The hook was tested by running it directly: it blocks a staged GPS image and passes a clean one. It needs `pnpm` on `PATH`. Without it, the hook exits with code 127 and blocks the commit.
+
+**Reviewer findings:**
+- Important, fixed: the checker's orchestration, including the new missing-frontmatter path, had no test.
+- Important, fixed: there was no AVIF test, although the code claimed AVIF support. A scoped re-review confirmed both fixes.
+- Minor, deferred: when `profile/profile.md` is missing, the checker crashes with ENOENT instead of printing a plain message. It still exits non-zero.
+- Minor, deferred: `.heic` is accepted, although the spec lists only jpg, png, webp and avif.
