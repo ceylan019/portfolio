@@ -129,3 +129,25 @@ Commit `4c22f7c`. `src/lib/history.ts` was implemented with 26 unit tests: the p
 **Reviewer findings:**
 - No critical or important findings.
 - Minor, deferred: the 10-second default timeout and the initial "unknown" failure reason are never exercised by a test, so Stryker mutants on them will probably survive. Testing the real default would need a slow test.
+
+## Task 5: Traceability builder, evidence rules and mutation summary
+
+Commits `b57427c` and `dead480`. New modules: `src/lib/traceability.ts`, `evidence.ts`, `mutation.ts` and a shared `guards.ts`. The unit suite passes 91 of 91, and `astro check` is clean.
+
+**Changes from the plan:**
+- Ruling P1: Playwright's JSON reporter writes tags without the leading `@`, so `normalizePlaywright` now adds the `@` before reading tags. Without this, the gate would have called every Playwright test untagged. The test fixtures now use the real reporter shape, and one case keeps the `@` form.
+- Ruling P3: the Lighthouse summary unit test is retagged from `@REQ-PERF-01` to `@REQ-TRACE-01`. No unit test carries `REQ-PERF-01` or `REQ-CSP-01`, so those two are covered only by the real Lighthouse and dist-scan evidence, as spec section 8 requires.
+- Ruling P27: one `isRecord` guard now lives in `src/lib/guards.ts`, and `src/lib/history.ts` imports it instead of keeping its own copy.
+- A plan test fixture used Vitest's `pending` status. Vitest 5 reports a skipped test as `skipped`, so the fixture was updated. No code change was needed: every status other than `passed` and `failed` counts as skipped, so a skipped test can never count as coverage.
+- A Task 5 ruling (the spec wins over the plan): the plan's `tagsIn` silently drops near-miss tags such as `REQ-HERO-1`. Spec section 8 says CI fails on a tag that is not in the registry. Both normalizers now pass such tags through, and the gate reports them as unknown tags. `tagsIn` itself and its plan test are unchanged.
+
+**Verified against real tools:**
+- Playwright 1.63.0's JSON reporter strips the `@` from `spec.tags`. This was confirmed with a throwaway spec run outside the repo's tests.
+- Vitest 5.0.2's JSON report has the fields the normalizer reads. Its status values are `passed`, `failed`, `skipped`, `pending` and `todo`.
+- The Stryker 10 report format (mutation-testing-report-schema 3.8.4) matches the field names `mutationSummary` reads.
+
+**Reviewer findings:**
+- Important, fixed: near-miss requirement tags passed the gate silently (see the ruling above).
+- Important, fixed: the gate's malformed-input paths were untested. Focused tests now cover each guard, the evidence detail strings and the problem wording. A scoped re-review confirmed both fixes.
+- Deferred to the final review (minor): the Playwright `flaky` status maps to "failed" implicitly. Tests marked as expected to fail (Playwright `test.fail()`, Vitest `test.fails`) would count as coverage. Problems repeat once per browser project. Two Playwright tests with the same title in one file merge. `relative()` matches a path prefix without a trailing slash.
+- Carried forward to Tasks 20 and 22: a missing Lighthouse `assertion-results.json` must count as "not covered", a missing `vitest.json` must fail the report job, and failing tests must fail their CI job before the report job runs.
