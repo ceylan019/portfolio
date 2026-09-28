@@ -342,3 +342,12 @@ Commit `2a219eb`. New files: `scripts/extract-brush-paths.ts` (reads `photo-mark
 - Reduced motion could not be emulated in `/browse`, because its browser bridge refuses the media emulation command. The fallback was checked by cancelling the animations, and by reading the CSS: both strokes rest at `stroke-dashoffset: 0`, meaning complete. The Playwright E2E test in Task 20 emulates reduced motion for real.
 
 **Reviewer findings:** none blocking. Minor: the plan's interface line mentions a `size` prop on `PhotoFrame`, which no caller uses.
+
+## Task 15: Certifications section
+
+Commit `3c134b2`. `Certifications.astro` and `CertEntry.astro` were implemented as planned, with 6 component tests. The suite passes 295 of 295.
+
+**Reviewer findings:**
+- No critical or important findings.
+- Minor, deferred: each Verify link's accessible name is built from the certification name only. Two visible certifications with the same name (for example, a renewal recorded as a second entry) would produce duplicate link names.
+- Minor, deferred: no committed test locks in that an entry without a verify URL shows no tick and no link. The code does this correctly.
