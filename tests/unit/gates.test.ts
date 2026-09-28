@@ -1,5 +1,6 @@
 import { diffManifest, manifestMatches, parseManifest } from '../../src/lib/manifest';
 import { findPlaceholders } from '../../src/lib/placeholders';
+import { splitFrontmatter } from '../../src/lib/frontmatter';
 import { isStale, parseLsRemote } from '../../src/lib/stale-sha';
 
 const h = (c: string) => c.repeat(64);
@@ -123,4 +124,36 @@ describe('stale commit guard', () => {
     expect(isStale('aaa', 'bbb')).toBe(true);
     expect(isStale('aaa', null)).toBe(false);
   });
+});
+
+// Mutation testing (Task 11).
+describe('gate edge cases', () => {
+  const h = (c: string) => c.repeat(64);
+  test('@REQ-GATE-02 quality.json missing from the real build is not a difference', () => {
+    expect(diffManifest({ 'index.html': h('a'), 'quality.json': h('b') }, { 'index.html': h('a') }))
+      .toEqual({ changed: [], missing: [], extra: [] });
+  });
+  test('@REQ-GATE-02 every difference list is sorted', () => {
+    const expected = { 'd.html': h('1'), 'c.html': h('1'), 'b.html': h('1'), 'a.html': h('1') };
+    const actual = { 'd.html': h('2'), 'c.html': h('2'), 'z.html': h('1'), 'y.html': h('1') };
+    expect(diffManifest(expected, actual)).toEqual({ changed: ['c.html', 'd.html'], missing: ['a.html', 'b.html'], extra: ['y.html', 'z.html'] });
+  });
+  test('@REQ-GATE-02 parseManifest rejects null, arrays and non-string hashes without throwing', () => {
+    expect(parseManifest('null')).toBeNull();
+    expect(parseManifest(JSON.stringify([h('a')]))).toBeNull();
+    expect(parseManifest(JSON.stringify({ 'index.html': [h('a')] }))).toBeNull();
+  });
+  test('@REQ-GATE-04 ls-remote lines tolerate surrounding and repeated whitespace', () => {
+    expect(parseLsRemote(`  abc123 \t refs/heads/main  \n`)).toBe('abc123');
+  });
+});
+test('@REQ-GATE-02 a hash must be exactly 64 hex characters, with nothing before it', () => {
+  expect(parseManifest(JSON.stringify({ 'index.html': `x${'a'.repeat(64)}` }))).toBeNull();
+});
+test('@REQ-GATE-03 the flag must start its own line', () => {
+  expect(findPlaceholders([{ path: 'a.yml', text: 'note: placeholder: true\n' }])).toEqual([]);
+});
+test('@REQ-GATE-03 frontmatter must open the file, and may close without a trailing newline', () => {
+  expect(splitFrontmatter('intro\n---\nplaceholder: true\n---\nbody')).toBeNull();
+  expect(splitFrontmatter('---\nplaceholder: true\n---')).toEqual({ frontmatter: 'placeholder: true', body: '' });
 });

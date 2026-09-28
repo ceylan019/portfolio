@@ -87,3 +87,30 @@ test('@REQ-QUAL-02 the hostile fixture (huge and negative numbers, wrong types) 
 test('@REQ-QUAL-02 the hostile-valid fixture (HTML in names, javascript: link) still parses', () => {
   expect(parseQualityReport(load('hostile-valid')).ok).toBe(true);
 });
+
+// Mutation testing (Task 11).
+test('@REQ-QUAL-02 the rejection reason names the first failing field, or root', () => {
+  const doc = valid();
+  doc.counts.testRuns = '312';
+  expect(parseQualityReport(doc)).toEqual({ ok: false, reason: 'counts.testRuns' });
+  expect(parseQualityReport(42)).toEqual({ ok: false, reason: 'root' });
+});
+test('@REQ-QUAL-02 commit SHAs, dates and requirement ids are anchored at both ends', () => {
+  const withCommit = (commit: string) => { const doc = valid(); doc.commit = commit; return parseQualityReport(doc).ok; };
+  expect(withCommit('e5cdb92')).toBe(true);
+  expect(withCommit('zze5cdb92')).toBe(false);
+  expect(withCommit('e5cdb92zz')).toBe(false);
+  const withDate = (builtAt: string) => { const doc = valid(); doc.builtAt = builtAt; return parseQualityReport(doc).ok; };
+  expect(withDate('x2026-09-27T09:14:00Z')).toBe(false);
+  expect(withDate('2026-09-27T09:1')).toBe(false);
+  const withId = (id: string) => { const doc = valid(); doc.matrix[0].id = id; return parseQualityReport(doc).ok; };
+  expect(withId('xREQ-CV-01')).toBe(false);
+  expect(withId('REQ-CV-01x')).toBe(false);
+});
+test('@REQ-QUAL-02 history points are validated and kept field for field', () => {
+  const doc = valid();
+  const r = parseQualityReport(doc);
+  expect(r.ok && r.data.history[0]).toEqual(doc.history[0]);
+  doc.history[0].testRuns = 'many';
+  expect(parseQualityReport(doc)).toEqual({ ok: false, reason: 'history.0.testRuns' });
+});

@@ -75,5 +75,7 @@ export function parseQualityReport(input: unknown): ParseResult {
   const r = qualityReportSchema.safeParse(input);
   if (r.success) return { ok: true, data: r.data };
   const first = r.error.issues[0];
-  return { ok: false, reason: first ? first.path.join('.') || 'root' : 'invalid' };
+  // Stryker disable next-line StringLiteral: equivalent. zod reports at least one issue whenever parsing fails, so this fallback is unreachable.
+  const noIssueReason = 'invalid';
+  return { ok: false, reason: first ? first.path.join('.') || 'root' : noIssueReason };
 }

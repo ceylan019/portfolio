@@ -13,5 +13,6 @@ export function frontmatterOf(text: string): string | null {
  * the whole file as body text. */
 export function splitFrontmatter(text: string): { frontmatter: string; body: string } | null {
   const match = FRONTMATTER.exec(text.replace(/\r\n/g, '\n'));
+  // Stryker disable next-line StringLiteral: equivalent. The body group ([\s\S]*) always participates in a match, so match[2] is never undefined.
   return match ? { frontmatter: match[1]!, body: match[2] ?? '' } : null;
 }

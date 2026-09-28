@@ -16,6 +16,7 @@ export function scanHtml(file: string, html: string): Finding[] {
   for (const m of html.matchAll(STYLE_ATTR)) findings.push({ file, rule: 'style-attr', excerpt: excerpt(html, m.index) });
   for (const m of html.matchAll(STYLE_ELEMENT)) findings.push({ file, rule: 'style-element', excerpt: excerpt(html, m.index) });
   for (const m of html.matchAll(SCRIPT_OPEN)) {
+    // Stryker disable next-line StringLiteral: equivalent. The capture group ([^>]*) always participates in a match, so m[1] is never undefined.
     const attrs = m[1] ?? '';
     if (!HAS_SRC.test(attrs) && !IS_JSON_LD.test(attrs)) {
       findings.push({ file, rule: 'inline-script', excerpt: excerpt(html, m.index) });

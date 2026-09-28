@@ -41,7 +41,7 @@ export function resolveHistory(live: FetchOutcome, artifact: unknown): HistorySo
     const current = upgradeToCurrent(live.body);
     if (current) return { kind: 'live', history: current.history };
   }
-  const fallback = artifact === undefined ? null : upgradeToCurrent(artifact);
+  const fallback = upgradeToCurrent(artifact);
   if (fallback) return { kind: 'artifact', history: fallback.history };
   const why = live.kind === 'error' ? live.reason : 'live quality.json invalid';
   return { kind: 'fresh', warning: `History restarted: ${why}; no valid previous artifact.` };

@@ -58,3 +58,27 @@ test('@REQ-GATE-01 script tag and attribute names are case-insensitive', () => {
 test('@REQ-GATE-01 data-src is not treated as src attribute', () => {
   expect(rules('<script data-src="x">alert(1)</script>')).toEqual(['inline-script']);
 });
+
+// Mutation testing (Task 11).
+test('@REQ-GATE-01 an excerpt starts at the finding and is at most 80 characters', () => {
+  const html = `${'x'.repeat(10)}<div style="a">${'y'.repeat(100)}`;
+  expect(scanHtml('index.html', html)).toEqual([{ file: 'index.html', rule: 'style-attr', excerpt: html.slice(10, 90) }]);
+});
+test('@REQ-GATE-01 the states page is found at the root or nested, and other pages are not mistaken for it', () => {
+  const files = [
+    { path: 'index.html', html: '<p>ok</p>' },
+    { path: `sub/${STATES_PAGE}`, html: '<p>states</p>' },
+    { path: `not${STATES_PAGE}`, html: '<p>ok</p>' },
+  ];
+  expect(scanFiles(files, { forbidStatesPage: true }).findings).toEqual([
+    { file: `sub/${STATES_PAGE}`, rule: 'states-page', excerpt: '' },
+  ]);
+  expect(scanFiles([{ path: STATES_PAGE, html: '' }], { forbidStatesPage: true }).findings).toEqual([
+    { file: STATES_PAGE, rule: 'states-page', excerpt: '' },
+  ]);
+});
+test('@REQ-GATE-01 spaces around = in src and type attributes are still recognized', () => {
+  expect(rules('<script src = "/a.js"></script>')).toEqual([]);
+  expect(rules('<script type = "application/ld+json">{}</script>')).toEqual([]);
+  expect(rules('<script type=application/ld+jsonp>alert(1)</script>')).toEqual(['inline-script']);
+});

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import {
-  appendHistory, fetchLiveQuality, resolveHistory, upgradeToCurrent, UPGRADERS, type FetchDeps,
+  appendHistory, fetchLiveQuality, resolveHistory, upgradeToCurrent, UPGRADERS, type FetchDeps, type FetchOutcome,
 } from '../../src/lib/history';
 import { LIMITS, type HistoryPoint } from '../../src/lib/quality-schema';
 
@@ -166,5 +166,60 @@ describe('fetchLiveQuality', () => {
     const d = deps(['invalid', 200]);
     expect(await fetchLiveQuality('u', d)).toEqual({ kind: 'ok', body: valid() });
     expect(d.calls).toBe(2);
+  });
+});
+
+// Mutation testing (Task 11).
+describe('history edge cases', () => {
+  test('@REQ-QUAL-03 only an ok outcome is read as live data, even if another outcome carries a body', () => {
+    const errorWithBody = { kind: 'error', reason: 'HTTP 500', body: valid() } as unknown as FetchOutcome;
+    expect(resolveHistory(errorWithBody, undefined)).toEqual({ kind: 'fresh', warning: 'History restarted: HTTP 500; no valid previous artifact.' });
+  });
+  test('@REQ-QUAL-03 an invalid live file with no artifact names the invalid file in the warning', () => {
+    expect(resolveHistory({ kind: 'ok', body: null }, undefined))
+      .toEqual({ kind: 'fresh', warning: 'History restarted: live quality.json invalid; no valid previous artifact.' });
+  });
+  test('@REQ-QUAL-02 a schema version that is not a number is never upgraded', () => {
+    UPGRADERS[0] = (d) => ({ ...d, schemaVersion: 1 });
+    try {
+      const doc = valid(); doc.schemaVersion = '0';
+      expect(upgradeToCurrent(doc)).toBeNull();
+      doc.schemaVersion = 0;
+      expect(upgradeToCurrent(doc)?.schemaVersion).toBe(1);
+    } finally {
+      delete UPGRADERS[0];
+    }
+  });
+  test('@REQ-QUAL-03 a duplicate commit still trims an over-long history to the limit', () => {
+    const history = [point('a'), point('b'), point('c')];
+    expect(appendHistory(history, point('c'), 2).map((h) => h.commit)).toEqual(['b', 'c']);
+  });
+
+  const once = (status: number, body: unknown = valid()) => {
+    const d = { calls: 0, sleep: async () => {}, fetch: async () => { d.calls++; return { status: d.calls === 1 ? status : 200, json: async () => body }; } };
+    return d;
+  };
+  test.each([199, 300])('@REQ-QUAL-03 status %d with a valid body is still not a success', async (status) => {
+    const d = once(status);
+    expect(await fetchLiveQuality('u', d)).toEqual({ kind: 'ok', body: valid() });
+    expect(d.calls).toBe(2);
+  });
+  test('@REQ-QUAL-03 an HTTP failure is reported with its status', async () => {
+    const fetch = async () => ({ status: 503, json: async () => valid() });
+    expect(await fetchLiveQuality('u', { fetch, sleep: async () => {} })).toEqual({ kind: 'error', reason: 'HTTP 503' });
+  });
+  test('@REQ-QUAL-03 with no attempts the reason is unknown', async () => {
+    const fetch = async () => ({ status: 200, json: async () => valid() });
+    expect(await fetchLiveQuality('u', { fetch, sleep: async () => {}, attempts: 0 })).toEqual({ kind: 'error', reason: 'unknown' });
+  });
+  test('@REQ-QUAL-03 every attempt clears its timeout timer', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetch = async () => ({ status: 503, json: async () => valid() });
+      await fetchLiveQuality('u', { fetch, sleep: async () => {}, attempts: 2 });
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

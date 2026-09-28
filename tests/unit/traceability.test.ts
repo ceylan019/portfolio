@@ -218,3 +218,90 @@ describe('buildMatrix', () => {
     expect(describeProblem({ kind: 'missing-projects', missing: ['webkit'] })).toBe('No results from project(s): webkit.');
   });
 });
+
+// Mutation testing (Task 11): edge cases that pin the normalizers and the
+// matrix builder exactly.
+describe('normalizer edge cases', () => {
+  const vitestOne = (a: unknown, name = '/repo/tests/unit/x.test.ts', root = '/repo') =>
+    normalizeVitest({ testResults: [{ name, assertionResults: [a] }] }, root);
+
+  test('@REQ-TRACE-01 vitest drops non-object assertions and treats non-string names as empty', () => {
+    const report = { testResults: [{ name: '/repo/tests/unit/x.test.ts', assertionResults: [null, 'x', { fullName: 't', status: 'passed' }] }] };
+    expect(normalizeVitest(report, '/repo').map((t) => t.title)).toEqual(['t']);
+    expect(vitestOne({ fullName: 42, title: 'fallback', status: 'passed' })[0]!.title).toBe('fallback');
+    expect(vitestOne({ fullName: 42, status: 'passed' })[0]!.title).toBe('');
+  });
+  test('@REQ-TRACE-01 vitest line numbers must be finite numbers', () => {
+    expect(vitestOne({ fullName: 't', status: 'passed', location: { line: '7' } })[0]!.line).toBe(0);
+    expect(vitestOne({ fullName: 't', status: 'passed', location: { line: Infinity } })[0]!.line).toBe(0);
+    expect(vitestOne({ fullName: 't', status: 'passed', location: { line: 9 } })[0]!.line).toBe(9);
+  });
+  test('@REQ-TRACE-01 vitest files resolve relative to a root with or without a trailing slash', () => {
+    expect(vitestOne({ fullName: 't', status: 'passed' }, '/repo/tests/unit/x.test.ts', '/repo/')[0]!.file).toBe('tests/unit/x.test.ts');
+    expect(vitestOne({ fullName: 't', status: 'passed' }, '/repo//tests/unit/x.test.ts', '/repo')[0]!.file).toBe('tests/unit/x.test.ts');
+    expect(vitestOne({ fullName: 't', status: 'passed' }, 'elsewhere/x.test.ts', '/repo')[0]!.file).toBe('elsewhere/x.test.ts');
+  });
+  test('@REQ-TRACE-01 vitest suite comes from the folder: build, component or unit', () => {
+    expect(vitestOne({ fullName: 't', status: 'passed' }, '/repo/tests/build/z.test.ts')[0]!.suite).toBe('build');
+    expect(vitestOne({ fullName: 't', status: 'passed' }, '/repo/tests/components/z.test.ts')[0]!.suite).toBe('component');
+    expect(vitestOne({ fullName: 't', status: 'passed' }, '/repo/other/tests/build/z.test.ts')[0]!.suite).toBe('unit');
+  });
+
+  const pwSpec = (spec: Record<string, unknown>, test: Record<string, unknown> = {}) => normalizePlaywright({
+    suites: [{ specs: [{ title: 'x', file: 'e2e/x.spec.ts', line: 1, tags: [], ...spec, tests: [{ projectName: 'chromium', status: 'expected', annotations: [], ...test }] }] }],
+    config: { rootDir: '/repo/tests' },
+  }, '/repo');
+
+  test('@REQ-TRACE-01 playwright project "smoke" alone marks a test as smoke', () => {
+    expect(pwSpec({ tags: ['REQ-CV-01'] }, { projectName: 'smoke' })[0]!.suite).toBe('smoke');
+  });
+  test('@REQ-TRACE-01 playwright skips non-object suites at any depth', () => {
+    const out = normalizePlaywright({
+      suites: [null, { specs: [], suites: [null, { specs: [{ title: 'deep', file: 'e2e/d.spec.ts', line: 2, tags: [], tests: [{ projectName: 'chromium', status: 'expected', annotations: [] }] }] }] }],
+      config: { rootDir: '/repo/tests' },
+    }, '/repo');
+    expect(out.map((t) => t.title)).toEqual(['deep']);
+  });
+  test('@REQ-TRACE-01 playwright keeps only object annotations and only string descriptions', () => {
+    const [t] = pwSpec({}, { annotations: [null, 'x', { type: 'note' }, { type: 'axe-violations', description: 3 }, { type: 'issue', description: 'd' }] });
+    expect(t!.annotations).toStrictEqual([{ type: 'note' }, { type: 'axe-violations' }, { type: 'issue', description: 'd' }]);
+  });
+  test('@REQ-TRACE-01 playwright reads tags from both the tag list and the title', () => {
+    expect(pwSpec({ title: 'hero @REQ-HERO-01', tags: ['REQ-CV-01', 'REQ-CV-02'] })[0]!.tags).toEqual(['REQ-CV-01', 'REQ-CV-02', 'REQ-HERO-01']);
+  });
+  test('@REQ-TRACE-01 playwright spec with no title gets an empty title', () => {
+    expect(pwSpec({ title: undefined })[0]!.title).toBe('');
+  });
+});
+
+describe('buildMatrix edge cases', () => {
+  test('@REQ-TRACE-01 only evidence for the declared check covers a requirement', () => {
+    const base = allProjects({ tags: ['REQ-X-01'] });
+    const reqs = [req('REQ-PERF-01', { checks: ['lighthouse'] }), req('REQ-X-01')];
+    const links: CheckEvidence = { name: 'links', passed: true, examined: 5, detail: '' };
+    expect(buildMatrix(reqs, base, [links]).problems).toContainEqual({ kind: 'uncovered', id: 'REQ-PERF-01' });
+    expect(buildMatrix(reqs, base, [links]).rows[0]!.checks).toEqual([]);
+    expect(buildMatrix([req('REQ-X-01')], base, [links]).rows[0]!.checks).toEqual([]);
+  });
+  test('@REQ-TRACE-01 axe violations sum only axe-violations annotations, reading bad numbers as 0', () => {
+    const results = [
+      ...allProjects({ tags: ['REQ-X-01'] }),
+      r({ title: 'a', suite: 'axe', tags: ['REQ-X-01'], annotations: [{ type: 'axe-violations', description: '2' }, { type: 'note', description: '40' }] }),
+      r({ title: 'b', suite: 'axe', tags: ['REQ-X-01'], annotations: [{ type: 'axe-violations', description: '3' }, { type: 'axe-violations', description: 'many' }, { type: 'axe-violations' }] }),
+    ];
+    expect(buildMatrix([req('REQ-X-01')], results, []).counts.axeViolations).toBe(5);
+  });
+  test('@REQ-TRACE-01 several missing projects are listed in one sentence', () => {
+    const results = FIXTURE_PROJECTS.filter((p) => p !== 'iphone' && p !== 'webkit').map((p) => r({ project: p, tags: ['REQ-X-01'] }));
+    const problem = buildMatrix([req('REQ-X-01')], results, []).problems.find((p) => p.kind === 'missing-projects')!;
+    expect(describeProblem(problem)).toBe('No results from project(s): webkit, iphone.');
+  });
+  test('@REQ-TRACE-01 results with no project do not count as fixture test runs', () => {
+    const results = [...allProjects({ tags: ['REQ-X-01'] }), r({ title: 'u', project: null, suite: 'unit', tags: ['REQ-X-01'] })];
+    expect(buildMatrix([req('REQ-X-01')], results, []).counts.testRuns).toBe(5);
+  });
+});
+test('@REQ-TRACE-01 a REQ-like token must start with @REQ- to count as a malformed tag', () => {
+  const report = { testResults: [{ name: '/repo/tests/unit/x.test.ts', assertionResults: [{ fullName: 'mail@REQ-hero-01 @REQ-CV-01', status: 'passed' }] }] };
+  expect(normalizeVitest(report, '/repo')[0]!.tags).toEqual(['REQ-CV-01']);
+});

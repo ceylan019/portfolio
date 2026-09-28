@@ -7,8 +7,10 @@ const FLAG = /^placeholder:\s*['"]?true['"]?\s*(#.*)?$/im;
 export function findPlaceholders(files: { path: string; text: string }[]): string[] {
   return files
     .filter((f) => {
-      const scope = f.path.endsWith('.md') ? frontmatterOf(f.text) : f.text;
-      return scope !== null && FLAG.test(scope);
+      if (!f.path.endsWith('.md')) return FLAG.test(f.text);
+      // Stryker disable next-line StringLiteral: equivalent. Any stand-in for missing frontmatter lacks a "placeholder:" line, so it never matches.
+      const frontmatter = frontmatterOf(f.text) ?? '';
+      return FLAG.test(frontmatter);
     })
     .map((f) => f.path);
 }

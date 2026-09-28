@@ -106,3 +106,13 @@ describe('link state', () => {
     expect(parseLinkState(`<!-- link-state {"failures":{"${a}":0}} -->`)).toEqual({ failures: { [a]: 0 } });
   });
 });
+
+// Mutation testing (Task 11).
+test('@REQ-OPS-01 each reportable link is on its own line of the body', () => {
+  const body = renderLinksBody({ failures: { 'https://a.example/': 2, 'https://b.example/': 3 } });
+  expect(body).toContain('- https://a.example/ (failed 2 weekly checks in a row)\n- https://b.example/ (failed 3 weekly checks in a row)\n');
+});
+test('@REQ-OPS-01 the monitoring issues keep their exact titles, so a later run finds the same issue', () => {
+  expect(SMOKE_TITLE).toBe('Live site is failing');
+  expect(LINKS_TITLE).toBe('Broken external links');
+});

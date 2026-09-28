@@ -92,3 +92,8 @@ describe('ticks', () => {
     expect(showTickNote([])).toBe(false);
   });
 });
+
+// Mutation testing (Task 11).
+test('@REQ-CERT-05 a certification without an expiry date has validity none', () => {
+  expect(validity(cert({}), d('2026-09-27'))).toEqual({ kind: 'none' });
+});

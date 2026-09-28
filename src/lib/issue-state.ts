@@ -39,15 +39,16 @@ const STATE_COMMENT = /<!-- link-state (.*?) -->/;
 export function parseLinkState(body: string): LinkState | null {
   const match = body.match(STATE_COMMENT);
   if (!match) return null;
+  const json = match[1];
   let data: unknown;
   try {
-    data = JSON.parse(match[1]);
+    data = JSON.parse(json);
   } catch {
-    return null;
+    // Not JSON: data stays undefined, and the isRecord check below returns null.
   }
   if (!isRecord(data) || !isRecord(data.failures)) return null;
   for (const count of Object.values(data.failures)) {
-    if (typeof count !== 'number' || !Number.isInteger(count) || count < 0) return null;
+    if (!Number.isInteger(count) || (count as number) < 0) return null;
   }
   return { failures: data.failures as Record<string, number> };
 }

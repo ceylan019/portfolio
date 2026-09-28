@@ -62,9 +62,10 @@ function malformedReqTags(tokens: string[]): string[] {
 }
 
 const isObj = isRecord;
+// Stryker disable next-line ArrayDeclaration: equivalent. Every caller drops non-object items (isObj filter or guard), and a stray string tag like "@Stryker was here" is neither a requirement tag nor a suite tag.
 const arr = (x: unknown): unknown[] => (Array.isArray(x) ? x : []);
 const str = (x: unknown): string => (typeof x === 'string' ? x : '');
-const num = (x: unknown): number => (typeof x === 'number' && Number.isFinite(x) ? x : 0);
+const num = (x: unknown): number => (Number.isFinite(x) ? (x as number) : 0);
 const relative = (file: string, rootDir: string) =>
   file.startsWith(rootDir) ? file.slice(rootDir.length).replace(/^\/+/, '') : file;
 
@@ -85,6 +86,7 @@ export function normalizeVitest(report: unknown, rootDir: string): TestResult[] 
       return {
         title, file, line: isObj(a.location) ? num(a.location.line) : 0,
         suite: vitestSuite(file), project: null, status,
+        // Stryker disable next-line Regex: equivalent. Splitting on single whitespace only adds empty tokens, which malformedReqTags drops because they do not start with @REQ-.
         tags: [...tagsIn(title), ...malformedReqTags(title.split(/\s+/))],
         annotations: [],
       };
@@ -117,7 +119,9 @@ export function normalizePlaywright(report: unknown, rootDir: string): TestResul
       const rawTags = arr(spec.tags).map(str).map(withAt);
       const title = str(spec.title);
       const file = relative(testDir ? `${testDir}/${str(spec.file)}` : str(spec.file), rootDir);
-      const tags = [...tagsIn(`${rawTags.join(' ')} ${title}`), ...malformedReqTags(rawTags)];
+      // Stryker disable next-line StringLiteral: equivalent. Every raw tag starts with @, which can neither continue a tag match nor fail its lookahead, so the separator does not change which tags match.
+      const tagText = rawTags.join(' ');
+      const tags = [...tagsIn(`${tagText} ${title}`), ...malformedReqTags(rawTags)];
       for (const t of arr(spec.tests)) {
         if (!isObj(t)) continue;
         const project = str(t.projectName);
@@ -136,6 +140,9 @@ export function normalizePlaywright(report: unknown, rootDir: string): TestResul
 
 const testName = (t: TestResult) => `${t.file} > ${t.title}`;
 
+// Stryker disable next-line StringLiteral: equivalent. Any non-numeric fallback parses to NaN, which "|| 0" turns into the same 0.
+const violationCount = (description: string | undefined) => Number.parseInt(description ?? '0', 10) || 0;
+
 export function buildMatrix(reqs: Requirement[], results: TestResult[], evidence: CheckEvidence[]) {
   const known = new Set(reqs.map((r) => r.id));
   const gated = results.filter((t) => t.suite !== 'smoke');
@@ -146,7 +153,7 @@ export function buildMatrix(reqs: Requirement[], results: TestResult[], evidence
     for (const tag of t.tags) if (!known.has(tag)) problems.push({ kind: 'unknown-tag', tag, test: testName(t) });
   }
 
-  const seenProjects = new Set(gated.map((t) => t.project).filter((p): p is string => p !== null));
+  const seenProjects = new Set(gated.map((t) => t.project));
   const missing = FIXTURE_PROJECTS.filter((p) => !seenProjects.has(p));
   if (missing.length > 0) problems.push({ kind: 'missing-projects', missing });
 
@@ -162,6 +169,7 @@ export function buildMatrix(reqs: Requirement[], results: TestResult[], evidence
         byTest.set(key, { title: t.title, file: t.file, line: t.line, suite: t.suite as Suite, projects: t.project ? [t.project] : [] });
       }
     }
+    // Stryker disable next-line ArrayDeclaration: equivalent. An invented check name never matches a CheckEvidence name, so it is filtered out.
     const checks = (req.checks ?? []).filter((name) =>
       evidence.some((e) => e.name === name && e.passed && e.examined > 0));
     const phase = req.phase ?? 'pre-deploy';
@@ -170,12 +178,12 @@ export function buildMatrix(reqs: Requirement[], results: TestResult[], evidence
   });
 
   const uniqueTests = new Set(passed.map(testName));
-  const fixtureProjects: readonly string[] = FIXTURE_PROJECTS;
-  const testRuns = passed.filter((t) => t.project !== null && fixtureProjects.includes(t.project)).length;
+  const fixtureProjects: readonly (string | null)[] = FIXTURE_PROJECTS;
+  const testRuns = passed.filter((t) => fixtureProjects.includes(t.project)).length;
   const axeViolations = gated
     .flatMap((t) => t.annotations)
     .filter((a) => a.type === 'axe-violations')
-    .reduce((sum, a) => sum + (Number.parseInt(a.description ?? '0', 10) || 0), 0);
+    .reduce((sum, a) => sum + violationCount(a.description), 0);
 
   return { rows, problems, counts: { tests: uniqueTests.size, testRuns, axeViolations } };
 }

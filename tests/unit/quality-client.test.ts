@@ -88,3 +88,26 @@ test('@REQ-SEC-02 hydrate over an oversized document leaves blocks unavailable b
   expect(a.dataset.state).toBe('unavailable');
   expect(a.dataset.settled).toBe('true');
 });
+
+// Mutation testing (Task 11).
+test('@REQ-QUAL-01 loadQuality fetches /quality.json by default', async () => {
+  const urls: string[] = [];
+  await loadQuality(async (url) => { urls.push(url); return { ok: true, json: async () => JSON.parse(text('valid')) }; });
+  expect(urls).toEqual(['/quality.json']);
+});
+test('@REQ-QUAL-01 hydrate clears anything already in the live slot before rendering', async () => {
+  const a = block('a');
+  const slot = a.querySelector('[data-slot="live"]')!;
+  slot.append(document.createElement('i'));
+  await hydrate(document, { a: (live) => { live.append(document.createElement('b')); } }, fetchJson(text('valid')));
+  expect(slot.innerHTML).toBe('<b></b>');
+});
+test('@REQ-QUAL-01 a block with no live slot still settles when looking up its renderer throws', async () => {
+  const div = document.createElement('div');
+  div.dataset.block = 'a'; div.dataset.state = 'unavailable';
+  document.body.append(div);
+  const renderers = Object.defineProperty({}, 'a', { get() { throw new Error('boom'); } });
+  await expect(hydrate(document, renderers, fetchJson(text('valid')))).resolves.toBeUndefined();
+  expect(div.dataset.state).toBe('unavailable');
+  expect(div.dataset.settled).toBe('true');
+});

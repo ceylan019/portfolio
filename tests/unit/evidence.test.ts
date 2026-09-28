@@ -74,3 +74,30 @@ test('@REQ-TRACE-01 median scores only consider runs for the given URL', () => {
   expect(medianScores(mixed, urls[0]!).performance).toBe(70);
   expect(medianScores(mixed, urls[1]!).performance).toBe(10);
 });
+
+// Mutation testing (Task 11).
+test('@REQ-TRACE-01 lighthouse with no reports fails even when no URL was expected', () => {
+  expect(lighthouseEvidence({ lhrs: [], assertions: [], expectedUrls: [], runsPerUrl: 3 }))
+    .toEqual({ name: 'lighthouse', passed: false, examined: 0, detail: '0 runs' });
+});
+test('@REQ-TRACE-01 lighthouse lists every URL that ran too few times', () => {
+  expect(lighthouseEvidence({ lhrs: lhrs(2), assertions: [], expectedUrls: urls, runsPerUrl: 3 }).detail)
+    .toBe('Too few Lighthouse runs for: http://localhost:8788/, http://localhost:8788/quality');
+});
+test('@REQ-TRACE-01 links evidence ignores malformed reports and non-object links', () => {
+  expect(linksEvidence(null)).toEqual({ name: 'links', passed: false, examined: 0, detail: '0 links checked' });
+  expect(linksEvidence({ passed: true, links: 'x' })).toEqual({ name: 'links', passed: false, examined: 0, detail: '0 links checked' });
+  expect(linksEvidence({ passed: true, links: [null, 'x', { state: 'OK' }] }))
+    .toEqual({ name: 'links', passed: true, examined: 1, detail: '1 links checked' });
+});
+test('@REQ-TRACE-01 dist scan evidence is named dist-scan', () => {
+  expect(distScanEvidence({ scanned: ['index.html'], findings: [] }))
+    .toEqual({ name: 'dist-scan', passed: true, examined: 1, detail: '1 HTML files, 0 findings' });
+});
+test('@REQ-TRACE-01 median scores are 0 with no runs or a missing category, and read every category', () => {
+  expect(medianScores([], urls[0]!)).toEqual({ performance: 0, accessibility: 0, bestPractices: 0, seo: 0 });
+  const run = { requestedUrl: urls[0]!, categories: { performance: { score: 0.91 }, accessibility: { score: 0.92 }, 'best-practices': { score: 0.93 }, seo: { score: 0.94 } } };
+  expect(medianScores([run], urls[0]!)).toEqual({ performance: 91, accessibility: 92, bestPractices: 93, seo: 94 });
+  const { seo: _seo, ...partial } = run.categories;
+  expect(medianScores([{ ...run, categories: partial }], urls[0]!).seo).toBe(0);
+});

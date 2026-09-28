@@ -23,7 +23,7 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K, text?: string, attrs: Record<string, string> = {},
 ): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
-  if (text !== undefined) node.textContent = text;
+  node.textContent = text ?? '';
   const resolved: Record<string, string> =
     tag === 'a' ? { ...attrs, class: attrs.class ? `${attrs.class} lnk` : 'lnk' } : attrs;
   for (const [k, v] of Object.entries(resolved)) {

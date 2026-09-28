@@ -34,7 +34,7 @@ export function parseManifest(text: string): Manifest | null {
   try {
     data = JSON.parse(text);
   } catch {
-    return null;
+    // Not JSON: data stays undefined, and the isRecord check below returns null.
   }
   if (!isRecord(data)) return null;
   const entries = Object.entries(data);

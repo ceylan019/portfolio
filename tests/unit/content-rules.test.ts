@@ -47,3 +47,24 @@ describe('JSON-LD', () => {
     expect(JSON.parse(out).name).toBe('</script><script>alert(1)</script>');
   });
 });
+
+// Mutation testing (Task 11).
+describe('rules edge cases', () => {
+  test('@REQ-PRIV-01 identifying keys are reported in sorted order', () => {
+    expect(identifyingExifKeys({ latitude: 1, Artist: 'C' })).toEqual(['Artist', 'latitude']);
+  });
+  test('@REQ-CONTENT-03 a tagline sentence hidden in link text is still a repeat', () => {
+    expect(aboutProblems('[Testing web apps well](https://example.com/about). More words here.', 'Testing web apps well.'))
+      .toEqual(['About repeats the tagline: "testing web apps well"']);
+  });
+  test('@REQ-CONTENT-03 Markdown emphasis separates words', () => {
+    expect(wordCount('**Quality**first')).toBe(2);
+  });
+  test('@REQ-CONTENT-03 extra spaces inside a sentence neither add words nor hide a repeat', () => {
+    expect(sentences('Two  words. Three  short  words.')).toEqual(['three short words']);
+    expect(aboutProblems('Build reliable software.', 'Build  reliable  software')).toHaveLength(1);
+  });
+  test('@REQ-CONTENT-03 exactly the word limit is allowed', () => {
+    expect(aboutProblems(Array.from({ length: MAX_ABOUT_WORDS }, () => 'word').join(' '), 'Tagline goes here')).toEqual([]);
+  });
+});

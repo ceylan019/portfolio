@@ -2,8 +2,8 @@ import { isRecord } from './guards';
 
 const isObj = isRecord;
 
-const DETECTED = new Set(['Killed', 'Timeout']);
-const UNDETECTED = new Set(['Survived', 'NoCoverage']);
+const DETECTED: ReadonlySet<unknown> = new Set(['Killed', 'Timeout']);
+const UNDETECTED: ReadonlySet<unknown> = new Set(['Survived', 'NoCoverage']);
 
 /**
  * Summarizes a mutation-testing-report-schema JSON (Stryker's json reporter).
@@ -16,14 +16,15 @@ const UNDETECTED = new Set(['Survived', 'NoCoverage']);
  * are excluded from both, matching the task brief.
  */
 export function mutationSummary(report: unknown): { score: number; killed: number; total: number } {
+  // Stryker disable next-line ArrayDeclaration: equivalent. An invented string entry is not an object, so it contributes no mutants.
   const files = isObj(report) && isObj(report.files) ? Object.values(report.files) : [];
   let killed = 0;
   let total = 0;
   for (const f of files) {
+    // Stryker disable next-line ArrayDeclaration: equivalent. An invented string entry is not an object, so it has no status.
     const mutants = isObj(f) && Array.isArray(f.mutants) ? f.mutants : [];
     for (const m of mutants) {
       const status = isObj(m) ? m.status : undefined;
-      if (typeof status !== 'string') continue;
       if (DETECTED.has(status)) { killed++; total++; } else if (UNDETECTED.has(status)) total++;
     }
   }

@@ -26,6 +26,7 @@ export async function hydrate(root: ParentNode, renderers: Record<string, Render
   for (const block of blocks) {
     const live = block.querySelector<HTMLElement>('[data-slot="live"]');
     try {
+      // Stryker disable next-line StringLiteral: equivalent. The [data-block] selector guarantees the attribute, so dataset.block is never undefined.
       const render = renderers[block.dataset.block ?? ''];
       if (data && render && live) {
         live.replaceChildren();

@@ -46,6 +46,9 @@
     "wrangler": "4.142.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "sharp", "workerd"]
+    "onlyBuiltDependencies": ["esbuild", "sharp", "workerd"],
+    "patchedDependencies": {
+      "@stryker-mutator/vitest-runner@10.0.0": "patches/@stryker-mutator__vitest-runner@10.0.0.patch"
+    }
   }
 }
