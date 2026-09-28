@@ -1,0 +1,32 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import Certifications from '../components/Certifications.astro';
+import ProofStrip from '../components/ProofStrip.astro';
+import { loadProfile } from '../lib/content';
+import { FIXTURE_TODAY } from '../lib/build-date';
+import type { Certification } from '../lib/certifications';
+
+// Exists only in the fixture build (D20); the real build's dist scan fails if it appears (D21).
+export async function getStaticPaths() {
+  return process.env.BUILD_KIND === 'fixture' ? [{ params: { states: '__states' } }] : [];
+}
+
+const { data: profile } = await loadProfile();
+const today = FIXTURE_TODAY;
+const d = (s: string) => new Date(`${s}T00:00:00Z`);
+const one: Certification[] = [{ id: '1', name: 'ISTQB Certified Tester, Foundation Level', issuer: 'ISTQB', issueDate: d('2024-03-01'), verifyUrl: 'https://verify.example/1' }];
+const many: Certification[] = Array.from({ length: 8 }, (_, i) => ({ id: String(i), name: `Certification number ${i + 1}`, issuer: 'Issuer', issueDate: d(`202${i % 6}-0${(i % 9) + 1}-01`), ...(i % 2 ? { verifyUrl: 'https://verify.example/x' } : {}), ...(i === 3 ? { expiryDate: d('2024-01-01') } : {}) }));
+const long: Certification[] = [{ id: 'l', name: 'International Software Testing Qualifications Board Certified Tester Advanced Level Technical Test Analyst Extended', issuer: 'ISTQB', issueDate: d('2022-05-01'), credentialId: 'CTAL-TTA-2022-000000000000001', verifyUrl: 'https://verify.example/l' }];
+---
+<Base title="States" description="Visual states for tests" path="/__states" noindex>
+  <div class="page">
+    <main id="main">
+      <div id="hero-long-name"><Hero profile={{ ...profile, name: 'Ceylan Akyol Testname Longerthanusual Xy', showAvailability: true, availability: 'Based in Fixture City, open to remote. Available from November.' }} /></div>
+      <div id="certs-one"><Certifications entries={one} today={today} /></div>
+      <div id="certs-many"><Certifications entries={many} today={today} /></div>
+      <div id="certs-long"><Certifications entries={long} today={today} /></div>
+      <div id="proof-fallback"><ProofStrip /></div>
+    </main>
+  </div>
+</Base>
