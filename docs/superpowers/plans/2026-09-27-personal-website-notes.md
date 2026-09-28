@@ -13,6 +13,7 @@ None so far. Where the plan and the spec disagreed, the spec was followed; the p
 ### Open questions
 
 - Brush ring colours: DESIGN.md tokens are used; photo-mark.svg's own gradient stops differ slightly. Add tokens to DESIGN.md if you want the SVG's exact shades (Task 12).
+- Credential IDs longer than about 35 characters cannot both stay unbroken and avoid sideways scrolling at 375px (spec section 6). Check your real IDs at launch (Task 20).
 
 ### Things you must do
 
@@ -429,3 +430,42 @@ Commits `758db92` and `09466f4`. `src/pages/[states].astro` renders the long-nam
 - Spec section 8 also lists sparse and full history and a matrix with many rows. Those are drawn in the browser from `quality.json`, so they are covered in Task 20's `/quality` tests with routed data variants, not on this page.
 
 **Verified:** `dist-fixture/__states.html` has no inline style, and `dist/__states.html` does not exist.
+
+## Task 20: Playwright configuration and browser test suites
+
+Commits `69242fd`, `6a0a23b` and `995a721`. New files: `playwright.config.ts`, shared fixtures, and 12 spec files. `overflow.spec.ts` and `scripts/serve-and-wait.sh` were added beyond the brief.
+
+Suites: home, quality, quality-data, nojs, overflow, a11y, headers, previews, health, visual and real.
+
+**Local results (macOS host, not the Linux container):**
+- Fixture build, visual excluded: 51 tests passed, 0 failed and 0 skipped in each of chromium, firefox, webkit, iphone and pixel. That is 255 test runs.
+- Real build (`real-chromium`, served with a stand-in `quality.json` that is not in `dist`): 14 passed.
+- Visual suite: all 24 tests (chromium and pixel) ran and failed only because no baseline exists yet. No screenshot files were written or committed.
+- The traceability builder reports no problems for the 283 Playwright results.
+
+**Changes from the plan:**
+- The plan's two "no sideways scroll" checks ran at the desktop viewport (1280px), where they could never fail. `overflow.spec.ts` forces a 375px viewport on `/`, `/quality`, `/__states` and a many-rows `/quality` in all five profiles (Review Focus 3). It found a real bug: `/__states` scrolled 18px sideways because the whole "Credential ID" line refused to wrap. Now the label can wrap, and the ID stays unbroken (commit `69242fd`).
+- Ruling P11: the invalid `hostile.json` must settle as `unavailable`. The valid `hostile-valid.json` must settle as `ready` with nothing injected: only expected element types, every link `https`, and no marker attribute set on the page.
+- `/quality` gets routed variants for sparse history (2 points) and a many-row matrix, tagged `@REQ-STATE-01` and included in the visual suite. They cover spec section 8's states that are drawn in the browser.
+- Ruling P23: the section-order test is tagged `@REQ-A11Y-04`, and it also checks that each section is labelled by its heading.
+- Header tests assert exact values. Task 18 recorded what `wrangler dev` really serves.
+- WebKit does not move focus to links with plain Tab (Safari's default), so the keyboard test uses Alt+Tab there. It asserts the same focus order and the site's own 2px solid focus ring on the skip link, the CV button and Email.
+- The plan's list of certifications grew from 5 to 6 rows, because the fixture now includes the certification expiring today.
+- One serve-and-wait helper (ruling P27): `scripts/serve-and-wait.sh`.
+
+**Verified against real tools:**
+- The Playwright 1.63 JSON reporter drops the `@` from tags. The traceability builder handles that.
+- `--update-snapshots=none` fails on a missing baseline without writing an image.
+- `playwright install` kept timing out when downloading from its CDN on this machine, although plain downloads of the same URLs worked. The implementer downloaded the exact browser archives Playwright names and placed them in its install folders. This only affects local runs, because CI uses the Playwright container.
+
+**Reviewer findings:**
+- Important, fixed: the "no console errors on any page and data state" test (REQ-HEALTH-01) skipped the "missing `quality.json`" state. It now covers it, ignoring only the one expected 404 message.
+- Ruled in and fixed: five tightened assertions:
+  - the focus ring is the site's own 2px solid outline
+  - each credential ID renders on one line
+  - all 5 Verify links appear
+  - the real build has at least one visible certification
+  - the oversized variant fails for the matrix limit
+- Not yet verified: whether Alt+Tab behaves the same in WebKit inside the Linux container. It is confirmed on macOS only, and the first CI run will show it.
+
+**Open question for you:** spec section 6 asks for both "credential IDs never break mid-token" and "no horizontal scroll at 375px". The schema allows credential IDs up to 60 characters, and an unbroken ID longer than about 35 characters cannot fit a 375px screen. The site keeps IDs unbroken, and every tested ID fits. If one of your real IDs is longer than about 35 characters, choose between capping the ID length in the schema and allowing a break only for IDs that cannot fit.
