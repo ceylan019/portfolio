@@ -1,0 +1,4 @@
+name: Hidden Certification Must Not Render
+issuer: Nobody
+issueDate: 2025-01-01
+hidden: true

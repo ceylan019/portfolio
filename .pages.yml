@@ -1,0 +1,43 @@
+media:
+  - name: uploads
+    label: Photos and CV
+    input: src/assets/uploads
+    output: /src/assets/uploads
+    extensions: [jpg, jpeg, png, webp, avif, pdf]
+
+content:
+  - name: profile
+    label: Profile
+    type: file
+    path: src/content/profile/profile.md
+    format: yaml-frontmatter
+    fields:
+      - { name: name, label: Name, type: string, required: true }
+      - { name: title, label: Job title, type: string, required: true }
+      - { name: tagline, label: Tagline (one sentence), type: string, required: true }
+      - { name: photo, label: Photo (JPG, PNG, WebP or AVIF, at least 800px), type: image, required: true, options: { media: uploads, extensions: [jpg, jpeg, png, webp, avif] } }
+      - { name: photoAlt, label: Photo description, type: string, required: true }
+      - { name: email, label: Email, type: string, required: true }
+      - { name: linkedinUrl, label: LinkedIn URL, type: string, required: true }
+      - { name: githubUrl, label: GitHub URL, type: string, required: true }
+      - { name: cv, label: CV (PDF, public version without phone or address), type: file, required: true, options: { media: uploads, extensions: [pdf] } }
+      - { name: availability, label: Availability line, type: string }
+      - { name: showAvailability, label: Show availability on the site, type: boolean, default: false }
+      - { name: placeholder, label: Placeholder (blocks deploy), type: boolean, default: false }
+      - { name: body, label: About (at most about 90 words), type: rich-text }
+
+  - name: certifications
+    label: Certifications
+    type: collection
+    path: src/content/certifications
+    format: yaml
+    filename: "{primary}.yaml"
+    fields:
+      - { name: name, label: Name, type: string, required: true }
+      - { name: issuer, label: Issuer, type: string, required: true }
+      - { name: issueDate, label: Issue date, type: date, required: true }
+      - { name: expiryDate, label: Expiry date, type: date }
+      - { name: credentialId, label: Credential ID, type: string }
+      - { name: verifyUrl, label: Verification URL, type: string }
+      - { name: hidden, label: Hide from the site, type: boolean, default: false }
+      - { name: placeholder, label: Placeholder (blocks deploy), type: boolean, default: false }
