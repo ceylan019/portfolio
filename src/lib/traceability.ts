@@ -86,8 +86,8 @@ export function normalizeVitest(report: unknown, rootDir: string): TestResult[] 
       return {
         title, file, line: isObj(a.location) ? num(a.location.line) : 0,
         suite: vitestSuite(file), project: null, status,
-        // Stryker disable next-line Regex: equivalent. Splitting on single whitespace only adds empty tokens, which malformedReqTags drops because they do not start with @REQ-.
-        tags: [...tagsIn(title), ...malformedReqTags(title.split(/\s+/))],
+        // Empty tokens from repeated whitespace never start with @REQ-, so malformedReqTags drops them.
+        tags: [...tagsIn(title), ...malformedReqTags(title.split(/\s/))],
         annotations: [],
       };
     });

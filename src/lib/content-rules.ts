@@ -4,15 +4,15 @@ const stripMarkdown = (text: string) =>
   text.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`#>]/g, ' ');
 
 export function wordCount(text: string): number {
-  // Stryker disable next-line Regex: equivalent. Splitting on single whitespace only adds empty tokens, which the filter below drops.
-  const tokens = stripMarkdown(text).split(/\s+/);
+  // Empty tokens from repeated whitespace have no letter or digit, so the filter drops them.
+  const tokens = stripMarkdown(text).split(/\s/);
   return tokens.filter((w) => /[A-Za-z0-9]/.test(w)).length;
 }
 
 /** Lowercased sentences of 3 or more words, punctuation removed, for overlap checks. */
 export function sentences(text: string): string[] {
-  // Stryker disable next-line Regex: equivalent. Dropping "+" or "|$" only leaves extra punctuation or an empty piece, and the next step strips punctuation while the length filter drops empty pieces.
-  const pieces = stripMarkdown(text).split(/[.!?]+(?:\s|$)/);
+  // Repeated or final punctuation left on a piece is stripped by the next step.
+  const pieces = stripMarkdown(text).split(/[.!?]\s/);
   return pieces
     .map((s) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim())
     .filter((s) => s.split(' ').length >= 3);
