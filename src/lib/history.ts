@@ -1,6 +1,7 @@
 import {
   LIMITS, SCHEMA_VERSION, parseQualityReport, type HistoryPoint, type QualityReport,
 } from './quality-schema';
+import { isRecord } from './guards';
 
 export type FetchOutcome =
   | { kind: 'ok'; body: unknown }
@@ -11,8 +12,6 @@ type Doc = Record<string, unknown>;
 
 /** Upgrader for version n produces version n + 1. Empty while the schema is at v1 (D28). */
 export const UPGRADERS: Record<number, (doc: Doc) => Doc> = {};
-
-const isRecord = (x: unknown): x is Doc => typeof x === 'object' && x !== null && !Array.isArray(x);
 
 export function upgradeToCurrent(raw: unknown): QualityReport | null {
   if (!isRecord(raw)) return null;
