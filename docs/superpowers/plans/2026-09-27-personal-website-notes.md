@@ -26,7 +26,7 @@ None so far. Where the plan and the spec disagreed, the spec was followed; the p
 
 ## Environment
 
-- Branch `feat/phase-1-site`, created from `main` at `c9bb45f`. Git identity checked: "Ceylan Akyol" <akyl.cyln@gmail.com> (repo-local, unchanged).
+- Branch `feat/phase-1-site`, created from `main` at `c9bb45f`. Git identity checked: the repo-local personal identity "Ceylan Akyol" matches the required one and was not changed.
 - The machine's default Node is 23 (Homebrew) and nvm's default is 18. Node 22.23.3 was installed through nvm and is used by putting its `bin` directory first on `PATH`. The nvm default was not changed.
 - pnpm 10.18.0 through corepack (the version in the plan's `packageManager`).
 - Docker is installed but its daemon is not running, so container-based steps (Playwright container, visual baselines) cannot run locally.
