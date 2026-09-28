@@ -1,0 +1,69 @@
+---
+import '@fontsource/schibsted-grotesk/latin-400.css';
+import '@fontsource/schibsted-grotesk/latin-500.css';
+import '@fontsource/schibsted-grotesk/latin-800.css';
+import '../styles/tokens.css';
+import '../styles/base.css';
+import font800 from '@fontsource/schibsted-grotesk/files/schibsted-grotesk-latin-800-normal.woff2?url';
+import { serializeJsonLd } from '../lib/jsonld';
+
+interface Props {
+  title: string;
+  description: string;
+  path: string;
+  noindex?: boolean;
+  jsonLd?: Record<string, unknown>;
+}
+const { title, description, path, noindex = false, jsonLd } = Astro.props;
+// Astro.site is unset under the Container API (it validates against
+// ASTRO_CONFIG_DEFAULTS, not astro.config.mjs), so this fallback is what the
+// component test exercises; the real build always has Astro.site from `site`.
+const site = (Astro.site?.href ?? 'https://ceylan-akyol.example.workers.dev/').replace(/\/$/, '');
+const canonical = `${site}${path === '/' ? '' : path}`;
+const beaconToken = process.env.BUILD_KIND === 'real' ? process.env.CF_BEACON_TOKEN : undefined;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preload" href={font800} as="font" type="font/woff2" crossorigin />
+    {noindex ? (
+      <meta name="robots" content="noindex" />
+    ) : (
+      <>
+        <link rel="canonical" href={canonical} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:image" content={`${site}/og.png`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+      </>
+    )}
+    {jsonLd && <script type="application/ld+json" set:html={serializeJsonLd(jsonLd)} />}
+    {beaconToken && (
+      // Cloudflare updates beacon.min.js in place, so Subresource Integrity cannot be used here.
+      <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon={JSON.stringify({ token: beaconToken })}></script>
+    )}
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <svg width="0" height="0" aria-hidden="true" class="defs">
+      <defs>
+        <linearGradient id="tick-gradient" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" class="tick-stop-a" />
+          <stop offset="1" class="tick-stop-b" />
+        </linearGradient>
+      </defs>
+    </svg>
+    <slot />
+  </body>
+</html>

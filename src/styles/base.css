@@ -1,0 +1,62 @@
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body { background: var(--bg); color: var(--ink); font: 400 18px/1.6 var(--font); font-variant-numeric: tabular-nums; }
+@media (max-width: 899px) { body { font-size: 17px; } }
+img, svg { display: block; max-width: 100%; }
+
+.skip { position: absolute; left: 16px; top: -64px; background: var(--ink); color: var(--bg); padding: 12px 16px; border-radius: 8px; z-index: 10; }
+.skip:focus { top: 16px; }
+:focus-visible { outline: 2px solid var(--rose-text); outline-offset: 3px; border-radius: 4px; }
+
+.page { max-width: calc(var(--max) + 2 * var(--gutter)); margin: 0 auto; padding: 64px var(--gutter) 32px; }
+@media (max-width: 899px) { .page { padding-top: 32px; } }
+
+.lnk, .prose a, .list a, .reqs a { color: var(--rose-text); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, var(--rose-text) 40%, transparent); font-weight: 500; }
+.lnk:visited, .prose a:visited, .list a:visited, .reqs a:visited { color: var(--visited); text-decoration-color: var(--muted); }
+.lnk { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* T12-C: 22px snapped to the 24px spacing-scale step (4, 8, 12, 16, 24, 32, 48, 64, 96). */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px; border-radius: 10px; background: var(--rose-mark); color: var(--on-rose); font-weight: 700; text-decoration: none; }
+.btn:hover { background: var(--rose-mark-hover); }
+.btn:active { background: var(--rose-mark-active); }
+
+.muted { color: var(--muted); }
+h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
+
+.sec { display: grid; grid-template-columns: var(--label-col) 1fr; gap: var(--col-gap); margin-top: var(--section-gap); }
+.sec > .side .note { font-size: 14px; color: var(--muted); margin-top: 8px; max-width: 26ch; line-height: 1.5; }
+@media (max-width: 899px) { .sec { grid-template-columns: 1fr; gap: 12px; } }
+.prose p { max-width: 62ch; }
+.prose p + p { margin-top: 16px; }
+/* P4: a long unbroken URL in About cannot scroll the page sideways at 375px. */
+.prose { overflow-wrap: anywhere; }
+
+.list { list-style: none; padding: 0; }
+.row { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; padding: 16px 0; border-top: 1px solid var(--line); align-items: start; }
+.row:last-child { border-bottom: 1px solid var(--line); }
+.row .meta { display: block; color: var(--muted); font-size: 16px; }
+.row .cid { display: block; color: var(--muted); font-size: 14px; white-space: nowrap; }
+/* T12-C: 19px snapped to the 20px type-scale row ("Role, tagline"). */
+.row .title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.35; overflow-wrap: anywhere; }
+.row.expired .title { color: var(--muted); }
+/* T12-C: 13px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
+.expired-label { display: inline-block; font-size: 14px; font-weight: 700; color: var(--muted); border: 1.5px solid var(--line); border-radius: 6px; padding: 0 8px; margin-left: 6px; vertical-align: 3px; }
+@media (max-width: 899px) { .row { grid-template-columns: 32px 1fr; } .row > :last-child { grid-column: 2; } }
+
+.tick-ink { fill: url(#tick-gradient); }
+.tick-stop-a { stop-color: var(--rose-mark); }
+.tick-stop-b { stop-color: var(--coral); }
+
+.big { font-size: 24px; line-height: 1.45; font-weight: 500; letter-spacing: -0.01em; max-width: 40ch; }
+.big b { font-weight: 800; }
+@media (max-width: 899px) { .big { font-size: 20px; } }
+
+/* Data blocks (E7, E14, G3): fallback until the loader marks the block ready. */
+[data-block][data-state="unavailable"] > [data-slot="live"] { display: none; }
+[data-block][data-state="ready"] > [data-slot="fallback"] { display: none; }
+[data-block="proof-strip"] { min-height: 7.5em; }
+
+.foot { margin-top: var(--section-gap); padding-top: 24px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+
+.defs { position: absolute; }

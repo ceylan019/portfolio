@@ -1,0 +1,28 @@
+/*
+ * Design tokens (DESIGN.md "Color tokens" and "Spacing"). T12-B: this is
+ * exactly the DESIGN.md color table, light and dark. --face, --rose-start
+ * and --peach-end from the plan's draft are dropped as unused: the brush
+ * gradient runs --rose-mark to --coral, and the second pass uses --peach.
+ * photo-mark.svg's own gradient stops differ slightly from these tokens
+ * (recorded for Ceylan in the task report).
+ */
+:root {
+  color-scheme: light dark;
+  --bg: #FFF6F5; --ink: #2C1822; --muted: #7D5F69;
+  --rose-mark: #CF3F68; --rose-mark-hover: #B8325A; --rose-mark-active: #9E2A4E; --on-rose: #FFFFFF;
+  --rose-text: #B8325A; --visited: #8A2447;
+  --coral: #F08A5D; --peach: #F7B596; --blush: #FBE1E3; --line: #F1D9DC;
+  --gutter: 64px; --section-gap: 96px; --label-col: 220px; --col-gap: 48px; --max: 1120px;
+  --font: "Schibsted Grotesk", ui-sans-serif, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1E1117; --ink: #F8E8EB; --muted: #B8949F;
+    --rose-mark: #F0729A; --rose-mark-hover: #F48FB0; --rose-mark-active: #E0678E; --on-rose: #1E1117;
+    --rose-text: #F0729A; --visited: #E8B89A;
+    --coral: #F4A07C; --peach: #C9785C; --blush: #2E1A23; --line: #3A2530;
+  }
+}
+@media (max-width: 899px) {
+  :root { --gutter: 16px; --section-gap: 64px; }
+}
