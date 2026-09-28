@@ -351,3 +351,18 @@ Commit `3c134b2`. `Certifications.astro` and `CertEntry.astro` were implemented 
 - No critical or important findings.
 - Minor, deferred: each Verify link's accessible name is built from the certification name only. Two visible certifications with the same name (for example, a renewal recorded as a second entry) would produce duplicate link names.
 - Minor, deferred: no committed test locks in that an entry without a verify URL shows no tick and no link. The code does this correctly.
+
+## Task 16: Hero, proof strip, About, Contact, footer and the home page
+
+Commit `4595748`. The home page is built from content in the approved order: hero, certifications, proof strip, About, Contact, footer. The suite passes 302 of 302, and both builds succeed.
+
+**Changes from the plan:**
+- Ruling P10: `src/lib/site.ts` is included in the commit. The plan's `git add` list left it out.
+- Ruling T13-A: the page takes "today" from `buildToday`. The fixture build therefore shows the 27 September 2026 state: the certification expiring that day reads "Valid until September 2026", and the footer year is 2026. `BUILD_KIND` is available through both `import.meta.env` and `process.env` during `astro build`, and this was checked.
+
+**Verified against real tools:**
+- Built HTML: `dist/index.html` and `dist-fixture/index.html` contain no `style=` and no `<style`. Each has exactly two script tags: the JSON-LD block and one external `/_astro/*.js` module. There is no analytics beacon without a token.
+
+**Reviewer findings:**
+- No critical or important findings.
+- Minor, deferred: an Astro markdown deprecation warning prints during every component test that uses the Container API. It dates from an earlier task, and the final review will trace it. `About.astro` has no render test of its own. Some component props are typed `any`.
