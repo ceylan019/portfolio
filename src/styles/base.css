@@ -156,3 +156,13 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
   .req { grid-template-columns: 30px 1fr; }
   .req > .rq-cov { grid-column: 2; }
 }
+
+/* /404 (Task 18). T18-A: the numeral uses the DESIGN.md "Name" display size (96px
+   desktop, 60px under 900px), the same as .name, not the brief's flat 120px; the text
+   margin is 24px, snapped to the 4px spacing scale, not the brief's 20px. */
+.nf { padding: 64px 0; }
+.nf-code { font-size: 96px; font-weight: 800; letter-spacing: -0.035em; line-height: .92; }
+.nf-text { font-size: 20px; margin-top: 24px; max-width: 30ch; }
+@media (max-width: 899px) {
+  .nf-code { font-size: 60px; }
+}
