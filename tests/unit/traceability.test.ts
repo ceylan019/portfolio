@@ -43,6 +43,15 @@ describe('normalizeVitest', () => {
     expect(normalizeVitest({ nope: 1 }, '/repo')).toEqual([]);
     expect(normalizeVitest(null, '/repo')).toEqual([]);
   });
+  test('@REQ-TRACE-01 skips a non-object file result without throwing', () => {
+    const report = { testResults: [null, {
+      name: '/repo/tests/unit/x.test.ts',
+      assertionResults: [{ fullName: 't', title: 't', status: 'passed' }],
+    }] };
+    expect(normalizeVitest(report, '/repo')).toEqual([
+      { title: 't', file: 'tests/unit/x.test.ts', line: 0, suite: 'unit', project: null, status: 'passed', tags: [], annotations: [] },
+    ]);
+  });
 });
 
 describe('normalizePlaywright', () => {
@@ -76,6 +85,54 @@ describe('normalizePlaywright', () => {
     expect(tagged(['visual', 'REQ-CV-01'], 'chromium')).toBe('visual');
     expect(tagged(['REQ-CV-01'], 'real-chromium')).toBe('real');
     expect(tagged(['@REQ-CV-01'], 'chromium')).toBe('e2e');
+  });
+  test('@REQ-TRACE-01 an already @-prefixed smoke, visual or axe tag is recognized on its own, without a matching project name', () => {
+    const tagged = (tags: string[]) => normalizePlaywright({ suites: [{ specs: [{ title: 'x', file: 'e2e/x.spec.ts', line: 1, tags, tests: [{ projectName: 'chromium', status: 'expected', annotations: [] }] }] }], config: { rootDir: '/repo/tests' } }, '/repo')[0]!.suite;
+    expect(tagged(['@smoke'])).toBe('smoke');
+    expect(tagged(['@visual'])).toBe('visual');
+    expect(tagged(['@axe'])).toBe('axe');
+  });
+  test('@REQ-TRACE-01 a malformed report yields no results', () => {
+    expect(normalizePlaywright(null, '/repo')).toEqual([]);
+    expect(normalizePlaywright({}, '/repo')).toEqual([]);
+  });
+  test('@REQ-TRACE-01 skips non-object specs and tests, falling back to an already-relative file when config is missing', () => {
+    const malformed = {
+      suites: [{ specs: [
+        null,
+        { title: 'x', file: '/repo/tests/e2e/x.spec.ts', line: 5, tags: [], tests: [null, { projectName: 'chromium', status: 'expected', annotations: [] }] },
+      ] }],
+    };
+    expect(normalizePlaywright(malformed, '/repo')).toEqual([
+      { title: 'x', file: 'tests/e2e/x.spec.ts', line: 5, suite: 'e2e', project: 'chromium', status: 'passed', tags: [], annotations: [] },
+    ]);
+  });
+});
+
+describe('malformed requirement tags (E15)', () => {
+  test('@REQ-TRACE-01 normalizePlaywright keeps a malformed REQ tag so the gate reports it as unknown', () => {
+    const out = normalizePlaywright({
+      suites: [{ specs: [{ title: 'x', file: 'e2e/x.spec.ts', line: 1, tags: ['REQ-CV-01', 'REQ-HERO-1'], tests: [
+        { projectName: 'chromium', status: 'expected', annotations: [] },
+      ] }] }],
+      config: { rootDir: '/repo/tests' },
+    }, '/repo');
+    expect(out[0]!.tags).toEqual(['REQ-CV-01', 'REQ-HERO-1']);
+    const { problems } = buildMatrix([req('REQ-CV-01')], out, []);
+    expect(problems).toContainEqual({ kind: 'unknown-tag', tag: 'REQ-HERO-1', test: 'tests/e2e/x.spec.ts > x' });
+  });
+
+  test('@REQ-TRACE-01 normalizeVitest keeps a malformed REQ token in the title so the gate reports it as unknown', () => {
+    const report = { testResults: [{
+      name: '/repo/tests/unit/x.test.ts',
+      assertionResults: [{ fullName: 'group @REQ-CV-01 @REQ-hero-01 works', title: 't', status: 'passed' }],
+    }] };
+    const out = normalizeVitest(report, '/repo');
+    expect(out[0]!.tags).toEqual(['REQ-CV-01', 'REQ-hero-01']);
+    const { problems } = buildMatrix([req('REQ-CV-01')], out, []);
+    expect(problems).toContainEqual({
+      kind: 'unknown-tag', tag: 'REQ-hero-01', test: 'tests/unit/x.test.ts > group @REQ-CV-01 @REQ-hero-01 works',
+    });
   });
 });
 
@@ -137,8 +194,27 @@ describe('buildMatrix', () => {
     expect(counts).toEqual({ tests: 3, testRuns: 5, axeViolations: 0 });
   });
 
+  test('@REQ-TRACE-01 the same project reported twice for one test is not duplicated, and a null project starts empty', () => {
+    const results = [
+      r({ title: 'cv', project: 'chromium', tags: ['REQ-CV-01'] }),
+      r({ title: 'cv', project: 'chromium', tags: ['REQ-CV-01'] }),
+      r({ title: 'unit', project: null, suite: 'unit', file: 'tests/unit/u.test.ts', tags: ['REQ-U-01'] }),
+    ];
+    const { rows } = buildMatrix([req('REQ-CV-01'), req('REQ-U-01')], results, []);
+    expect(rows.find((x) => x.id === 'REQ-CV-01')!.tests).toEqual([
+      { title: 'cv', file: 'tests/e2e/a.spec.ts', line: 1, suite: 'e2e', projects: ['chromium'] },
+    ]);
+    expect(rows.find((x) => x.id === 'REQ-U-01')!.tests).toEqual([
+      { title: 'unit', file: 'tests/unit/u.test.ts', line: 1, suite: 'unit', projects: [] },
+    ]);
+  });
+
   test('@REQ-TRACE-01 problems read as plain sentences', () => {
     expect(describeProblem({ kind: 'uncovered', id: 'REQ-CV-01' })).toBe('REQ-CV-01 has no passing test or check.');
+    expect(describeProblem({ kind: 'unknown-tag', tag: 'REQ-XX-99', test: 'tests/e2e/a.spec.ts > typo' }))
+      .toBe('tests/e2e/a.spec.ts > typo uses unknown tag REQ-XX-99.');
+    expect(describeProblem({ kind: 'untagged', test: 'tests/e2e/a.spec.ts > bare' }))
+      .toBe('tests/e2e/a.spec.ts > bare has no requirement tag.');
     expect(describeProblem({ kind: 'missing-projects', missing: ['webkit'] })).toBe('No results from project(s): webkit.');
   });
 });

@@ -49,6 +49,18 @@ export function tagsIn(text: string): string[] {
   return [...new Set([...text.matchAll(TAG)].map((m) => m[1]!))];
 }
 
+// Anything that looks like a requirement tag (starts with @REQ-, case
+// insensitive) but does not match tagsIn's strict REQ-XXXX-99 pattern is a
+// malformed or near-miss tag: for example REQ-HERO-1, REQ-hero-01 or
+// REQ-HERO-012. tagsIn silently drops these, which would let a test's
+// intended coverage disappear instead of failing the gate. Kept verbatim
+// without the leading @, so buildMatrix reports it as unknown-tag (spec
+// section 8: CI fails when a test uses a tag that is not in the registry).
+const REQ_LIKE = /^@REQ-/i;
+function malformedReqTags(tokens: string[]): string[] {
+  return [...new Set(tokens.filter((t) => REQ_LIKE.test(t) && tagsIn(t).length === 0).map((t) => t.slice(1)))];
+}
+
 const isObj = isRecord;
 const arr = (x: unknown): unknown[] => (Array.isArray(x) ? x : []);
 const str = (x: unknown): string => (typeof x === 'string' ? x : '');
@@ -72,7 +84,9 @@ export function normalizeVitest(report: unknown, rootDir: string): TestResult[] 
       const status = a.status === 'passed' ? 'passed' : a.status === 'failed' ? 'failed' : 'skipped';
       return {
         title, file, line: isObj(a.location) ? num(a.location.line) : 0,
-        suite: vitestSuite(file), project: null, status, tags: tagsIn(title), annotations: [],
+        suite: vitestSuite(file), project: null, status,
+        tags: [...tagsIn(title), ...malformedReqTags(title.split(/\s+/))],
+        annotations: [],
       };
     });
   });
@@ -103,7 +117,7 @@ export function normalizePlaywright(report: unknown, rootDir: string): TestResul
       const rawTags = arr(spec.tags).map(str).map(withAt);
       const title = str(spec.title);
       const file = relative(testDir ? `${testDir}/${str(spec.file)}` : str(spec.file), rootDir);
-      const tags = tagsIn(`${rawTags.join(' ')} ${title}`);
+      const tags = [...tagsIn(`${rawTags.join(' ')} ${title}`), ...malformedReqTags(rawTags)];
       for (const t of arr(spec.tests)) {
         if (!isObj(t)) continue;
         const project = str(t.projectName);
