@@ -168,3 +168,21 @@ Commits `7197ce4` and `1eaf09a`. `src/lib/dist-scan.ts` has 10 unit tests, and t
 - Fixed in a second round: the implementer's report used dashes as punctuation, and its first fix claim was inaccurate. Only the report changed, not the code.
 - Minor, deferred: the nested-path branch of the states page check has no test.
 - Carried to Task 22: the CLI around the scanner must assert that it scanned a non-zero number of files including `index.html` (spec section 7).
+
+## Task 7: Deploy gates (manifest, placeholders, stale commit)
+
+Commits `980dcf7` and `10f5e0b`. New modules: `src/lib/manifest.ts`, `placeholders.ts`, `stale-sha.ts`, and a shared `frontmatter.ts`. There are 22 gate tests, and the unit suite passes 123 of 123.
+
+**Decisions not in the plan:**
+- Ruling P27: frontmatter extraction lives once, in `src/lib/frontmatter.ts` (`frontmatterOf`). Tasks 9 and 22 must import it instead of copying the regex.
+
+**Changes from the plan:**
+- Two fail-open paths were copied from the plan's own code, and both are fixed because the spec says deploy must refuse:
+  - `diffManifest` used `path in expected`, which also finds names inherited from every JavaScript object. An extra file named `toString` passed manifest verification. Both membership checks now use `Object.hasOwn`.
+  - The placeholder regex missed `placeholder: True`, `placeholder: TRUE` and `placeholder: true  # remove before launch`, so placeholder content could have gone live. It now matches `true` in any letter case and allows a trailing comment. `false`, words that only start with "true", and mentions in the body still don't trigger it.
+- `frontmatterOf` normalizes Windows (CRLF) line endings, because a CRLF file used to read as having no frontmatter.
+- The stale-commit check deliberately fails open (as in the plan): if `git ls-remote` output can't be parsed, the deploy is not skipped. A transient network error should not block every deploy.
+
+**Reviewer findings:**
+- Critical, fixed: both fail-open paths above.
+- Minor, fixed under a ruling: the CRLF case, which is the same fail-open class. A scoped re-review confirmed all three fixes.
