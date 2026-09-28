@@ -57,6 +57,9 @@ test('certifications are ordered, filtered and labelled', req('REQ-CERT-01', 'RE
   const normal = await rows.nth(0).locator('.title').evaluate((el) => getComputedStyle(el).color);
   expect(muted).not.toBe(normal);
   await expect(rows.locator('.tick')).toHaveCount(5);
+  // Tick and Verify link go together: one Verify link per ticked row.
+  await expect(rows.getByRole('link', { name: /^Verify credential: / })).toHaveCount(5);
+  await expect(rows.filter({ has: page.locator('.tick') }).getByRole('link', { name: /^Verify credential: / })).toHaveCount(5);
   await expect(rows.nth(3).locator('.tick')).toHaveCount(0);
   await expect(rows.nth(3).locator('a')).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Verify credential: ISTQB Certified Tester, Foundation Level' })).toHaveAttribute('href', 'https://verify.example/ctfl');

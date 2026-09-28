@@ -30,6 +30,8 @@ test('@real every non-hidden certification file is rendered', req('REQ-CERT-02')
   const visible = files
     .map((f) => parse(readFileSync(`${dir}/${f}`, 'utf8')) as { hidden?: boolean })
     .filter((c) => c.hidden !== true).length;
+  // An empty collection (for example a wrong glob base) must not pass as 0 == 0.
+  expect(visible).toBeGreaterThan(0);
   await page.goto('/');
   await expect(page.locator('.list .row')).toHaveCount(visible);
 });

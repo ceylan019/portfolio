@@ -1,13 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { test as base, expect, type Page } from '@playwright/test';
-import { LIMITS, parseQualityReport, type QualityReport } from '../../src/lib/quality-schema';
+import { LIMITS, parseQualityReport, qualityReportSchema, type QualityReport } from '../../src/lib/quality-schema';
+
+/** A console error or uncaught page error; url is where the console says it came from ('' for page errors). */
+export interface ConsoleError { text: string; url: string }
 
 /** Every test blocks analytics and records console errors (REQ-HEALTH-01). */
-export const test = base.extend<{ consoleErrors: string[] }>({
+export const test = base.extend<{ consoleErrors: ConsoleError[] }>({
   consoleErrors: [async ({ page }, use) => {
-    const errors: string[] = [];
-    page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-    page.on('pageerror', (e) => errors.push(e.message));
+    const errors: ConsoleError[] = [];
+    page.on('console', (m) => { if (m.type() === 'error') errors.push({ text: m.text(), url: m.location().url }); });
+    page.on('pageerror', (e) => errors.push({ text: e.message, url: '' }));
     await page.route(/cloudflareinsights\.com/, (route) => route.abort());
     await use(errors);
   }, { auto: true }],
@@ -78,6 +81,13 @@ export function oversizedQuality(): string {
   const row = doc.matrix[0]!;
   const matrix = Array.from({ length: LIMITS.requirements + 1 }, (_, i) => ({ ...row, id: `REQ-X${Math.floor(i / 100)}-${String(i % 100).padStart(2, '0')}` }));
   const text = JSON.stringify({ ...doc, matrix });
-  if (parseQualityReport(JSON.parse(text)).ok) throw new Error('oversized variant unexpectedly passes the schema');
+  // Rejected for the matrix row limit and nothing else: exactly one issue, a
+  // too_big on the matrix array itself (a bad row would sit at matrix.N.field).
+  const parsed = parseQualityReport(JSON.parse(text));
+  const issues = qualityReportSchema.safeParse(JSON.parse(text)).error?.issues ?? [];
+  const onlyTheLimit = issues.length === 1 && issues[0]!.code === 'too_big' && issues[0]!.path.join('.') === 'matrix';
+  if (parsed.ok || parsed.reason !== 'matrix' || !onlyTheLimit) {
+    throw new Error(`oversized variant must fail only the matrix limit: ${JSON.stringify(issues.map((i) => [i.code, i.path.join('.')]))}`);
+  }
   return text;
 }

@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, settled } from './fixtures';
 import { req } from '../tag';
+import type { Locator } from '@playwright/test';
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -24,21 +25,24 @@ test('skip link, tab order and visible focus', req('REQ-A11Y-02'), async ({ page
   // "Press Tab to highlight each item", and Option+Tab (Alt+Tab) moves through
   // links too. It is the same focus order, reached with Safari's link key.
   const tab = browserName === 'webkit' ? 'Alt+Tab' : 'Tab';
+  // The site's own focus ring (base.css :focus-visible), not a browser default.
+  const expectRing = async (el: Locator) => {
+    await expect(el).toBeFocused();
+    expect(await el.evaluate((e) => { const s = getComputedStyle(e); return [s.outlineStyle, s.outlineWidth]; })).toEqual(['solid', '2px']);
+  };
   await page.goto('/');
   await page.keyboard.press(tab);
   const skip = page.locator('a.skip');
-  await expect(skip).toBeFocused();
+  await expectRing(skip);
   await expect(skip).toBeInViewport();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#main$/);
   await page.goto('/');
   await page.keyboard.press(tab);
   await page.keyboard.press(tab);
-  const cv = page.locator('.hero a.btn');
-  await expect(cv).toBeFocused();
-  expect(await cv.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe('none');
+  await expectRing(page.locator('.hero a.btn'));
   await page.keyboard.press(tab);
-  await expect(page.locator('.hero .links a').first()).toBeFocused();
+  await expectRing(page.locator('.hero .links a').first());
 });
 
 test('reduced motion shows the ring without animation', req('REQ-A11Y-03'), async ({ page }) => {

@@ -28,3 +28,13 @@ test('/quality with the matrix at its row limit does not scroll sideways at 375p
   await expect(page.locator('[data-block="matrix"]')).toHaveAttribute('data-state', 'ready');
   expect(await sidewaysOverflow(page)).toBeLessThanOrEqual(0);
 });
+
+// Spec section 6 (G10): credential IDs never break mid-token, even at 375px.
+test('/__states keeps every credential ID on one line at 375px', req('REQ-STATE-01'), async ({ page }) => {
+  await page.goto('/__states');
+  await settled(page);
+  await page.evaluate(() => document.fonts.ready);
+  const lines = await page.locator('.cid-token').evaluateAll((els) => els.map((e) => [e.textContent, e.getClientRects().length]));
+  expect(lines.length).toBeGreaterThan(0);
+  expect(lines.filter(([, n]) => n !== 1)).toEqual([]);
+});
