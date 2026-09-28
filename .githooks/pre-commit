@@ -1,0 +1,6 @@
+#!/bin/sh
+# Blocks commits of images with GPS or owner metadata (E18). Enable once with:
+#   git config core.hooksPath .githooks
+files=$(git diff --cached --name-only --diff-filter=ACM | grep -Ei '\.(jpe?g|png|webp|avif|heic)$')
+[ -z "$files" ] && exit 0
+exec pnpm -s tsx scripts/check-content.ts --images-only $files
