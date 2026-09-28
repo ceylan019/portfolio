@@ -92,7 +92,7 @@ test('@REQ-QUAL-01 the requirements section says there is no pass or fail column
   expect(html).toContain('There is no pass or fail column, because only fully green builds deploy.');
 });
 
-test('the suites section names every suite from spec section 8, in words that match the pipeline', async () => {
+test('@REQ-QUAL-01 the suites section names every suite from spec section 8, in words that match the pipeline', async () => {
   const html = await renderPage();
   const suites = html.slice(html.indexOf('class="suites"'), html.indexOf('data-block="duration"'));
   for (const name of ['Unit', 'Component', 'Build', 'Mutation', 'End to end', '@real', 'Accessibility', 'Visual regression', 'Performance', 'Links', 'Smoke']) {
@@ -105,7 +105,7 @@ test('the suites section names every suite from spec section 8, in words that ma
   expect(suites).toContain('mobile, 3 runs');
 });
 
-test('the glossary line uses the spec terms for tests, test runs, browser engines and device profiles', async () => {
+test('@REQ-QUAL-01 the glossary line uses the spec terms for tests, test runs, browser engines and device profiles', async () => {
   const html = await renderPage();
   const gloss = html.slice(html.indexOf('class="gloss"'), html.indexOf('data-block="integrity"'));
   expect(gloss).toContain('one test case');
