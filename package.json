@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "build:fixture": "CONTENT_DIR=tests/fixtures/content BUILD_KIND=fixture astro build --outDir dist-fixture",
+    "build:fixture": "CONTENT_DIR=tests/fixtures/content BUILD_KIND=fixture astro build --outDir dist-fixture && cp tests/fixtures/quality/valid.json dist-fixture/quality.json",
     "build:real": "BUILD_KIND=real astro build --outDir dist",
     "check": "astro check",
     "test:unit": "vitest run --reporter=default --reporter=json --outputFile.json=reports/vitest.json",
