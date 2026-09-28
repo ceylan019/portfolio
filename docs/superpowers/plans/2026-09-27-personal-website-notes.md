@@ -328,3 +328,17 @@ Commits `469edd6`, `c734189` and `8097a2b`. New files: content schemas, `src/con
 
 **Needs me:**
 - After the first photo and CV upload through Pages CMS (Task 26), check that the build still finds both files. The CMS path format was taken from its docs, not from a live upload.
+
+## Task 14: Brush ring, photo frame and tick components
+
+Commit `2a219eb`. New files: `scripts/extract-brush-paths.ts` (reads `photo-mark.svg`), the generated `src/lib/brush-ring.ts`, `PhotoFrame.astro`, `Tick.astro`, ring CSS and 3 component tests. The suite passes 289 of 289.
+
+**Changes from the plan:**
+- Ruling T12-B: the plan's CSS used `--rose-start` and `--peach-end`, which are not DESIGN.md tokens. The main stroke runs from `--rose-mark` to `--coral`, and the second pass is a flat `--peach`.
+- Ruling P23: the ring markup test is tagged `@REQ-HERO-01` instead of `@REQ-A11Y-03`. It checks the decorative, mask-based ring, not reduced motion. Reduced motion is covered by the E2E test in Task 20.
+
+**Verified against real tools:**
+- Draw-in direction (the plan asked for this check): the animations were paused at 0, 100, 300, 600 and 1000ms in `/browse`, and the frames compared with `photo-mark.svg`. The main stroke draws first, counterclockwise from about 1 o'clock, then the second pass, as in the approved asset. No flip was needed. The reviewer and I both compared the end frame with the reference: the geometry, colour order and overshoot match.
+- Reduced motion could not be emulated in `/browse`, because its browser bridge refuses the media emulation command. The fallback was checked by cancelling the animations, and by reading the CSS: both strokes rest at `stroke-dashoffset: 0`, meaning complete. The Playwright E2E test in Task 20 emulates reduced motion for real.
+
+**Reviewer findings:** none blocking. Minor: the plan's interface line mentions a `size` prop on `PhotoFrame`, which no caller uses.
