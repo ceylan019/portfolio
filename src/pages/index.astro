@@ -1,3 +1,33 @@
 ---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import Certifications from '../components/Certifications.astro';
+import ProofStrip from '../components/ProofStrip.astro';
+import About from '../components/About.astro';
+import Contact from '../components/Contact.astro';
+import Footer from '../components/Footer.astro';
+import { loadCertifications, loadProfile } from '../lib/content';
+import { personJsonLd } from '../lib/jsonld';
+import { buildToday } from '../lib/build-date';
+
+const { data: profile, About: AboutContent } = await loadProfile();
+const certifications = await loadCertifications();
+const today = buildToday(import.meta.env.BUILD_KIND ?? process.env.BUILD_KIND, new Date());
+const site = (Astro.site?.href ?? '').replace(/\/$/, '');
+const jsonLd = personJsonLd({
+  name: profile.name, jobTitle: profile.title, url: site, image: `${site}/og.png`,
+  sameAs: [profile.linkedinUrl, profile.githubUrl],
+});
 ---
-<html lang="en"><head><meta charset="utf-8"><title>Ceylan Akyol</title></head><body><h1>Ceylan Akyol</h1></body></html>
+<Base title={`${profile.name}, ${profile.title}`} description={profile.tagline} path="/" jsonLd={jsonLd}>
+  <div class="page">
+    <Hero profile={profile} />
+    <main id="main">
+      <Certifications entries={certifications} today={today} />
+      <ProofStrip />
+      <About About={AboutContent} />
+      <Contact profile={profile} />
+    </main>
+    <Footer name={profile.name} year={today.getUTCFullYear()} />
+  </div>
+</Base>

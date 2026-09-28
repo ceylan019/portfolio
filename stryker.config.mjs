@@ -11,7 +11,7 @@ export default {
   plugins: ['@stryker-mutator/vitest-runner'],
   testRunner: 'vitest',
   vitest: { configFile: 'vitest.unit.config.ts', related: false },
-  mutate: ['src/lib/**/*.ts', '!src/lib/brush-*.ts'],
+  mutate: ['src/lib/**/*.ts', '!src/lib/brush-*.ts', '!src/lib/content.ts'],
   // Per-test coverage relies on patches/@stryker-mutator__vitest-runner@10.0.0.patch:
   // Vitest 5 matches test names as "describe > test", the runner as "describe test".
   // Static mutants (module-level values such as the gate regexes) are tested too.

@@ -84,3 +84,20 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
 .ring-sweep-second { transform: rotate(-20deg) scaleY(-1); animation: ring-draw 400ms cubic-bezier(.6, 0, .3, 1) 500ms both; }
 @keyframes ring-draw { from { stroke-dashoffset: 805; } to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce) { .ring-sweep-main, .ring-sweep-second { animation: none; } }
+
+.hero { display: grid; grid-template-columns: 1fr 280px; gap: 48px; align-items: center; }
+.name { font-size: 96px; font-weight: 800; line-height: .92; letter-spacing: -0.035em; overflow-wrap: anywhere; }
+.role { font-size: 20px; font-weight: 500; margin-top: 24px; }
+.avail { font-size: 16px; margin-top: 4px; }
+.tag { font-size: 20px; color: var(--muted); margin-top: 8px; max-width: 38ch; line-height: 1.5; }
+.acts { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; margin-top: 32px; font-size: 17px; }
+.links, .cl { display: flex; flex-wrap: wrap; gap: 0 24px; }
+.proof { padding: 32px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.sub { margin-top: 12px; font-size: 16px; }
+@media (max-width: 899px) {
+  .hero { grid-template-columns: 1fr; gap: 16px; }
+  .hero .photo-frame { order: -1; }
+  .name { font-size: 60px; }
+  .role, .tag { font-size: 18px; }
+  .acts { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 24px; }
+}

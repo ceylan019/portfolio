@@ -1,0 +1,17 @@
+---
+---
+<section class="sec proof" aria-labelledby="proof-heading">
+  <h2 id="proof-heading">How this site is tested</h2>
+  <div>
+    <div data-block="proof-strip" data-state="unavailable">
+      <div data-slot="fallback"><p class="big">Every change runs through automated tests in 3 browser engines and 5 device profiles before it deploys.</p></div>
+      <div data-slot="live"></div>
+    </div>
+    <p class="sub"><a class="lnk" href="/quality">See every requirement and the tests behind it</a></p>
+  </div>
+</section>
+<script>
+  import { hydrate } from '../lib/quality-client';
+  import { renderProofStrip } from '../lib/render-home';
+  hydrate(document, { 'proof-strip': renderProofStrip }, (url) => fetch(url, { cache: 'no-cache' }));
+</script>
