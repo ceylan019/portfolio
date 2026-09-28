@@ -151,3 +151,20 @@ Commits `b57427c` and `dead480`. New modules: `src/lib/traceability.ts`, `eviden
 - Important, fixed: the gate's malformed-input paths were untested. Focused tests now cover each guard, the evidence detail strings and the problem wording. A scoped re-review confirmed both fixes.
 - Deferred to the final review (minor): the Playwright `flaky` status maps to "failed" implicitly. Tests marked as expected to fail (Playwright `test.fail()`, Vitest `test.fails`) would count as coverage. Problems repeat once per browser project. Two Playwright tests with the same title in one file merge. `relative()` matches a path prefix without a trailing slash.
 - Carried forward to Tasks 20 and 22: a missing Lighthouse `assertion-results.json` must count as "not covered", a missing `vitest.json` must fail the report job, and failing tests must fail their CI job before the report job runs.
+
+## Task 6: Built HTML scanner
+
+Commits `7197ce4` and `1eaf09a`. `src/lib/dist-scan.ts` has 10 unit tests, and the unit suite passes 101 of 101. All scanner tests are tagged `@REQ-GATE-01`, not `@REQ-CSP-01` (ruling P3).
+
+**Changes from the plan:**
+- The plan's JSON-LD exception was a prefix match, so `<script type="application/ld+jsonp">alert(1)</script>` passed the CSP scan. Spec section 7 allows only `type="application/ld+json"`. The regex now needs the exact value, quoted with matching quotes or unquoted and followed by whitespace, `/` or `>`. Tests show that `ld+jsonp`, `ld+json-evil` and `ld+jsonx` are flagged, and that the three exact forms are allowed.
+
+**Decisions not in the plan:**
+- Added tests that pin case-insensitivity (`<SCRIPT>`, `SRC=`, `TYPE="APPLICATION/LD+JSON"`) and a `data-src` decoy.
+
+**Reviewer findings:**
+- Important, fixed: the JSON-LD prefix-match evasion above.
+- Important, fixed: case-insensitivity of the script rules was not pinned.
+- Fixed in a second round: the implementer's report used dashes as punctuation, and its first fix claim was inaccurate. Only the report changed, not the code.
+- Minor, deferred: the nested-path branch of the states page check has no test.
+- Carried to Task 22: the CLI around the scanner must assert that it scanned a non-zero number of files including `index.html` (spec section 7).
