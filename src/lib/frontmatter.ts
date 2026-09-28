@@ -1,4 +1,5 @@
-const FRONTMATTER = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/;
+// No trailing "$": the greedy body group ([\s\S]*) always runs to the end of the input.
+const FRONTMATTER = /^---\n([\s\S]*?)\n---\n?([\s\S]*)/;
 
 /** The single frontmatter parser in the codebase (ruling P27). Every module that reads
  * a Markdown file's YAML frontmatter imports this instead of copying the regex.

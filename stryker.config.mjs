@@ -14,7 +14,8 @@ export default {
   mutate: ['src/lib/**/*.ts', '!src/lib/brush-*.ts'],
   // Per-test coverage relies on patches/@stryker-mutator__vitest-runner@10.0.0.patch:
   // Vitest 5 matches test names as "describe > test", the runner as "describe test".
-  ignoreStatic: true,
+  // Static mutants (module-level values such as the gate regexes) are tested too.
+  ignoreStatic: false,
   reporters: ['clear-text', 'progress', 'json', 'html', ...(dashboard ? ['dashboard'] : [])],
   jsonReporter: { fileName: 'reports/mutation/mutation.json' },
   htmlReporter: { fileName: 'reports/mutation/mutation.html' },
