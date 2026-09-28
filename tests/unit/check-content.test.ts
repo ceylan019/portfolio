@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import sharp from 'sharp';
 import {
-  checkContent, checkImage, checkProfilePhoto, resolvePhotoPath,
+  checkContent, checkImage, checkProfilePhoto, normalizePhotoFormat, resolvePhotoPath,
 } from '../../scripts/check-content';
 
 const withGpsExif = {
@@ -198,6 +198,24 @@ describe('checkContent (CLI orchestration)', () => {
     const problems = await checkContent([contentDir]);
     expect(problems).toEqual([`${join(contentDir, 'profile/profile.md')}: missing "photo". Cannot check the photo rules.`]);
   });
+
+  // Proves the photoProblem(resolvePhotoPath(...)) call inside checkContent is actually
+  // wired up and its result actually reported: deleting that call, or dropping its
+  // result, leaves this the one test in the suite that goes red (fix round 1 review).
+  test('@REQ-CONTENT-01 a too-small photo fails through checkContent end to end', async () => {
+    const contentDir = join(root, 'small-photo');
+    await writeProfile(
+      contentDir,
+      `---\nname: Ceylan Akyol\ntagline: ${tagline}\nphoto: photo.jpg\n---\nFor five years I tested web and API products in small teams.\n`,
+    );
+    const photoPath = join(contentDir, 'profile/photo.jpg');
+    await sharp({ create: { width: 799, height: 1200, channels: 3, background: { r: 251, g: 225, b: 227 } } })
+      .jpeg()
+      .toFile(photoPath);
+
+    const problems = await checkContent([contentDir]);
+    expect(problems).toEqual([`${photoPath}: The photo must be at least 800px on its shorter side (it is 799px).`]);
+  });
 });
 
 // resolvePhotoPath and checkProfilePhoto are the units content.config.ts's schema guard
@@ -255,5 +273,30 @@ describe('resolvePhotoPath and checkProfilePhoto (@REQ-CONTENT-01)', () => {
     const photoPath = join(dir, 'does-not-exist.jpg');
 
     expect(await checkProfilePhoto(photoPath)).toBe(`${photoPath}: could not read the profile photo.`);
+  });
+
+  // sharp 0.35.5 reports every AVIF as format "heif" with compression "av1", not as
+  // "avif" (fix round 1 review, verified locally the same way: sharp({...}).avif()
+  // then .metadata() returns { format: "heif", compression: "av1", ... }). Without
+  // normalizePhotoFormat this real, valid AVIF photo was rejected.
+  test('@REQ-CONTENT-01 an 800px AVIF photo passes', async () => {
+    const photoPath = join(dir, 'photo.avif');
+    await sharp({ create: { width: 800, height: 900, channels: 3, background: { r: 251, g: 225, b: 227 } } })
+      .avif()
+      .toFile(photoPath);
+
+    expect(await checkProfilePhoto(photoPath)).toBeNull();
+  });
+
+  // A HEIC photo is also reported as format "heif", but with compression "hevc" (sharp's
+  // own type comment: "av1 (AVIF) or hevc (HEIC)"), and must stay rejected. sharp's local
+  // libheif build cannot encode hevc-compressed HEIF (verified: sharp({...})
+  // .heif({ compression: 'hevc' }) throws "heifsave: Unsupported compression"), so a real
+  // HEIC file cannot be generated here to exercise checkProfilePhoto end to end.
+  // normalizePhotoFormat is tested directly instead, with the exact shape sharp documents
+  // for a HEIC file, and with compression absent (an unrecognized non-AVIF heif variant).
+  test('@REQ-CONTENT-01 normalizePhotoFormat leaves a HEIC-shaped heif rejected', () => {
+    expect(normalizePhotoFormat({ format: 'heif', compression: 'hevc' })).toBe('heif');
+    expect(normalizePhotoFormat({ format: 'heif' })).toBe('heif');
   });
 });

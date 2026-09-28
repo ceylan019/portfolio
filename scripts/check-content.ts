@@ -78,13 +78,24 @@ export function resolvePhotoPath(profilePath: string, photo: string): string {
   return photo.startsWith('/') ? resolve(photo.slice(1)) : resolve(dirname(profilePath), photo);
 }
 
+// sharp 0.35.5 reports every AVIF file with format "heif", not "avif" (its own type
+// comment: "The encoder used to compress an HEIF file, av1 (AVIF) or hevc (HEIC)"), and
+// distinguishes the two only through the separate `compression` field. Verified locally:
+// sharp({...}).avif().toBuffer() then .metadata() returns { format: "heif",
+// compression: "av1", ... }. photoProblem only recognizes the string "avif", so without
+// this remap every valid AVIF photo was rejected. A HEIC file is also "heif", but with
+// compression "hevc" (or absent), and must stay rejected; only the av1 case is remapped.
+export function normalizePhotoFormat(meta: { format: string; compression?: string }): string {
+  return meta.format === 'heif' && meta.compression === 'av1' ? 'avif' : meta.format;
+}
+
 /** Reads the profile photo's real dimensions and format through sharp and reports it as a
  * problem under the same rule content-schemas.ts's photoProblem enforces (D14). Fails
  * closed: a photo sharp cannot read, including one that does not exist, is a problem too
  * (T13-D), never a silent pass, since content.config.ts's schema check cannot see real
  * metadata for a loader-based collection in this Astro version (see content.config.ts). */
 export async function checkProfilePhoto(photoPath: string): Promise<string | null> {
-  let meta: { width?: number; height?: number; format?: string };
+  let meta: { width?: number; height?: number; format?: string; compression?: string };
   try {
     meta = await sharp(photoPath).metadata();
   } catch {
@@ -93,7 +104,8 @@ export async function checkProfilePhoto(photoPath: string): Promise<string | nul
   if (meta.width === undefined || meta.height === undefined || !meta.format) {
     return `${photoPath}: could not read the profile photo.`;
   }
-  const problem = photoProblem({ width: meta.width, height: meta.height, format: meta.format });
+  const format = normalizePhotoFormat({ format: meta.format, compression: meta.compression });
+  const problem = photoProblem({ width: meta.width, height: meta.height, format });
   return problem ? `${photoPath}: ${problem}` : null;
 }
 
