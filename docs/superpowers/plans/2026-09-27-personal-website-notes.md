@@ -12,7 +12,7 @@ None so far. Where the plan and the spec disagreed, the spec was followed; the p
 
 ### Open questions
 
-None yet.
+- Brush ring colours: DESIGN.md tokens are used; photo-mark.svg's own gradient stops differ slightly. Add tokens to DESIGN.md if you want the SVG's exact shades (Task 12).
 
 ### Things you must do
 
@@ -270,3 +270,22 @@ Commits `d92d365`, `7d70c8d`, `f287a5d` and `128c512`. New files: `tests/require
 **Reviewer findings:**
 - Important, fixed: three regex disable comments also hid mutants that are not equivalent (8 in total), which the tests do kill. The regexes were rewritten and the comments removed. A scoped re-review confirmed this from `mutation.json`.
 - Minor, deferred: one disable comment's reason is worded inaccurately. Several renderer tests pin attribute order through `innerHTML`, which will cause churn on harmless refactors. The config comment does not state when to remove the patch.
+
+## Task 12: Tokens, base styles and the page layout
+
+Commit `b30ea49`. New files: `src/styles/tokens.css`, `src/styles/base.css`, `src/layouts/Base.astro` and 5 component tests. The whole suite passes 265 of 265, and `astro check` and `pnpm build` are clean.
+
+**Changes from the plan:**
+- Ruling P26: the tokens are exactly the DESIGN.md table in both themes. The plan's extra `--face` (unused), `--rose-start` and `--peach-end` tokens were dropped. The brush gradient runs from `--rose-mark` to `--coral`.
+- Ruling P26: off-scale values were snapped to DESIGN.md. The certification title went from 19px to 20px, the "Expired" label from 13px to 14px, and the button padding from 22px to 24px.
+- Ruling P4: `.prose` wraps long unbroken strings, so a long URL in About cannot scroll the page sideways at 375px.
+- Ruling P3: the "no analytics beacon without a token" test is tagged `@REQ-HEALTH-01` instead of `@REQ-CSP-01`.
+
+**Decisions not in the plan:**
+- `vitest.config.ts` turns off Astro's dev toolbar for tests only. Astro 6.4.8 adds `data-astro-source-*` attributes to every element when the toolbar is on in dev mode, and Vitest runs Astro in that mode. A production build never adds them. The reviewer confirmed this in Astro's compiler source.
+
+**Reviewer findings:**
+- No critical or important findings.
+- Minor, deferred: the "Expired" label keeps a 6px left margin, which is off the 4px spacing scale.
+
+**Open question for you:** `photo-mark.svg` uses its own gradient stop colours, which differ slightly from the DESIGN.md tokens. DESIGN.md says colours come from tokens, so the ring uses `--rose-mark`, `--coral` and `--peach`. If you want the SVG's exact shades, add two tokens to DESIGN.md and the ring can use them.
