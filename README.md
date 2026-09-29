@@ -10,7 +10,7 @@ A personal portfolio that is also a QA project: every promise the site makes is 
 - Two builds on every change: a fixture build with fixed test content, and the real build with the real content. The fixture build runs behavior and accessibility tests in 3 browser engines and 5 device profiles (desktop Chromium, desktop Firefox, desktop WebKit, emulated iPhone and emulated Pixel), plus visual regression on desktop Chromium and emulated Pixel only, both themes. The real build runs accessibility, performance, links and a short key behavior pass before deploy.
 - Mutation testing of the business logic in `src/lib` (Stryker, threshold 90, every mutant measured including module level constants).
 - A first-party JavaScript budget of 10 KB brotli-compressed, checked by a build test.
-- A deploy job that installs nothing, verifies the build against the hashes of what was tested, and a post-deploy check that every live file matches.
+- A deploy job that installs no project dependencies (it fetches only a pinned wrangler, with install scripts disabled), verifies the build against the hashes of what was tested, and a post-deploy check that every live file matches.
 - GitHub Actions pinned to commit SHAs, kept current by Dependabot.
 
 ## Run it
@@ -30,7 +30,7 @@ Enable the local privacy check once, so a commit is blocked if a staged photo st
 git config core.hooksPath .githooks
 ```
 
-Every command above was run against this repository as part of writing this file. The visual regression tests in the last step fail until baselines exist (see the runbook); every other test passes.
+Every command above, other than `pnpm install`, was run against this repository while writing this file. `pnpm install` was skipped because `node_modules` was already present. `git config core.hooksPath .githooks` was not run either, since changing this repository's own git configuration falls outside writing documentation; its effect was instead confirmed by reading `.githooks/pre-commit`. The visual regression tests in the last step fail until baselines exist (see the runbook); every other test passes.
 
 ## Where things live
 

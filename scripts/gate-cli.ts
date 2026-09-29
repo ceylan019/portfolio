@@ -1,5 +1,6 @@
 // Usage: gate-cli verify-manifest <site> <manifest.json> | placeholders <contentDir> | stale <sha> <remoteUrl>
-// Runs in the deploy job, which installs no npm packages (E17). The report job bundles it
+// Runs in the deploy job, which installs no project dependencies and fetches only the
+// pinned wrangler, with install scripts disabled (E17). The report job bundles this file
 // with esbuild into dist-gate/gate-cli.mjs; at runtime it uses Node built-ins only.
 import { appendFileSync, existsSync, readFileSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
