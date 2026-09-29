@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
-  buildMatrix, describeProblem, normalizePlaywright, normalizeVitest, tagsIn,
+  buildMatrix, describeProblem, normalizePlaywright, normalizeVitest, repoPath, tagsIn,
   FIXTURE_PROJECTS, REAL_PROJECT, type Requirement, type TestResult, type CheckEvidence,
 } from '../../src/lib/traceability';
+import { walkFiles } from '../../scripts/node-fs';
 
 const r = (over: Partial<TestResult>): TestResult => ({
   title: 't', file: 'tests/e2e/a.spec.ts', line: 1, suite: 'e2e', project: 'chromium',
@@ -258,7 +261,27 @@ describe('normalizer edge cases', () => {
   test('@REQ-TRACE-01 vitest suite comes from the folder: build, component or unit', () => {
     expect(vitestOne({ fullName: 't', status: 'passed' }, '/repo/tests/build/z.test.ts')[0]!.suite).toBe('build');
     expect(vitestOne({ fullName: 't', status: 'passed' }, '/repo/tests/components/z.test.ts')[0]!.suite).toBe('component');
-    expect(vitestOne({ fullName: 't', status: 'passed' }, '/repo/other/tests/build/z.test.ts')[0]!.suite).toBe('unit');
+    expect(vitestOne({ fullName: 't', status: 'passed' }, '/repo/tests/unit/z.test.ts')[0]!.suite).toBe('unit');
+    // Only the tests/ folder decides: a components or build folder elsewhere does not.
+    expect(vitestOne({ fullName: 't', status: 'passed' }, '/repo/src/components/z.test.ts')[0]!.suite).toBe('unit');
+    expect(vitestOne({ fullName: 't', status: 'passed' }, '/repo/build/z.test.ts')[0]!.suite).toBe('unit');
+    expect(vitestOne({ fullName: 't', status: 'passed' }, 'tests/components/z.test.ts')[0]!.suite).toBe('component');
+  });
+  test('@REQ-TRACE-01 vitest suite does not depend on the report being written under the same absolute root', () => {
+    // The logic job's checkout and the report job's working directory differ, so the
+    // report's absolute paths do not start with rootDir and stay absolute here.
+    const component = vitestOne({ fullName: 't', status: 'passed' }, '/__w/website/website/tests/components/z.test.ts', '/home/runner/work/website/website');
+    expect(component[0]!.suite).toBe('component');
+    expect(component[0]!.file).toBe('/__w/website/website/tests/components/z.test.ts');
+    expect(vitestOne({ fullName: 't', status: 'passed' }, '/other/root/tests/build/z.test.ts', '/repo')[0]!.suite).toBe('build');
+    expect(vitestOne({ fullName: 't', status: 'passed' }, '/other/root/tests/unit/z.test.ts', '/repo')[0]!.suite).toBe('unit');
+  });
+  test('@REQ-TRACE-01 repoPath keeps the tail from the first tests folder and leaves other paths alone', () => {
+    expect(repoPath('/__w/website/website/tests/e2e/home.spec.ts')).toBe('tests/e2e/home.spec.ts');
+    expect(repoPath('/a/tests/b/tests/c.ts')).toBe('tests/b/tests/c.ts');
+    expect(repoPath('tests/unit/x.test.ts')).toBe('tests/unit/x.test.ts');
+    expect(repoPath('/repo/src/lib/x.ts')).toBe('/repo/src/lib/x.ts');
+    expect(repoPath('/tests/unit/x.test.ts')).toBe('tests/unit/x.test.ts');
   });
 
   const pwSpec = (spec: Record<string, unknown>, test: Record<string, unknown> = {}) => normalizePlaywright({
@@ -314,6 +337,60 @@ describe('buildMatrix edge cases', () => {
     const results = [...allProjects({ tags: ['REQ-X-01'] }), r({ title: 'u', project: null, suite: 'unit', tags: ['REQ-X-01'] })];
     expect(buildMatrix([req('REQ-X-01')], results, []).counts.testRuns).toBe(5);
   });
+  test('@REQ-TRACE-01 a project whose every result was skipped ran nothing, so it is missing (E15)', () => {
+    const results = [
+      ...REQUIRED.filter((p) => p !== 'webkit').map((p) => r({ project: p, tags: ['REQ-X-01'] })),
+      r({ title: 'a', project: 'webkit', tags: ['REQ-X-01'], status: 'skipped' }),
+      r({ title: 'b', project: 'webkit', tags: ['REQ-X-01'], status: 'skipped' }),
+    ];
+    expect(buildMatrix([req('REQ-X-01')], results, []).problems).toEqual([{ kind: 'missing-projects', missing: ['webkit'] }]);
+  });
+  test('@REQ-TRACE-01 a project with one result that ran is present, even beside skipped ones', () => {
+    const results = [...allProjects({ tags: ['REQ-X-01'] }), r({ title: 'b', project: 'webkit', tags: ['REQ-X-01'], status: 'skipped' })];
+    expect(buildMatrix([req('REQ-X-01')], results, []).problems).toEqual([]);
+    const failedOnly = [...REQUIRED.filter((p) => p !== 'pixel').map((p) => r({ project: p, tags: ['REQ-X-01'] })), r({ project: 'pixel', tags: ['REQ-X-01'], status: 'failed' })];
+    expect(buildMatrix([req('REQ-X-01')], failedOnly, []).problems).not.toContainEqual(expect.objectContaining({ kind: 'missing-projects' }));
+  });
+  test('@REQ-TRACE-01 an expected failure (a "fail" annotation) never counts as passing coverage or a test run', () => {
+    const results = [
+      ...allProjects({ title: 'ok', tags: ['REQ-X-01'] }),
+      ...FIXTURE_PROJECTS.map((p) => r({ title: 'known bug', project: p, tags: ['REQ-CV-01'], annotations: [{ type: 'fail' }] })),
+    ];
+    const { rows, problems, counts } = buildMatrix([req('REQ-X-01'), req('REQ-CV-01')], results, []);
+    expect(problems).toEqual([{ kind: 'uncovered', id: 'REQ-CV-01' }]);
+    expect(rows[1]!.tests).toEqual([]);
+    expect(counts).toEqual({ tests: 1, testRuns: 5, axeViolations: 0 });
+  });
+  test('@REQ-TRACE-01 other annotations leave a passing test covering', () => {
+    const results = allProjects({ title: 'ok', tags: ['REQ-X-01'], annotations: [{ type: 'issue', description: 'fail' }] });
+    expect(buildMatrix([req('REQ-X-01')], results, []).rows[0]!.tests).toHaveLength(1);
+  });
+  test('@REQ-TRACE-01 playwright keeps the fail annotation that marks an expected failure', () => {
+    const out = normalizePlaywright({
+      suites: [{ specs: [{ title: 'x', file: 'e2e/x.spec.ts', line: 1, tags: ['REQ-CV-01'], tests: [{ projectName: 'chromium', status: 'expected', annotations: [{ type: 'fail' }] }] }] }],
+      config: { rootDir: '/repo/tests' },
+    }, '/repo');
+    expect(out[0]).toMatchObject({ status: 'passed', annotations: [{ type: 'fail' }] });
+    expect(buildMatrix([req('REQ-CV-01')], out, []).rows[0]!.tests).toEqual([]);
+  });
+});
+
+// Vitest's expected-failure modifier reports a failing test as passed and carries no
+// annotation the normalizer could see, and Playwright's is only caught through its
+// annotation. Neither belongs in this suite, so any use under tests/ fails here.
+test('@REQ-TRACE-01 no test under tests/ is marked as an expected failure', () => {
+  const expectedFailure = /\b(?:test|it)\.fails?\b|\.fails\(/;
+  const offenders = walkFiles('tests')
+    .filter((f) => /\.(?:[cm]?[jt]s|tsx?)$/.test(f))
+    .filter((f) => expectedFailure.test(readFileSync(join('tests', f), 'utf8')));
+  expect(offenders).toEqual([]);
+  // The pattern itself catches every form it is meant to catch. The samples are joined
+  // at runtime so this file does not flag itself.
+  const call = (object: string, rest: string) => [object, rest].join('.');
+  for (const use of [call('test', 'fail()'), call('test', 'fail(true)'), call('it', 'fails("x", fn)'), call('test', 'fails("x", fn)'), call('describe', 'fails('), call('test', 'fail.only(')]) {
+    expect(expectedFailure.test(use)).toBe(true);
+  }
+  expect(expectedFailure.test('request.failure()')).toBe(false);
 });
 test('@REQ-TRACE-01 a REQ-like token counts as a malformed tag only when an @ sign starts it', () => {
   const report = { testResults: [{ name: '/repo/tests/unit/x.test.ts', assertionResults: [{ fullName: 'mail@REQ-hero-01 @REQ-CV-01', status: 'passed' }] }] };

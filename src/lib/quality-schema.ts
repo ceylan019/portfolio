@@ -9,6 +9,10 @@ export const SCHEMA_VERSION = 1 as const;
 export const LIMITS = { requirements: 200, history: 50, testsPerRequirement: 500, string: 200 } as const;
 
 export const SUITES = ['unit', 'component', 'build', 'e2e', 'real', 'axe', 'visual'] as const;
+/** The 5 device profiles (spec section 4, E13) are the fixture build's Playwright
+ * projects. The real build's one project is not a device profile of its own. */
+export const FIXTURE_PROJECTS = ['chromium', 'firefox', 'webkit', 'iphone', 'pixel'] as const;
+export const REAL_PROJECT = 'real-chromium';
 export const CHECKS = ['lighthouse', 'links', 'dist-scan'] as const;
 export type Suite = (typeof SUITES)[number];
 export type CheckName = (typeof CHECKS)[number];

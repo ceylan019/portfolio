@@ -15,7 +15,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileS
 import { join } from 'node:path';
 import { REQUIREMENTS } from '../tests/requirements';
 import {
-  buildMatrix, describeProblem, normalizePlaywright, normalizeVitest, type CheckEvidence, type TestResult,
+  buildMatrix, describeProblem, normalizePlaywright, normalizeVitest, repoPath, type CheckEvidence, type TestResult,
 } from '../src/lib/traceability';
 import {
   combineEvidence, distScanEvidence, lhrsFromManifest, lighthouseEvidence, linksEvidence, medianScores, type Lhr,
@@ -82,10 +82,7 @@ function loadRequired(path: string): unknown {
 }
 
 // Runner paths differ between jobs (container vs host); keep the repo-relative tail.
-const fixPath = (t: TestResult): TestResult => {
-  const i = t.file.indexOf('/tests/');
-  return i >= 0 ? { ...t, file: t.file.slice(i + 1) } : t;
-};
+const fixPath = (t: TestResult): TestResult => ({ ...t, file: repoPath(t.file) });
 const root = process.cwd();
 function testResults(paths: string[], normalize: (report: unknown, rootDir: string) => TestResult[]): TestResult[] {
   return paths.flatMap((p) => {

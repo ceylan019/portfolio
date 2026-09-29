@@ -5,14 +5,14 @@
  *   playwright  ─┼─ TestResult[] ──┤
  *   evidence    ─┘                 └─ problems (uncovered, unknown tag, untagged, missing project)
  *
- * Verified against the installed tools (see task-5-report.md): Playwright
+ * Verified against the installed tools with real reporter runs: Playwright
  * 1.63.0's json reporter writes spec.tags WITHOUT the leading @, so raw tags
  * are normalized to the @ form before both tagsIn and playwrightSuite read
  * them. Vitest 5.0.2's json reporter matches the assumed shape (fullName,
  * title, status, location.line with includeTaskLocation), except a skipped
  * assertion reports status "skipped", not "pending".
  */
-import type { CheckName, MatrixRow, CoveringTest, Suite } from './quality-schema';
+import { FIXTURE_PROJECTS, REAL_PROJECT, type CheckName, type MatrixRow, type CoveringTest, type Suite } from './quality-schema';
 import { isRecord } from './guards';
 
 export interface Requirement {
@@ -40,8 +40,7 @@ export type GateProblem =
   | { kind: 'untagged'; test: string }
   | { kind: 'missing-projects'; missing: string[] };
 
-export const FIXTURE_PROJECTS = ['chromium', 'firefox', 'webkit', 'iphone', 'pixel'] as const;
-export const REAL_PROJECT = 'real-chromium';
+export { FIXTURE_PROJECTS, REAL_PROJECT };
 
 const TAG = /@(REQ-[A-Z0-9]+-\d{2})(?![\w-])/g;
 
@@ -69,9 +68,19 @@ const num = (x: unknown): number => (Number.isFinite(x) ? (x as number) : 0);
 const relative = (file: string, rootDir: string) =>
   file.startsWith(rootDir) ? file.slice(rootDir.length).replace(/^\/+/, '') : file;
 
+/** Runner paths differ between jobs (container vs host) and from the report job's
+ * working directory, so keep the repo-relative tail from the first tests/ folder. */
+export function repoPath(file: string): string {
+  // indexOf gives -1 when there is no tests/ folder, and slice(0) keeps the whole path.
+  return file.slice(file.indexOf('/tests/') + 1);
+}
+
+// Classified from the repo-relative tail, so a report written under another
+// absolute root (a different job's checkout) keeps its component and build suites.
 function vitestSuite(file: string): Suite {
-  if (file.startsWith('tests/components/')) return 'component';
-  if (file.startsWith('tests/build/')) return 'build';
+  const path = repoPath(file);
+  if (path.startsWith('tests/components/')) return 'component';
+  if (path.startsWith('tests/build/')) return 'build';
   return 'unit';
 }
 
@@ -155,11 +164,14 @@ export function buildMatrix(reqs: Requirement[], results: TestResult[], evidence
 
   // Every fixture shard and the real build's report must be present (E15, ruling T22-D):
   // without real-chromium the real-content checks, real axe run and real headers vanish.
-  const seenProjects = new Set(gated.map((t) => t.project));
+  // A shard whose every result was skipped ran nothing, so it counts as missing too.
+  const seenProjects = new Set(gated.filter((t) => t.status !== 'skipped').map((t) => t.project));
   const missing = [...FIXTURE_PROJECTS, REAL_PROJECT].filter((p) => !seenProjects.has(p));
   if (missing.length > 0) problems.push({ kind: 'missing-projects', missing });
 
-  const passed = gated.filter((t) => t.status === 'passed');
+  // test.fail() reports an expected failure as status "expected", with a "fail"
+  // annotation. A test that failed as expected proves nothing, so it never covers.
+  const passed = gated.filter((t) => t.status === 'passed' && !t.annotations.some((a) => a.type === 'fail'));
   const rows: MatrixRow[] = reqs.map((req) => {
     const byTest = new Map<string, CoveringTest>();
     for (const t of passed.filter((p) => p.tags.includes(req.id))) {
