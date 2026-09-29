@@ -1,0 +1,302 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # G4: daily rebuild so certification expiry is never more than a day old.
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # Ruling P7: an explicit bash shell runs every step with -e and pipefail.
+    shell: bash
+
+env:
+  # Ruling T23-B (P5): pull request and Dependabot runs may not see repository variables,
+  # so they build and report against the example URL. The deploy job refuses without it.
+  SITE_URL: ${{ vars.SITE_URL || 'https://ceylan-akyol.example.workers.dev' }}
+  REPO_URL: https://github.com/${{ github.repository }}
+
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      playwright: ${{ steps.v.outputs.playwright }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      # E23: the container tag follows the exact @playwright/test pin, which the
+      # frozen lockfile install in every job holds equal to the lockfile.
+      - id: v
+        run: echo "playwright=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
+
+  logic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      stryker_url: ${{ steps.dashboard.outputs.url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm build:real
+      - run: pnpm test:unit
+      - name: Mutation testing
+        run: pnpm test:mutation
+        env:
+          STRYKER_DASHBOARD_API_KEY: ${{ github.ref == 'refs/heads/main' && secrets.STRYKER_DASHBOARD_API_KEY || '' }}
+          STRYKER_PROJECT: github.com/${{ github.repository }}
+      - name: Confirm the dashboard report exists (D13, E16)
+        id: dashboard
+        if: github.ref == 'refs/heads/main'
+        run: |
+          api="https://dashboard.stryker-mutator.io/api/reports/github.com/${{ github.repository }}/${{ github.sha }}"
+          if curl -fsS -o /dev/null "$api"; then
+            echo "url=https://dashboard.stryker-mutator.io/reports/github.com/${{ github.repository }}/${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Stryker Dashboard report not found; /quality will omit the report link."
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: logic-reports
+          path: |
+            reports/vitest.json
+            reports/mutation/mutation.json
+
+  fixture:
+    needs: versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.versions.outputs.playwright }}-noble
+    env:
+      # Ruling P18: Firefox inside the Playwright container needs HOME=/root.
+      HOME: /root
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit, iphone, pixel]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      # The container brings the browsers; Node comes from .nvmrc like every other job.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:fixture
+      # Ruling P2: one leg scans and uploads the fixture build scan; the report expects exactly one.
+      - name: Dist scan of the fixture build
+        if: matrix.project == 'chromium'
+        run: pnpm tsx scripts/scan-dist.ts dist-fixture reports/dist-scan-fixture.json
+      - name: Serve the fixture build
+        run: scripts/serve-and-wait.sh serve:fixture http://localhost:8787/
+      - run: pnpm exec playwright test --project=${{ matrix.project }}
+        env:
+          CI: 'true'
+          PW_JSON: reports/playwright-fixture-${{ matrix.project }}.json
+      - name: Lighthouse on the fixture build (once)
+        if: matrix.project == 'chromium'
+        run: |
+          export CHROME_PATH=$(node -e "import('@playwright/test').then(m=>console.log(m.chromium.executablePath()))")
+          LHCI_BUILD=fixture pnpm lhci
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: fixture-${{ matrix.project }}
+          path: |
+            reports/playwright-fixture-${{ matrix.project }}.json
+            reports/dist-scan-fixture.json
+            test-results/
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: matrix.project == 'chromium'
+        with:
+          name: lhci-fixture
+          path: .lighthouseci
+          include-hidden-files: true
+
+  real:
+    needs: versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.versions.outputs.playwright }}-noble
+    env:
+      # Ruling P18: same container settings as the fixture job.
+      HOME: /root
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Content checks (REQ-CONTENT-01)
+        run: pnpm tsx scripts/check-content.ts
+      # The beacon token goes to the build and to its Lighthouse run, or the
+      # third-party budget in lighthouserc.cjs no longer matches the build.
+      - run: pnpm build:real
+        env:
+          CF_BEACON_TOKEN: ${{ vars.CF_BEACON_TOKEN }}
+      - run: pnpm tsx scripts/scan-dist.ts dist reports/dist-scan-real.json --forbid-states
+      - run: pnpm tsx scripts/write-manifest.ts dist manifest/manifest.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: site-real, path: dist, include-hidden-files: true }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: manifest-real, path: manifest/manifest.json }
+      - name: Serve the real build with a stand-in quality.json (E12)
+        run: |
+          pnpm tsx scripts/stand-in-quality.ts dist dist-served "$SITE_URL"
+          test ! -e dist/quality.json
+          scripts/serve-and-wait.sh serve:real http://localhost:8788/
+      - run: pnpm exec playwright test --project=real-chromium
+        env:
+          CI: 'true'
+          PW_JSON: reports/playwright-real.json
+      - name: Lighthouse on the real build
+        run: |
+          export CHROME_PATH=$(node -e "import('@playwright/test').then(m=>console.log(m.chromium.executablePath()))")
+          LHCI_BUILD=real pnpm lhci
+        env:
+          CF_BEACON_TOKEN: ${{ vars.CF_BEACON_TOKEN }}
+      - name: Internal link check
+        run: pnpm exec linkinator http://localhost:8788 --recurse --format json --skip "^(?!http://localhost:8788)" > reports/links.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: real-reports
+          path: |
+            reports/playwright-real.json
+            reports/dist-scan-real.json
+            reports/links.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: lhci-real, path: .lighthouseci, include-hidden-files: true }
+
+  report:
+    needs: [logic, fixture, real]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { path: reports-in }
+      - name: Previous quality.json (E19) and the latest live check (ruling P6)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Main runs only: a pull request from a fork branch named main is not one.
+          main_runs() {
+            gh run list --workflow ci.yml --branch main --status "$1" --limit 20 --json databaseId,event \
+              -q '.[] | select(.event != "pull_request") | .databaseId'
+          }
+          # First line without a pipe into head, which pipefail could turn into a failure.
+          prev=$(main_runs success)
+          prev=${prev%%$'\n'*}
+          if [ -n "$prev" ]; then
+            gh run download "$prev" -n quality-json -D reports-in/prev-quality \
+              || echo "::warning::Run $prev has no quality-json artifact; history cannot fall back to it."
+          fi
+          # smoke.yml runs as a job of the deploying ci run, so live-check belongs to that run.
+          # Take the newest completed run whose smoke job ran, whatever its conclusion, so a
+          # failed live check shows as failed instead of an older passing one.
+          # An assignment, so a failing gh call fails the step instead of skipping the loop.
+          completed=$(main_runs completed)
+          for id in $completed; do
+            ran=$(gh run view "$id" --json jobs -q '[.jobs[] | select((.name | startswith("smoke")) and .conclusion != "skipped")] | length')
+            if [ "$ran" -gt 0 ]; then
+              gh run download "$id" -n live-check -D reports-in/prev-live-check \
+                || echo "::warning::The latest smoke run ($id) left no live-check artifact; quality.json records no live check."
+              break
+            fi
+          done
+          echo "RUN_STARTED_AT=$(gh api "repos/$GH_REPO/actions/runs/${{ github.run_id }}" --jq .run_started_at)" >> "$GITHUB_ENV"
+      - run: pnpm tsx scripts/build-report.ts
+        env:
+          STRYKER_URL: ${{ needs.logic.outputs.stryker_url }}
+      - run: pnpm exec esbuild scripts/gate-cli.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist-gate/gate-cli.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: quality-json, path: out/quality.json }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: gate-cli, path: dist-gate/gate-cli.mjs }
+
+  deploy:
+    needs: report
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    concurrency:
+      group: deploy-main
+      cancel-in-progress: false
+    outputs:
+      deployed: ${{ steps.stale.outputs.stale == 'false' }}
+    # E17: this job installs no project dependencies. Node runs the bundled gate
+    # CLI, and wrangler comes from a pinned install without install scripts.
+    steps:
+      - name: Refuse without the live site URL (ruling T23-B)
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "::error::Refusing to deploy: the repository variable SITE_URL is empty, so this build carries the example URL. Set SITE_URL to the live site's URL and run ci again."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: .nvmrc, package-manager-cache: false }
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { name: site-real, path: dist }
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { name: manifest-real, path: manifest }
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { name: quality-json, path: quality }
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { name: gate-cli, path: gate }
+      - run: node gate/gate-cli.mjs verify-manifest dist manifest/manifest.json
+      - run: node gate/gate-cli.mjs placeholders src/content
+      - id: stale
+        run: node gate/gate-cli.mjs stale ${{ github.sha }} https://github.com/${{ github.repository }}.git
+      - name: Install a pinned wrangler without install scripts (E17)
+        if: steps.stale.outputs.stale == 'false'
+        run: |
+          v=$(node -p "require('./package.json').devDependencies.wrangler")
+          npm install --prefix /tmp/wrangler --no-save --ignore-scripts --no-audit --no-fund "wrangler@$v"
+      - name: Deploy
+        if: steps.stale.outputs.stale == 'false'
+        run: |
+          cp quality/quality.json dist/quality.json
+          /tmp/wrangler/node_modules/.bin/wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  smoke:
+    needs: deploy
+    if: needs.deploy.outputs.deployed == 'true'
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/smoke.yml
+    with:
+      mode: post-deploy
