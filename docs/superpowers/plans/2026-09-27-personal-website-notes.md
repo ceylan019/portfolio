@@ -508,3 +508,35 @@ The measurements behind it, taken with esbuild against the installed zod 4.6.5:
 - Delete the untracked `.probe/` folder at the repo root. It holds esbuild size probes from this investigation, and deleting it was not permitted in this session.
 
 **Reviewer findings:** none blocking. Carried to Task 23: `CF_BEACON_TOKEN` must reach both the real build step and the real Lighthouse step.
+
+## Task 22: Pipeline scripts
+
+Commits `f50c774`, `8c2a716` and `7150b5e`. New files in `scripts/`: `node-fs.ts`, `scan-dist.ts`, `write-manifest.ts`, `stand-in-quality.ts`, `build-report.ts` and `gate-cli.ts` (bundled to `dist-gate/gate-cli.mjs`). The unit suite passes 324 of 324, and Stryker scores 99.78.
+
+**Changes from the plan:**
+- Ruling T22-A: `build-report` fails closed on missing evidence. A missing or unreadable Lighthouse file for either build means "not covered". A missing Vitest, Playwright or mutation report is a named problem, and so is a missing live-check file.
+- The traceability gate now also requires results from the real-build project (`real-chromium`). Before this fix, a missing real Playwright report passed the gate silently, dropping the real-content count check, the real-build axe run and the real 404 and header checks. This was shown end to end: without the file, `build-report` now exits 1 with "No results from project(s): real-chromium."
+- The stale-commit check fails closed. If the head of `main` cannot be read (ls-remote error, or no `main`), `gate-cli` exits 1 and nothing is deployed. The plan deployed in that case, which could let an older run overwrite a newer deploy. A brief GitHub outage now fails the deploy job, and a rerun recovers. The skip note for a superseded commit also goes to the job summary, as spec section 7 says.
+- `scan-dist` records whether it ran with `--forbid-states`, and the report requires that on the real scan, which carries REQ-CSP-01's states-page rule.
+- `stand-in-quality` refuses to write into its own source directory, including edge cases like `dist/..served`.
+- A traceability test title contained a bare `@REQ-`, which the gate correctly reported as the unknown tag `REQ-`. The title was renamed, and the assertion is unchanged.
+
+**Verified against real tools (all local, no GitHub or Cloudflare):**
+- Every CLI was run end to end with real inputs:
+  - `scan-dist` passes both builds and fails a copy with an inline style.
+  - The manifest check passes, then fails after one changed byte and after one extra file.
+  - `placeholders` refuses the real content, which still has `placeholder: true`.
+  - The stale check was run against local bare repositories.
+  - `stand-in-quality` falls back to the fixture when the live host is unreachable.
+  - `build-report` produced a `quality.json` that passes `parseQualityReport`.
+- The gate bundle imports only `node:` modules and runs from a directory without `node_modules`.
+
+**Things found for CI (handled in Task 23):**
+- Playwright's default `updateSnapshots: 'missing'` silently wrote 24 baseline images during a local run, and the next visual run passed against them. Nothing was committed, and the run was repeated without them. CI must never write baselines (ruling T23-A).
+- An honest local report fails only on REQ-VIS-01 until visual baselines are committed. It also fails while `SITE_URL` is unset.
+
+**Reviewer findings:**
+- Critical, fixed: the real Playwright report was not required.
+- Important, fixed (my ruling): the stale check deployed when the head of `main` was unknown.
+- Minor, deferred: a browser project counts as present even when all of its results are skipped. That was already true for every project.
+- Minor, deferred: the evidence loaders in `build-report` live outside `src/lib`, so they are not mutation tested.
