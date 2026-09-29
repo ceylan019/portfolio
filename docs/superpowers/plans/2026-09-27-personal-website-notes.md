@@ -594,3 +594,39 @@ The daily schedule runs the same gates.
 - Important, fixed: Lighthouse scores were missing from the job summary.
 - Small items ruled in and fixed. A scoped re-review confirmed each fix and that no fallback can turn a failing suite green.
 - Minor, deferred: wrangler's deeper dependencies are resolved when the deploy job runs, with install scripts off. A committed deploy lockfile would pin them fully.
+
+## Task 24: Smoke, link check, baselines, keepalive and Dependabot
+
+Commit `4f6a496`. New files: `.github/workflows/smoke.yml`, `links-weekly.yml`, `visual-baselines.yml`, `keepalive.yml`, `.github/dependabot.yml`, `scripts/live-check.ts`, `scripts/issue-sync.ts`, `tests/e2e/smoke.spec.ts` and `tests/unit/issue-sync.test.ts`. The unit suite passes 344 of 344.
+
+**Changes from the plan:**
+- The plan chose between the daily and post-deploy paths using `github.event_name`. Inside a called workflow, that is the caller's event, and `ci.yml` has its own daily schedule, so post-deploy runs would have touched the issue. `smoke.yml` now takes a `mode` input, and `ci.yml` passes `post-deploy`.
+- The plan decided "failed" from the outcome of the test step. A failure before the tests, such as the install, would then have read as passing and closed the "Live site is failing" issue. The job status is used instead, so a failed run can only open or update the issue.
+- Ruling P9: link-check state is read from the open issue body first. When no issue is open, it comes from the `link-state` artifact of the previous run, downloaded with `gh run download`, not from the Actions cache. A refused run carries the previous counts forward. `links-weekly` gets `actions: read` to download the previous artifact.
+- `issue-sync links` also takes the site URL. It refuses to judge a crawl that never loaded the site or found no external links (evidence rule E15). linkinator gets a 20-second timeout, because its default has none.
+- Rulings P7 and P8: steps piped into `tee` run with pipefail, and both monitoring workflows create their labels before syncing issues.
+- A stub `gh` could not be made executable in this session. `issue-sync` therefore takes its `gh` function as a parameter, and a new unit test file (18 tests, tagged `@REQ-OPS-01`) covers opening, updating, closing and leaving both issues alone, plus every state-source path.
+- Dependabot groups `@playwright/test` and `playwright` (which set the container tag). `@axe-core/playwright` is left out of the group. The spec says "all Playwright packages", so change this if you meant axe too.
+- `keepalive` has `actions: write` on its job only.
+
+**Verified locally:**
+- `@action-validator/cli` passes all five workflows, and a broken control file fails. `dependabot.yml` passes the SchemaStore schema.
+- The structural check passes: timeouts, permissions, SHA pins, and the `smoke` job-name prefix that `ci.yml` relies on.
+- `live-check` against a real build served by `wrangler dev` matched 33 of 33 files. After one file was changed, it reported `robots.txt (content differs)` and exited 1. A removed file, a dead host and a missing manifest each recorded `ok: false`.
+- The smoke spec passes 6 of 6 against the local server. A broken case fails the step under pipefail.
+
+**Not verified until live runs:**
+- Production Workers header values.
+- The daily path when `inputs.mode` is empty.
+- Whether `gh workflow enable` resets GitHub's 60-day timer.
+- The `gh` label, issue and download calls with the job token.
+- Whether linkinator reaches every certification verify URL.
+
+Until real content and `SITE_URL` are in place, the weekly link check will report the placeholder links.
+
+**Reviewer findings:** no critical or important findings. Minor, deferred:
+- live-check has no per-request timeout.
+- Cancelling a daily smoke run by hand opens the issue.
+- live-check has no automated test.
+- The live 404 check does not confirm the custom page.
+- `/_astro/*` caching is not checked live.
