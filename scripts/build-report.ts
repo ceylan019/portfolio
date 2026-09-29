@@ -145,7 +145,8 @@ function links(): CheckEvidence {
   return r.ok ? linksEvidence(r.data) : { ...linksEvidence(null), detail: `${path} is unreadable` };
 }
 
-/** Ruling P2: exactly one fixture scan and one real scan. */
+/** Ruling P2: exactly one fixture scan and one real scan. Ruling T22-F: the real scan
+ * must have run with --forbid-states, or the states page rule of REQ-CSP-01 is unchecked. */
 function distScans(): CheckEvidence {
   const notCovered = (detail: string): CheckEvidence => ({ name: 'dist-scan', passed: false, examined: 0, detail });
   const fixture = files.filter((p) => p.endsWith('dist-scan-fixture.json'));
@@ -153,13 +154,16 @@ function distScans(): CheckEvidence {
   if (fixture.length !== 1 || real.length !== 1) {
     return notCovered(`expected one dist-scan-fixture.json and one dist-scan-real.json, found ${fixture.length} and ${real.length}`);
   }
-  return combineEvidence([...fixture, ...real].map((p) => {
+  const evidenceFor = (p: string, mustForbidStates: boolean): CheckEvidence => {
     const r = load(p);
     const scan = r.ok && isRecord(r.data) ? r.data : {};
-    const { scanned, findings } = scan;
+    const { scanned, findings, forbidStates } = scan;
     const valid = Array.isArray(scanned) && scanned.every((f) => typeof f === 'string') && Array.isArray(findings);
-    return valid ? distScanEvidence({ scanned, findings }) : notCovered(`${p} is unreadable`);
-  }));
+    if (!valid) return notCovered(`${p} is unreadable`);
+    if (mustForbidStates && forbidStates !== true) return notCovered(`${p} was not scanned with --forbid-states`);
+    return distScanEvidence({ scanned, findings });
+  };
+  return combineEvidence([evidenceFor(fixture[0]!, false), evidenceFor(real[0]!, true)]);
 }
 
 const fixtureLh = lhci('fixture');

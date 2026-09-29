@@ -4,7 +4,7 @@
 // valid fixture. An empty siteUrl (an unset repository variable, ruling P5) means there
 // is no live site yet, so the fixture is used.
 import { cpSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, relative, resolve, isAbsolute } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fetchLiveQuality } from '../src/lib/history';
 import { parseQualityReport } from '../src/lib/quality-schema';
 
@@ -19,7 +19,8 @@ if (!src || !out) {
 // so the two directories may not overlap in either direction.
 const within = (parent: string, child: string) => {
   const r = relative(resolve(parent), resolve(child));
-  return r === '' || (!r.startsWith('..') && !isAbsolute(r));
+  // A child named like '..served' is inside; only '..' itself or '../...' leaves the parent.
+  return r === '' || (r !== '..' && !r.startsWith(`..${sep}`) && !isAbsolute(r));
 };
 if (within(src, out) || within(out, src)) {
   console.error(`The output directory ${out} and the build ${src} must not overlap.`);

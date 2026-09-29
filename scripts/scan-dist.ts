@@ -1,8 +1,8 @@
 // Usage: tsx scripts/scan-dist.ts <dir> <out.json> [--forbid-states]
 // Scans every built HTML file for inline styles, inline scripts other than JSON-LD and,
 // with --forbid-states, the fixture-only states page (REQ-CSP-01, spec section 7). Writes
-// { scanned, findings } for the report job and exits 1 on any finding, or when no files
-// or no index.html were scanned.
+// { scanned, findings, forbidStates } for the report job and exits 1 on any finding, or
+// when no files or no index.html were scanned.
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { scanFiles } from '../src/lib/dist-scan';
@@ -20,9 +20,11 @@ if (!existsSync(dir) || !statSync(dir).isDirectory()) {
 }
 
 const files = walkFiles(dir).filter((f) => f.endsWith('.html')).map((path) => ({ path, html: readFileSync(join(dir, path), 'utf8') }));
-const result = scanFiles(files, { forbidStatesPage: flag === '--forbid-states' });
+const forbidStates = flag === '--forbid-states';
+const result = scanFiles(files, { forbidStatesPage: forbidStates });
 mkdirSync(dirname(out), { recursive: true });
-writeFileSync(out, JSON.stringify(result, null, 2));
+// forbidStates lets the report job confirm the real build was scanned for the states page.
+writeFileSync(out, JSON.stringify({ ...result, forbidStates }, null, 2));
 for (const f of result.findings) console.error(`${f.file}: ${f.rule}: ${f.excerpt}`);
 
 const evidence = distScanEvidence(result);

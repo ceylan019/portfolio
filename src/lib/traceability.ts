@@ -153,8 +153,10 @@ export function buildMatrix(reqs: Requirement[], results: TestResult[], evidence
     for (const tag of t.tags) if (!known.has(tag)) problems.push({ kind: 'unknown-tag', tag, test: testName(t) });
   }
 
+  // Every fixture shard and the real build's report must be present (E15, ruling T22-D):
+  // without real-chromium the real-content checks, real axe run and real headers vanish.
   const seenProjects = new Set(gated.map((t) => t.project));
-  const missing = FIXTURE_PROJECTS.filter((p) => !seenProjects.has(p));
+  const missing = [...FIXTURE_PROJECTS, REAL_PROJECT].filter((p) => !seenProjects.has(p));
   if (missing.length > 0) problems.push({ kind: 'missing-projects', missing });
 
   const passed = gated.filter((t) => t.status === 'passed');

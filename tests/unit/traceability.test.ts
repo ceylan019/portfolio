@@ -1,6 +1,6 @@
 import {
   buildMatrix, describeProblem, normalizePlaywright, normalizeVitest, tagsIn,
-  FIXTURE_PROJECTS, type Requirement, type TestResult, type CheckEvidence,
+  FIXTURE_PROJECTS, REAL_PROJECT, type Requirement, type TestResult, type CheckEvidence,
 } from '../../src/lib/traceability';
 
 const r = (over: Partial<TestResult>): TestResult => ({
@@ -8,7 +8,9 @@ const r = (over: Partial<TestResult>): TestResult => ({
   status: 'passed', tags: [], annotations: [], ...over,
 });
 const req = (id: string, over: Partial<Requirement> = {}): Requirement => ({ id, text: id, source: '§1', ...over });
-const allProjects = (over: Partial<TestResult>) => FIXTURE_PROJECTS.map((p) => r({ ...over, project: p }));
+// Every project the gate requires: the 5 fixture projects plus the real build's project.
+const REQUIRED = [...FIXTURE_PROJECTS, REAL_PROJECT];
+const allProjects = (over: Partial<TestResult>) => REQUIRED.map((p) => r({ ...over, project: p }));
 
 describe('tagsIn', () => {
   test('@REQ-TRACE-01 finds requirement tags and strips the @', () => {
@@ -142,7 +144,7 @@ describe('buildMatrix', () => {
   test('@REQ-TRACE-01 covers a requirement with a passing tagged test, counting projects once', () => {
     const { rows, problems } = buildMatrix([req('REQ-CV-01')], allProjects({ title: 'cv', tags: ['REQ-CV-01'] }), []);
     expect(problems).toEqual([]);
-    expect(rows[0]!.tests).toEqual([{ title: 'cv', file: 'tests/e2e/a.spec.ts', line: 1, suite: 'e2e', projects: [...FIXTURE_PROJECTS] }]);
+    expect(rows[0]!.tests).toEqual([{ title: 'cv', file: 'tests/e2e/a.spec.ts', line: 1, suite: 'e2e', projects: REQUIRED }]);
   });
 
   test('@REQ-TRACE-01 skipped and failed tests do not cover', () => {
@@ -173,8 +175,20 @@ describe('buildMatrix', () => {
   });
 
   test('@REQ-TRACE-01 a missing fixture project fails the gate (E15)', () => {
-    const results = FIXTURE_PROJECTS.filter((p) => p !== 'iphone').map((p) => r({ project: p, tags: ['REQ-X-01'] }));
+    const results = REQUIRED.filter((p) => p !== 'iphone').map((p) => r({ project: p, tags: ['REQ-X-01'] }));
     expect(buildMatrix([req('REQ-X-01')], results, []).problems).toContainEqual({ kind: 'missing-projects', missing: ['iphone'] });
+  });
+
+  test('@REQ-TRACE-01 a missing real build report fails the gate (T22-D)', () => {
+    const results = FIXTURE_PROJECTS.map((p) => r({ project: p, tags: ['REQ-X-01'] }));
+    const { problems } = buildMatrix([req('REQ-X-01')], results, []);
+    expect(problems).toEqual([{ kind: 'missing-projects', missing: ['real-chromium'] }]);
+    expect(describeProblem(problems[0]!)).toBe('No results from project(s): real-chromium.');
+  });
+
+  test('@REQ-TRACE-01 a real build result from a smoke test does not count as the real report', () => {
+    const results = [...FIXTURE_PROJECTS.map((p) => r({ project: p, tags: ['REQ-X-01'] })), r({ suite: 'smoke', project: REAL_PROJECT, tags: [] })];
+    expect(buildMatrix([req('REQ-X-01')], results, []).problems).toEqual([{ kind: 'missing-projects', missing: ['real-chromium'] }]);
   });
 
   test('@REQ-TRACE-01 post-deploy requirements are listed but never block', () => {
@@ -292,7 +306,7 @@ describe('buildMatrix edge cases', () => {
     expect(buildMatrix([req('REQ-X-01')], results, []).counts.axeViolations).toBe(5);
   });
   test('@REQ-TRACE-01 several missing projects are listed in one sentence', () => {
-    const results = FIXTURE_PROJECTS.filter((p) => p !== 'iphone' && p !== 'webkit').map((p) => r({ project: p, tags: ['REQ-X-01'] }));
+    const results = REQUIRED.filter((p) => p !== 'iphone' && p !== 'webkit').map((p) => r({ project: p, tags: ['REQ-X-01'] }));
     const problem = buildMatrix([req('REQ-X-01')], results, []).problems.find((p) => p.kind === 'missing-projects')!;
     expect(describeProblem(problem)).toBe('No results from project(s): webkit, iphone.');
   });

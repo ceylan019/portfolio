@@ -54,16 +54,22 @@ function placeholders(dir: string | undefined) {
 
 function stale(runSha: string | undefined, remote: string | undefined) {
   if (!runSha || !remote) return fail('Usage: gate-cli stale <sha> <remoteUrl>');
-  let head: string | null = null;
+  let listing: string;
   try {
-    head = parseLsRemote(execFileSync('git', ['ls-remote', remote, 'refs/heads/main'], { encoding: 'utf8' }));
+    listing = execFileSync('git', ['ls-remote', remote, 'refs/heads/main'], { encoding: 'utf8' });
   } catch {
-    // Reported below: head stays null.
+    return fail(`Refusing to deploy: could not read the head of main from ${remote}, so this run may be stale.`);
   }
+  // Fail closed (ruling T22-E): an unknown head could let an older run overwrite a newer deploy.
+  const head = parseLsRemote(listing) ?? fail(`Refusing to deploy: ${remote} has no refs/heads/main, so this run may be stale.`);
   const skip = isStale(runSha, head);
-  if (head === null) console.log('::warning::Could not read the head of main; continuing with this deploy.');
-  else if (skip) console.log(`::notice::Skipping deploy: main has moved on to ${head}.`);
-  else console.log(`Not stale: ${runSha} is the head of main.`);
+  if (skip) {
+    const note = `Skipping deploy: main has moved on to ${head}; the newer run deploys.`;
+    console.log(`::notice::${note}`);
+    if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${note}\n`);
+  } else {
+    console.log(`Not stale: ${runSha} is the head of main.`);
+  }
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `stale=${skip}\n`);
 }
 
