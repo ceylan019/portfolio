@@ -1,7 +1,9 @@
 import { parseQualityReport, type QualityReport } from './quality-schema';
 
 export type FetchLike = (url: string) => Promise<{ ok: boolean; json(): Promise<unknown> }>;
-export type Renderer = (live: HTMLElement, data: QualityReport) => void;
+/** Fills the live slot. Returning false means the data has nothing true to show for
+ * this block, so the block keeps its server-rendered fallback. */
+export type Renderer = (live: HTMLElement, data: QualityReport) => void | boolean;
 
 export async function loadQuality(fetchFn: FetchLike, url = '/quality.json'): Promise<QualityReport | null> {
   try {
@@ -17,6 +19,7 @@ export async function loadQuality(fetchFn: FetchLike, url = '/quality.json'): Pr
 /**
  * Upgrades server-rendered fallbacks to live numbers (E7, E14, G3):
  *   unavailable (SSR) validated data and a matching renderer take it to ready
+ *   a renderer that returns false leaves it unavailable, showing the fallback
  *   every path settles: data-settled="true" is always set, in a finally block
  */
 export async function hydrate(root: ParentNode, renderers: Record<string, Renderer>, fetchFn: FetchLike, url?: string): Promise<void> {
@@ -30,8 +33,12 @@ export async function hydrate(root: ParentNode, renderers: Record<string, Render
       const render = renderers[block.dataset.block ?? ''];
       if (data && render && live) {
         live.replaceChildren();
-        render(live, data);
-        block.dataset.state = 'ready';
+        if (render(live, data) === false) {
+          live.replaceChildren();
+          block.dataset.state = 'unavailable';
+        } else {
+          block.dataset.state = 'ready';
+        }
       }
     } catch {
       // A renderer that throws partway may have already appended nodes to the

@@ -59,6 +59,13 @@ export function sparseQuality(): string {
   return mustParse({ ...doc, history: doc.history.slice(0, 2) });
 }
 
+/** Valid, from a run whose start time and previous live check were both unknown:
+ * no pipelineSeconds and no liveCheck. */
+export function firstRunQuality(): string {
+  const { pipelineSeconds: _duration, liveCheck: _live, ...doc } = validQuality();
+  return mustParse(doc);
+}
+
 /**
  * Valid, with the matrix at its schema limit (LIMITS.requirements rows), each
  * row text a maximum-length unbroken string, so the matrix is exercised at

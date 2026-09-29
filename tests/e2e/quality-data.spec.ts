@@ -1,4 +1,4 @@
-import { test, expect, settled, serveQuality, qualityFixture, sparseQuality, manyRowsQuality, oversizedQuality } from './fixtures';
+import { test, expect, settled, serveQuality, qualityFixture, sparseQuality, manyRowsQuality, oversizedQuality, firstRunQuality } from './fixtures';
 import { req } from '../tag';
 import { LIMITS } from '../../src/lib/quality-schema';
 
@@ -75,4 +75,24 @@ test('the matrix at its row limit renders every row', req('REQ-STATE-01'), async
   await expect(page.locator('[data-block="matrix"]')).toHaveAttribute('data-state', 'ready');
   await expect(page.locator('li.req')).toHaveCount(LIMITS.requirements);
   await expect(page.locator('li.req .rq-id').last()).toHaveText('REQ-R1-99');
+});
+
+// A report without a pipeline duration or a previous live check: the duration block
+// keeps its true fallback, every other block renders, and the post-deploy row carries
+// no tick because nothing was checked yet.
+test('an unknown duration and a missing live check stay honest', req('REQ-QUAL-01'), async ({ page }) => {
+  await serveQuality(page, firstRunQuality());
+  await page.goto('/quality');
+  await settled(page);
+  const duration = page.locator('[data-block="duration"]');
+  await expect(duration).toHaveAttribute('data-state', 'unavailable');
+  await expect(duration.getByText('Pipeline duration is unavailable right now.')).toBeVisible();
+  await expect(duration.locator('[data-slot="live"]')).toBeEmpty();
+  for (const name of ['verdict', 'matrix', 'integrity', 'trends', 'mutation']) {
+    await expect(page.locator(`[data-block="${name}"]`)).toHaveAttribute('data-state', 'ready');
+  }
+  const deploy = page.locator('li.req', { hasText: 'REQ-DEPLOY-01' });
+  await expect(deploy.locator('.tick')).toHaveCount(0);
+  await expect(deploy).toContainText('Not verified yet');
+  await expect(page.locator('li.req .tick')).toHaveCount(3);
 });

@@ -70,6 +70,17 @@ test('@REQ-QUAL-02 the report URL is optional', () => {
   expect(parseQualityReport(doc).ok).toBe(true);
 });
 
+test('@REQ-QUAL-02 the pipeline duration is optional, and still a whole non-negative count when present', () => {
+  const doc = valid(); delete doc.pipelineSeconds;
+  const r = parseQualityReport(doc);
+  expect(r.ok && r.data.pipelineSeconds).toBeUndefined();
+  expect(r.ok).toBe(true);
+  for (const bad of [-1, 1.5, '512', null]) {
+    const d = valid(); d.pipelineSeconds = bad;
+    expect(parseQualityReport(d)).toEqual({ ok: false, reason: 'pipelineSeconds' });
+  }
+});
+
 test('@REQ-QUAL-02 non-objects are rejected', () => {
   for (const x of [null, 42, 'x', [], undefined]) expect(parseQualityReport(x).ok).toBe(false);
 });

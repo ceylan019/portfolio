@@ -5,7 +5,7 @@
   "repoUrl": "https://github.com/example/ceylan-akyol-site",
   "ciRunUrl": "https://github.com/example/ceylan-akyol-site/actions/runs/1",
   "pipelineSeconds": 512,
-  "counts": { "requirements": 4, "tests": 148, "testRuns": 312, "axeViolations": 0 },
+  "counts": { "requirements": 3, "tests": 148, "testRuns": 312, "axeViolations": 0 },
   "lighthouse": { "performance": 100, "accessibility": 100, "bestPractices": 100, "seo": 100 },
   "mutation": { "score": 100, "killed": 86, "total": 86, "reportUrl": "https://dashboard.stryker-mutator.io/reports/github.com/example/ceylan-akyol-site/e5cdb92a1b2c3d4e5f60718293a4b5c6d7e8f901" },
   "liveCheck": { "commit": "0c1d2e3", "checkedAt": "2026-09-26T09:20:00Z", "files": 64, "ok": true },

@@ -61,7 +61,9 @@ export const qualityReportSchema = z.object({
   builtAt: isoDate,
   repoUrl: https,
   ciRunUrl: https,
-  pipelineSeconds: count,
+  // Absent when the run's start time could not be read: /quality then keeps the
+  // duration block's fallback rather than publishing a made-up 0.
+  pipelineSeconds: z.optional(count),
   counts: z.object({ requirements: count, tests: count, testRuns: count, axeViolations: count }),
   lighthouse: z.object({ performance: score, accessibility: score, bestPractices: score, seo: score }),
   mutation: z.object({ score, killed: count, total: count, reportUrl: z.optional(https) }),

@@ -47,6 +47,21 @@ test('@REQ-QUAL-01 one failing renderer does not affect other blocks', async () 
   expect(bad.querySelector('[data-slot="live"]')!.childElementCount).toBe(0);
   expect(good.dataset.state).toBe('ready');
 });
+test('@REQ-QUAL-01 a renderer that returns false keeps its block unavailable, with an empty live slot', async () => {
+  const declined = block('declined'); const shown = block('shown'); const done = block('done');
+  // A state other than the server-rendered one proves hydrate sets unavailable itself.
+  declined.dataset.state = 'loading';
+  await hydrate(document, {
+    declined: (l) => { l.append(document.createElement('span')); return false; },
+    shown: (l) => { l.textContent = 'ok'; },
+    done: (l) => { l.textContent = 'done'; return true; },
+  }, fetchJson(text('valid')));
+  expect(declined.dataset.state).toBe('unavailable');
+  expect(declined.dataset.settled).toBe('true');
+  expect(declined.querySelector('[data-slot="live"]')!.childNodes).toHaveLength(0);
+  expect(shown.dataset.state).toBe('ready');
+  expect(done.dataset.state).toBe('ready');
+});
 test('@REQ-QUAL-01 blocks without a renderer settle as unavailable', async () => {
   const x = block('unknown');
   await hydrate(document, {}, fetchJson(text('valid')));

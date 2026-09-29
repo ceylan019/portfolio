@@ -17,8 +17,12 @@ test('every block renders from the fixture data', req('REQ-QUAL-01'), async ({ p
     await expect(block).toHaveAttribute('data-state', 'ready');
     await expect(block.locator('[data-slot="fallback"]')).toBeHidden();
   }
-  await expect(page.locator('[data-block="verdict"]')).toContainText('This build covered all 4 requirements with 148 tests (312 test runs)');
+  await expect(page.locator('[data-block="verdict"]')).toContainText('This build covered all 3 pre-deploy requirements with 148 tests (312 test runs)');
   await expect(page.locator('li.req')).toHaveCount(4);
+  // The fixture's previous live check passed, so the post-deploy row carries its tick too.
+  const deploy = page.locator('li.req', { hasText: 'REQ-DEPLOY-01' });
+  await expect(deploy.locator('.tick')).toHaveCount(1);
+  await expect(deploy).toContainText('Verified on the previous deploy');
   await expect(page.locator('.spark-line')).toHaveCount(3);
   await expect(page.locator('[data-block="duration"] [data-slot="live"]')).toHaveText('This build went through the pipeline in 8 min 32 s.');
   await expect(page.getByRole('link', { name: 'Open the full report on Stryker Dashboard' })).toBeVisible();

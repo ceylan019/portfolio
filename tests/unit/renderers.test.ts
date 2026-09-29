@@ -28,7 +28,7 @@ test('@REQ-QUAL-01 plurals and thousands separators', () => {
 });
 test('@REQ-QUAL-01 verdict states requirements, tests and test runs', () => {
   const l = live(); renderVerdict(l, fixture('valid'));
-  expect(squash(l.textContent)).toContain('This build covered all 4 requirements with 148 tests (312 test runs), and nothing ships unless every one passes.');
+  expect(squash(l.textContent)).toContain('This build covered all 3 pre-deploy requirements with 148 tests (312 test runs), and nothing ships unless every one passes.');
   const commit = l.querySelector('a[href*="/commit/"]')!;
   expect(commit.getAttribute('href')).toBe('https://github.com/example/ceylan-akyol-site/commit/e5cdb92a1b2c3d4e5f60718293a4b5c6d7e8f901');
   expect(commit.textContent).toBe('e5cdb92');
@@ -97,8 +97,17 @@ test('@REQ-QUAL-01 mutation sentence, with the dashboard link only when uploaded
   expect(noLink.querySelector('a')).toBeNull();
 });
 test('@REQ-QUAL-01 pipeline duration in minutes and seconds', () => {
-  const l = live(); renderDuration(l, fixture('valid'));
+  const l = live();
+  expect(renderDuration(l, fixture('valid'))).toBe(true);
   expect(squash(l.textContent)).toBe('This build went through the pipeline in 8 min 32 s.');
+});
+test('@REQ-QUAL-01 an unknown pipeline duration renders nothing and asks to keep the fallback', () => {
+  const { pipelineSeconds: _drop, ...rest } = fixture('valid');
+  const l = live();
+  expect(renderDuration(l, rest)).toBe(false);
+  expect(l.childNodes).toHaveLength(0);
+  const zero = live(); renderDuration(zero, { ...rest, pipelineSeconds: 0 });
+  expect(squash(zero.textContent)).toBe('This build went through the pipeline in 0 min 0 s.');
 });
 
 // Mutation testing (Task 11): exact markup, so a dropped class, attribute,
@@ -109,7 +118,7 @@ const html = (render: (l: HTMLElement) => void) => { const l = live(); render(l)
 
 test('@REQ-QUAL-01 verdict markup: classes, deploy time and every link', () => {
   expect(html((l) => renderVerdict(l, fixture('valid')))).toBe(
-    '<p class="lede">Every promise this site makes is tied to the checks that prove it. This build covered <b>all 4 requirements</b> with <b>148 tests</b> (<b>312 test runs</b>), and nothing ships unless every one passes.</p>'
+    '<p class="lede">Every promise this site makes is tied to the checks that prove it. This build covered <b>all 3 pre-deploy requirements</b> with <b>148 tests</b> (<b>312 test runs</b>), and nothing ships unless every one passes.</p>'
     + '<p class="meta2">Deployed 27 September 2026, 09:14 UTC<br>'
     + 'Commit <a href="https://github.com/example/ceylan-akyol-site/commit/e5cdb92a1b2c3d4e5f60718293a4b5c6d7e8f901" class="lnk">e5cdb92</a><br>'
     + '<a href="https://github.com/example/ceylan-akyol-site/actions/runs/1" class="lnk">View this CI run</a><br>'
@@ -119,7 +128,7 @@ test('@REQ-QUAL-01 verdict markup: classes, deploy time and every link', () => {
 test('@REQ-QUAL-01 verdict uses singular forms for counts of one', () => {
   const d = fixture('valid');
   const l = live(); renderVerdict(l, { ...d, counts: { ...d.counts, requirements: 1, tests: 1, testRuns: 1 } });
-  expect(squash(l.querySelector('.lede')!.textContent)).toContain('covered all 1 requirement with 1 test (1 test run), and');
+  expect(squash(l.querySelector('.lede')!.textContent)).toContain('covered all 1 pre-deploy requirement with 1 test (1 test run), and');
 });
 test('@REQ-QUAL-01 integrity markup for a verified, a single-file and a failed live check', () => {
   const d = fixture('valid');
@@ -146,7 +155,7 @@ test('@REQ-QUAL-01 matrix markup for tested, check-only and post-deploy rows', (
     + `<li class="req">${tick}<div><span class="rq-id">REQ-PERF-01</span><p class="rq-text">Mobile Lighthouse in CI: performance at least 95</p></div>`
     + '<div class="rq-cov"><strong>Lighthouse CI</strong></div></li>'
     + `<li class="req">${tick}<div><span class="rq-id">REQ-DEPLOY-01</span><p class="rq-text">Every file served live matches the tested build</p></div>`
-    + '<div class="rq-cov"><strong>Checked after each deploy</strong><span>live smoke test</span></div></li>'
+    + '<div class="rq-cov"><strong>Checked after each deploy</strong><span>live smoke test</span><span class="dim">Verified on the previous deploy</span></div></li>'
     + '</ul>',
   );
 });
@@ -231,4 +240,53 @@ test('@REQ-QUAL-01 tick is the brush path scaled to the requested width', () => 
 test('@REQ-SEC-02 el keeps the datetime, aria-hidden and hidden attributes', () => {
   expect(el('time', '2026', { datetime: '2026-09-27' }).outerHTML).toBe('<time datetime="2026-09-27">2026</time>');
   expect(el('span', 'x', { 'aria-hidden': 'true', hidden: '' }).outerHTML).toBe('<span aria-hidden="true" hidden="">x</span>');
+});
+
+// The post-deploy row's tick means the previous deploy's live check passed (DESIGN.md:
+// the tick means one thing everywhere, this was checked).
+test('@REQ-QUAL-01 the post-deploy row is ticked only when the previous live check passed', () => {
+  const d = fixture('valid');
+  const deployRow = (data: QualityReport) => {
+    const l = live(); renderMatrix(l, data);
+    return l.querySelectorAll('li.req')[3]!;
+  };
+  const cov = (status: string) => `<div class="rq-cov"><strong>Checked after each deploy</strong><span>live smoke test</span><span class="dim">${status}</span></div>`;
+  const main = '<div><span class="rq-id">REQ-DEPLOY-01</span><p class="rq-text">Every file served live matches the tested build</p></div>';
+
+  expect(deployRow(d).innerHTML).toBe(`${TICK(30, 25)}${main}${cov('Verified on the previous deploy')}`);
+
+  const { liveCheck: _omit, ...none } = d;
+  const notYet = deployRow(none);
+  expect(notYet.innerHTML).toBe(`<span></span>${main}${cov('Not verified yet')}`);
+  expect(notYet.querySelector('.tick')).toBeNull();
+
+  const failed = deployRow({ ...d, liveCheck: { ...d.liveCheck!, ok: false } });
+  expect(failed.innerHTML).toBe(`<span></span>${main}${cov('Failed on the previous deploy')}`);
+  expect(failed.querySelector('.tick')).toBeNull();
+});
+test('@REQ-QUAL-01 pre-deploy rows keep their tick whatever the live check says', () => {
+  const d = fixture('valid');
+  const { liveCheck: _omit, ...none } = d;
+  for (const data of [none, { ...d, liveCheck: { ...d.liveCheck!, ok: false } }]) {
+    const l = live(); renderMatrix(l, data);
+    const rows = [...l.querySelectorAll('li.req')];
+    expect(rows.slice(0, 3).map((r) => r.querySelectorAll('.tick').length)).toEqual([1, 1, 1]);
+    expect(rows[3]!.querySelectorAll('.tick')).toHaveLength(0);
+  }
+});
+test('@REQ-QUAL-01 device profiles count only the 5 fixture projects, and the real build is named apart', () => {
+  const d = fixture('valid');
+  const t = (projects: string[]) => ({ title: 'x', file: 'tests/x.ts', line: 1, suite: 'e2e' as const, projects });
+  const row = (projects: string[][]): QualityReport['matrix'][number] => ({ id: 'REQ-A-01', text: 'a', phase: 'pre-deploy', checks: [], tests: projects.map(t) });
+  const where = (projects: string[][]) => {
+    const l = live(); renderMatrix(l, { ...d, matrix: [row(projects)] });
+    return l.querySelector('.rq-cov .dim')?.textContent ?? null;
+  };
+  expect(where([['chromium', 'firefox', 'webkit', 'iphone', 'pixel', 'real-chromium']])).toBe('5 device profiles, real build');
+  expect(where([['chromium', 'firefox', 'webkit', 'iphone', 'pixel'], ['real-chromium']])).toBe('5 device profiles, real build');
+  expect(where([['real-chromium']])).toBe('real build');
+  expect(where([['chromium'], ['real-chromium']])).toBe('1 device profile, real build');
+  expect(where([['pixel', 'iphone']])).toBe('2 device profiles');
+  expect(where([['smoke']])).toBeNull();
+  expect(where([[]])).toBeNull();
 });

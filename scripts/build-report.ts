@@ -9,7 +9,8 @@
  * or empty report means not covered (spec section 8): required reports that are absent
  * or unreadable are named gate problems, and check evidence built from them fails.
  * Needs GITHUB_SHA, GITHUB_REPOSITORY, GITHUB_RUN_ID and SITE_URL; reads GITHUB_SERVER_URL,
- * RUN_STARTED_AT, STRYKER_URL and GITHUB_STEP_SUMMARY when set.
+ * RUN_STARTED_AT, STRYKER_URL and GITHUB_STEP_SUMMARY when set. Without RUN_STARTED_AT,
+ * quality.json carries no pipeline duration and /quality keeps that block's fallback.
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,7 +23,8 @@ import {
 } from '../src/lib/evidence';
 import { mutationSummary } from '../src/lib/mutation';
 import { appendHistory, fetchLiveQuality, resolveHistory } from '../src/lib/history';
-import { SCHEMA_VERSION, liveCheckSchema, parseQualityReport } from '../src/lib/quality-schema';
+import { liveCheckSchema, parseQualityReport } from '../src/lib/quality-schema';
+import { assembleReport, preDeployCount } from '../src/lib/report';
 import { isRecord } from '../src/lib/guards';
 import { walkFiles } from './node-fs';
 
@@ -165,7 +167,7 @@ const mutation = mutationSummary(mutationData ?? null);
 if (mutationData !== undefined && mutation.total === 0) reportProblems.push(`${mutationPath} contains no mutants.`);
 
 const { rows, problems, counts } = buildMatrix(REQUIREMENTS, results, evidence);
-say(`## Traceability\n\n${rows.length} requirements, ${counts.tests} tests, ${counts.testRuns} test runs.\n`);
+say(`## Traceability\n\n${rows.length} requirements (${preDeployCount(rows)} pre-deploy), ${counts.tests} tests, ${counts.testRuns} test runs.\n`);
 for (const e of evidence) say(`- ${e.name}: ${e.passed ? 'passed' : 'FAILED'} (${e.detail})`);
 say(`- mutation: ${mutation.score}% (${mutation.killed} of ${mutation.total} mutants killed)`);
 if (problems.length > 0 || reportProblems.length > 0) {
@@ -180,7 +182,6 @@ const liveCheck = liveCheckRaw?.ok ? liveCheckSchema.safeParse(liveCheckRaw.data
 const prevPath = first((p) => segments(p).includes('prev-quality') && p.endsWith('quality.json'));
 const prev = prevPath ? load(prevPath) : null;
 const now = new Date();
-const started = Date.parse(process.env.RUN_STARTED_AT || '');
 
 const live = await fetchLiveQuality(`${siteUrl}/quality.json`, {
   fetch: (url, init) => fetch(url, init),
@@ -195,21 +196,12 @@ const history = appendHistory(source.kind === 'fresh' ? [] : source.history, {
   mutationScore: mutation.score, lighthousePerformance: scores.performance,
 });
 
-const strykerUrl = process.env.STRYKER_URL || '';
-const report = {
-  schemaVersion: SCHEMA_VERSION,
-  commit: sha,
-  builtAt: now.toISOString(),
-  repoUrl,
-  ciRunUrl: `${repoUrl}/actions/runs/${runId}`,
-  pipelineSeconds: Number.isFinite(started) ? Math.max(0, Math.round((now.getTime() - started) / 1000)) : 0,
-  counts: { requirements: rows.length, tests: counts.tests, testRuns: counts.testRuns, axeViolations: counts.axeViolations },
-  lighthouse: scores,
-  mutation: { ...mutation, ...(strykerUrl ? { reportUrl: strykerUrl } : {}) },
-  ...(liveCheck?.success ? { liveCheck: liveCheck.data } : {}),
-  matrix: rows,
-  history,
-};
+const report = assembleReport({
+  commit: sha, now, runStartedAt: process.env.RUN_STARTED_AT || '', repoUrl, runId,
+  rows, counts, lighthouse: scores, mutation, strykerUrl: process.env.STRYKER_URL || '',
+  liveCheck: liveCheck?.success ? liveCheck.data : undefined, history,
+});
+if (report.pipelineSeconds === undefined) say('\n> Warning: RUN_STARTED_AT is empty or unreadable, so quality.json records no pipeline duration.');
 const parsed = parseQualityReport(report);
 if (!parsed.ok) stop('Report not built', [`quality.json failed its own schema at ${parsed.reason}.`]);
 mkdirSync('out', { recursive: true });
