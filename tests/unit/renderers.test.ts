@@ -58,6 +58,15 @@ test('@REQ-SEC-02 el rejects javascript, data and protocol-relative hrefs', () =
     expect(el('a', 'x', { href }).getAttribute('href')).toBe(href);
   }
 });
+test('@REQ-SEC-02 el rejects hrefs holding a tab, newline or carriage return anywhere', () => {
+  // Browsers strip these before parsing, so "/\t/evil.example" would load //evil.example.
+  for (const href of ['/\t/evil.example', '/\n/evil.example', '/\r/evil.example', '/\\\t\\evil', 'https://example.com/a\tb', 'https://example.com/\n', '/quality\r', '\t//evil.example']) {
+    expect(el('a', 'x', { href }).hasAttribute('href')).toBe(false);
+  }
+  for (const href of ['/quality', 'https://example.com/a b', '/a%09b']) {
+    expect(el('a', 'x', { href }).getAttribute('href')).toBe(href);
+  }
+});
 test('@REQ-SEC-02 hostile strings render as text and create no elements', () => {
   // T10-A: hostile.json is now schema-invalid, so this test exercises the
   // schema-valid hostile-valid fixture, whose HTML and javascript: strings

@@ -9,8 +9,12 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // A root-relative href must start with a single "/" followed by something other
 // than "/" or "\": both "//host/x" and "/\host" are browser tricks that resolve
-// to a different, cross-origin host, not a same-site path.
+// to a different, cross-origin host, not a same-site path. Browsers strip tab,
+// newline and carriage return from a URL before parsing it, so "/\t/host" would
+// become "//host": any of the three anywhere rejects the href.
+const STRIPPED_BY_URL_PARSER = /[\t\n\r]/;
 function isSafeHref(v: string): boolean {
+  if (STRIPPED_BY_URL_PARSER.test(v)) return false;
   if (v.startsWith('https://')) return true;
   if (v.startsWith('/')) {
     const next = v.charAt(1);
