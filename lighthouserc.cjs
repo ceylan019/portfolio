@@ -3,6 +3,18 @@
 const build = process.env.LHCI_BUILD === 'fixture' ? 'fixture' : 'real';
 const base = build === 'fixture' ? 'http://localhost:8787' : 'http://localhost:8788';
 
+// Only the real build ever emits the Cloudflare beacon <script>, and only when
+// CF_BEACON_TOKEN is set (Base.astro gates it on BUILD_KIND === 'real'). Chrome
+// still logs a Network request for it even though blockedUrlPatterns blocks the
+// beacon from actually loading (T21-B: Chrome emits a request/failure pair for
+// a client-blocked request regardless, and Lighthouse's resource-summary counts
+// every logged record). So once a real token is configured, one third-party
+// request against the real build is the correct, spec-allowed count (the
+// beacon is the one third-party script the spec permits). Checked against
+// `build` too, not just the env var, so a token present in the environment
+// during a fixture run (which never emits the tag) doesn't loosen that budget.
+const thirdPartyCount = build === 'real' && process.env.CF_BEACON_TOKEN ? 1 : 0;
+
 module.exports = {
   ci: {
     collect: {
@@ -21,7 +33,7 @@ module.exports = {
         'categories:seo': ['error', { minScore: 1, aggregationMethod: 'median-run' }],
         'resource-summary:font:size': ['error', { maxNumericValue: 120000 }],
         'resource-summary:total:size': ['error', { maxNumericValue: 256000 }],
-        'resource-summary:third-party:count': ['error', { maxNumericValue: 0 }],
+        'resource-summary:third-party:count': ['error', { maxNumericValue: thirdPartyCount }],
       },
     },
     upload: { target: 'filesystem', outputDir: `.lighthouseci/${build}` },

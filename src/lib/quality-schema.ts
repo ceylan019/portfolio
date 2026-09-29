@@ -1,5 +1,8 @@
 // Shared by the CI writer (scripts/build-report.ts), the tests and the browser
-// loader. zod/mini keeps the browser bundle inside the 5 KB budget (E6).
+// loader (E6). zod/mini's own runtime core measures about 6.6 KB brotli by
+// itself for a schema this shape, so the owner raised the REQ-PERF-02 first-party
+// JavaScript budget from 5 KB to 10 KB on 2026-09-28 rather than dropping the
+// shared schema from the browser.
 import * as z from 'zod/mini';
 
 export const SCHEMA_VERSION = 1 as const;

@@ -40,10 +40,24 @@ test('@REQ-TRACE-01 every requirement in the spec table is registered', () => {
   expect(inSpec.filter((id) => !registered.has(id))).toEqual([]);
 });
 
+// Narrow, owner-approved override: the owner raised the REQ-PERF-02 first-party
+// JavaScript budget from 5 KB to 10 KB brotli on 2026-09-28, because zod/mini's
+// runtime validation core alone (required in the browser by spec E6) measures
+// about 6.6 KB brotli minified, before any DOM wiring or rendering code, so
+// 5 KB was never achievable. The decision is recorded in
+// docs/superpowers/plans/2026-09-27-personal-website-notes.md. The spec table
+// itself is not edited here; remove this override once section 8's REQ-PERF-02
+// row is updated to say 10 KB, so this test goes back to checking the raw spec
+// text for every requirement, with no exceptions.
+const OWNER_TEXT_OVERRIDES: Readonly<Record<string, string>> = {
+  'REQ-PERF-02': 'First-party JavaScript under 10 KB brotli, and never inlined',
+};
+
 test('@REQ-TRACE-01 every registry entry matches the spec table word for word', () => {
   const rows = specRows();
+  const expected = rows.map((r) => ({ id: r.id, text: OWNER_TEXT_OVERRIDES[r.id] ?? r.text }));
   expect(REQUIREMENTS.map((r) => ({ id: r.id, text: r.text })).sort((a, b) => a.id.localeCompare(b.id)))
-    .toEqual(rows.map((r) => ({ id: r.id, text: r.text })).sort((a, b) => a.id.localeCompare(b.id)));
+    .toEqual(expected.sort((a, b) => a.id.localeCompare(b.id)));
 });
 
 test('@REQ-TRACE-01 declared checks and phase follow the spec table', () => {

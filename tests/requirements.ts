@@ -4,6 +4,11 @@ import type { Requirement } from '../src/lib/traceability';
 // is the spec table's wording with Markdown backticks removed, because it is
 // shown publicly on /quality. tests/unit/requirements.test.ts keeps the two in
 // step. Every test tag must name an id listed here.
+//
+// REQ-PERF-02 is the one exception: the owner raised its budget from 5 KB to
+// 10 KB brotli on 2026-09-28 (docs/superpowers/plans/2026-09-27-personal-website-notes.md),
+// ahead of a spec update. tests/unit/requirements.test.ts carries a narrow,
+// owner-approved override for this one id until the spec table is updated.
 export const REQUIREMENTS: Requirement[] = [
   { id: 'REQ-HERO-01', text: 'Hero shows name, title, tagline and photo with alt text', source: '§4' },
   { id: 'REQ-CV-01', text: 'CV downloads in one click from the hero; /cv.pdf is served as application/pdf', source: '§4' },
@@ -27,7 +32,7 @@ export const REQUIREMENTS: Requirement[] = [
   { id: 'REQ-A11Y-02', text: 'Skip link, logical tab order and visible focus', source: '§6' },
   { id: 'REQ-A11Y-03', text: 'Reduced motion shows the brush mark without animation', source: '§6' },
   { id: 'REQ-PERF-01', text: 'Mobile Lighthouse in CI: performance at least 95, other categories 100, byte budgets met', source: '§1', checks: ['lighthouse'] },
-  { id: 'REQ-PERF-02', text: 'First-party JavaScript under 5 KB brotli, and never inlined', source: 'E22' },
+  { id: 'REQ-PERF-02', text: 'First-party JavaScript under 10 KB brotli, and never inlined', source: 'E22' },
   { id: 'REQ-LINK-01', text: 'No broken internal links', source: '§8', checks: ['links'] },
   { id: 'REQ-NF-01', text: 'Unknown paths return the custom 404 page with status 404', source: '§4' },
   { id: 'REQ-URL-01', text: '/quality and /quality/ resolve to one canonical URL without a trailing slash', source: 'E22' },
