@@ -630,3 +630,22 @@ Until real content and `SITE_URL` are in place, the weekly link check will repor
 - live-check has no automated test.
 - The live 404 check does not confirm the custom page.
 - `/_astro/*` caching is not checked live.
+
+## Task 25: README, decision log and runbook
+
+Commits `c4e9ac2` and `c9d6bd0`. New files: `README.md`, `docs/runbook.md` and `docs/decisions/0001` to `0008`.
+
+**Changes from the plan:**
+- Ruling T25-A: the documents describe what was built, not the plan's draft. Visual regression runs on desktop Chromium and emulated Pixel only (the draft said all five profiles, ruling P25). The JavaScript budget is 10 KB. The runbook covers:
+  - the Stryker runner patch and when to remove it
+  - fail-closed stale commits
+  - where the link-check state lives
+  - the Lighthouse rerun and its job-summary record
+  - enabling the pre-commit hook
+  - SHA-pinned actions
+- The README's "Run it" commands were run in order, which corrected one: `pnpm build:real` must run before `pnpm test:unit`, because the build test reads `dist/_astro`. Results: 344 of 344 unit tests passed, Stryker scored 99.78, and in chromium 51 E2E tests passed and 12 visual tests failed only for missing baselines. `pnpm install` was skipped because `node_modules` was already present, and the hook line was not run. The README says both of these.
+
+**Reviewer findings:**
+- Important, fixed: the README first claimed every command had been run.
+- Important, fixed: the README, decision 0004 and a code comment said the deploy job "installs nothing". It installs no project dependencies and fetches only the pinned wrangler with install scripts disabled.
+- A scoped re-review confirmed both fixes. The reviewer checked every other factual claim against the repository and found no mismatch.
