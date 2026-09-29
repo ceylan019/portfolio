@@ -1,0 +1,31 @@
+name: keepalive
+
+# GitHub disables scheduled workflows in public repositories after 60 days without
+# repository activity (E23). Enabling each scheduled workflow once a month through
+# the API keeps them enabled. docs/runbook.md says how to check and re-enable them.
+
+on:
+  schedule:
+    - cron: '5 9 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  enable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      # gh workflow enable needs write access to Actions.
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          for wf in ci.yml smoke.yml links-weekly.yml keepalive.yml; do gh workflow enable "$wf"; done

@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      # E23: every Playwright package moves together in one pull request, because the
+      # ci.yml container tag follows the @playwright/test pin.
+      playwright:
+        patterns: ['@playwright/*', 'playwright', 'playwright-core']
+      astro:
+        patterns: ['astro', '@astrojs/*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
