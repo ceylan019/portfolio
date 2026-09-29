@@ -4,29 +4,46 @@ Running notes for executing `docs/superpowers/plans/2026-09-27-personal-website.
 
 ## Summary for Ceylan
 
-Work in progress. This section is updated after every task.
+Status: Tasks 1 to 25 are implemented, each reviewed task by task, followed by a whole-branch review and one fix wave. The branch is `feat/phase-1-site`. Nothing was pushed, merged or deployed. Task 26 (launch) is yours, and its steps are under "Needs me".
 
 ### Spec deviations
 
-- REQ-PERF-02 JavaScript budget raised from 5 KB to 10 KB brotli by your decision on 2026-09-28 (Task 21). Please update spec section 6 and the REQ-PERF-02 row; then remove the parity-test override.
-- Otherwise none. Where the plan and the spec disagreed, the spec was followed; the pre-flight table and each task section list those plan changes (P11 hostile fixture, P22 retries, Task 5 malformed tags, Task 6 JSON-LD type, Task 7 fail-open gates).
+- **JavaScript budget:** raised from 5 KB to 10 KB brotli by your decision on 28 September 2026 (Task 21). Please update spec section 6 and the REQ-PERF-02 row, then delete the one parity-test override.
+- **Deploy job install:** the job now installs only wrangler, from a committed `deploy/package-lock.json` with install scripts disabled. Spec section 9 (E17) says it "installs no npm packages". It still installs no project dependencies. Please confirm the wording or change the approach.
+- **The verdict on `/quality`:** it says "all N pre-deploy requirements" instead of "all N requirements", because the post-deploy requirement cannot be covered by the build (final review).
+- **Plan changes, not spec deviations:** everywhere else the plan and the spec disagreed, the spec was followed. The pre-flight table and each task section list those changes.
 
 ### Open questions
 
-- Brush ring colours: DESIGN.md tokens are used; photo-mark.svg's own gradient stops differ slightly. Add tokens to DESIGN.md if you want the SVG's exact shades (Task 12).
-- Credential IDs longer than about 35 characters cannot both stay unbroken and avoid sideways scrolling at 375px (spec section 6). Check your real IDs at launch (Task 20).
+- **Brush ring colours:** the ring uses the DESIGN.md tokens, but `photo-mark.svg`'s own gradient stops differ slightly. Add tokens to DESIGN.md if you want the SVG's exact shades (Task 12).
+- **Credential IDs:** an ID longer than about 35 characters cannot both stay unbroken and avoid sideways scrolling at 375px (spec section 6). Check your real IDs at launch (Task 20).
+- **Font weight 700:** DESIGN.md asks for weight 700 on `h2` and the button, but only 400, 500 and 800 are loaded, so 700 renders as 800 (final review).
+- **Edge states in the real content:** zero visible certifications, or none with a verify URL, would fail two `@real` tests, although the spec allows those states (final review).
+- **Copyright metadata:** should copyright fields in photo metadata count as identifying (final review)?
+- **Dependabot and Playwright packages:** `@axe-core/playwright` is outside the Dependabot Playwright group. Change this if "all Playwright packages" includes it (Task 24).
+- **Wrangler pins:** the root and `/deploy` wrangler pins can drift apart, because Dependabot bumps them separately (final review).
 
 ### Things you must do
 
-- Task 26 (launch) is yours. Its steps are listed under "Needs me" at the end of this file.
-- Enable the local EXIF pre-commit hook: `git config core.hooksPath .githooks` (Task 9).
-- Update the spec for the 10 KB JavaScript budget (Task 21).
-- Delete the untracked `.probe/` scratch folder (Task 21).
+The full list is under "Needs me" at the end of the file, before the appendix. The short version:
+
+1. Remove the backup refs.
+2. Review and merge.
+3. Update the spec (JavaScript budget, and the E17 wording if you agree).
+4. Delete `.probe/`.
+5. Enable the EXIF hook.
+6. Create the accounts, secrets and variables.
+7. Generate and commit the visual baselines (after merge).
+8. Replace the placeholder content.
+9. Watch the first deploy.
 
 ### Known gaps
 
-- Package majors are newer than the plan text (Vitest 5, Stryker 10, TypeScript 6, Playwright 1.63); see Task 1.
-- The Stryker Vitest runner 10.0.0 is patched locally (Task 11) because it silently skipped nested tests under Vitest 5. Remove the patch when a fixed runner is released.
+- **Not run on GitHub:** nothing ran on GitHub Actions or inside the Playwright Linux container. Container behaviour, production headers, the daily and weekly workflows, the Dependabot variables and the keepalive timer reset are unverified until the first real runs (Needs me items 15 to 18).
+- **Visual baselines:** there are none yet, so every CI run fails REQ-VIS-01 until you commit them. That is by design.
+- **Stryker runner patch:** `@stryker-mutator/vitest-runner` 10.0.0 is patched locally because it silently skipped nested tests under Vitest 5. Remove the patch when a fixed runner is released (runbook).
+- **Newer package majors:** several packages are newer majors than the plan text (Vitest 5, Stryker 10, TypeScript 6, Playwright 1.63). See Task 1.
+- **Local check tools:** actionlint was not available, so workflows were checked with `@action-validator/cli` and a structural script.
 
 ## Environment
 
@@ -736,3 +753,156 @@ Not run locally:
 - A real deploy and the live smoke and hash check.
 
 Leftover `wrangler dev` servers started by subagents during the session were stopped afterwards, and ports 8787 and 8788 are free.
+
+## Whole-branch review and final fixes
+
+After all 25 tasks, an independent reviewer went over the whole branch (`c9bb45f..5d8741c`). It covered:
+- the gate end to end
+- every public claim on `/` and `/quality`
+- security and the workflows
+- consistency and the writing rule
+- a triage of the 41 minor findings deferred from task reviews
+
+It found no critical issues. It found six important ones, and all six were fixed in one fix wave (commits `a0f9e83` to `77bbac0`):
+
+1. `/quality` said "6 device profiles" for requirements tested in both builds, because it counted the real-build project as a profile. The page's own glossary defines 5. It now says "5 device profiles, real build".
+2. The verdict counted the post-deploy requirement (REQ-DEPLOY-01) as covered by the build, and every matrix row got the "this was checked" tick. The verdict now says "all N pre-deploy requirements". The DEPLOY-01 row is ticked only when the previous deploy's live check passed. Otherwise it says "Not verified yet" or "Failed on the previous deploy".
+3. Rerunning a failed job once (the spec's Lighthouse rerun policy) would have failed on an existing artifact name. Every upload now overwrites.
+4. A missing run start time would have published "0 min 0 s". The duration is now optional, and the block keeps its fallback sentence.
+5. A browser project with only skipped results counted as present in the gate. It now counts as missing.
+6. The deploy job installed wrangler without a lock on its dependencies, in the step that holds the Cloudflare token. It now runs `npm ci --ignore-scripts` from a committed `deploy/package-lock.json` pinned to wrangler 4.142.0, and Dependabot watches `/deploy`.
+
+The same wave included ten smaller fixes, chosen because each touches a public claim, privacy, the gate or the deploy:
+- live-check requests time out after 20 seconds.
+- `test.fail()` results do not count as coverage, and a test forbids `.fails(` in the test suites.
+- Test suite classification no longer depends on the checkout path.
+- The photo check also reads XMP and IPTC metadata for GPS and creator data.
+- The link guard rejects tab, newline and carriage return.
+- Pages CMS saves About as Markdown, checked against its docs.
+- The `/quality` smoke copy and CI link are accurate.
+- The README's "Run it" covers every suite and gives a concrete domain-move step.
+- Code comments no longer cite uncommitted working files.
+- One duplicated file walker was removed.
+
+A scoped re-review confirmed all 16 fixes and found no new critical or important problems. After the fixes:
+- 384 of 384 unit, component and build tests pass.
+- Stryker scores 99.80.
+- Fixture E2E passes 260 of 260 (52 per project), and real-chromium passes 14 of 14.
+- Lighthouse passes on both builds, and the link check found 23 links with 0 broken.
+- The locked wrangler install dry-runs cleanly.
+- `quality.json` renders the three DEPLOY-01 states and the device-profile wording correctly.
+
+**Parked with a ruling (no effect on public claims or the gate today):**
+- The test path classifier cuts at the first `/tests/` folder, so a checkout path that itself contains a `tests` folder would misclassify tests. It does not trigger with this repository's name.
+- The smoke copy on `/quality` says "the home page", while the test also checks that the photo renders. That is an understatement, not a false claim.
+- Spacing values off the DESIGN.md scale remain in `base.css` (6, 10, 14, 18, 20, 22, 28 and 40px, plus one 34px type size). Leave them for a design polish pass once visual baselines exist.
+- About 109 code comments cite ruling or task numbers. They resolve through this committed notes file.
+- The remaining minors follow the reviewer's triage. None affects a public claim or the gate today.
+
+**Questions the reviewer raised for you** (also listed in the summary):
+- DESIGN.md sets weight 700 for `h2` and the button, but the spec loads only the 400, 500 and 800 weights, so 700 renders as 800.
+- Real content with zero visible certifications, or none with a verify URL, would fail two `@real` tests, although the spec allows those states.
+- The EXIF and IPTC checks do not treat copyright fields (often the owner's name) as identifying.
+- Spec section 9 (E17) says the deploy job installs no npm packages. It now installs only wrangler, from a committed lockfile with install scripts disabled.
+- The root and `/deploy` wrangler pins can drift apart, because Dependabot bumps them in separate pull requests.
+- The `/quality` page text changed, so generate the visual baselines after merging this branch, not before.
+
+## Appendix: every ruling made during execution
+
+Copied from the controller's ledger in the order made. Format: ruling; why; what it costs if wrong. P-numbers are the pre-flight rulings; T-numbers belong to the task they name.
+
+- Rulings (format: Ruling: what; why; cost if wrong). Per-task detail in rulings.md.
+- P1 Ruling: traceability accepts Playwright tags with or without the leading @ and the Task 5 fixture uses the real JSON reporter shape (no @); Playwright 1.55 JSON strips @, checked locally by the scanner; if wrong, a harmless extra normalization.
+- P2 Ruling: fixture dist-scan output is uploaded by one matrix leg only (chromium); the report job expects exactly 2 scan files; if wrong, evidence fails loudly, not silently.
+- P3 Ruling: unit tests tagged REQ-PERF-01 or REQ-CSP-01 are retagged (GATE-01, TRACE-01 or the right ID) so those two requirements are covered only by their declared checks (lighthouse, dist-scan), per spec section 8; costs nothing but tag edits.
+- P4 Ruling: add .prose { overflow-wrap: anywhere } (Review Focus 3, spec no horizontal scroll at 375px); tiny CSS cost.
+- P5 Ruling: SITE_URL fallback uses || not ?? everywhere (empty repo variable arrives as ""); if wrong, identical behavior when set.
+- P6 Ruling: report job reads live-check from the latest completed main run of the smoke workflow regardless of conclusion; a failed check must show as failed, spec E15 honesty; if wrong, /quality could show a newer failure, which is the truth.
+- P7 Ruling: smoke steps piping to tee use bash with pipefail; otherwise failures never fail the job (spec D27).
+- P8 Ruling: workflows create their labels idempotently (gh label create --force) before issue create; needs no manual step.
+- P9 Ruling: links-weekly state lives in the issue body once the issue exists (spec D15); before an issue exists, in an uploaded artifact from the previous run (not the Actions cache, which evicts at 7 days); plan's cache choice is broken for a weekly cadence. Recorded as a deviation from the plan, not the spec.
+- P10 Ruling: Task 16 git add includes src/lib/site.ts.
+- P11 Ruling: follow spec S356/S358: the hostile quality.json fixture (negative and huge numbers, wrong types, HTML in names) must settle unavailable. Add a separate schema-valid html-in-names variant expected ready that proves nothing is injected (REQ-SEC-02). Spec wins over plan; costs one extra fixture.
+- P12 Ruling: Task 17 follows spec section 4 /quality order and copy: Requirements before Deploy integrity; integrity sentence per spec wording; every block including pipeline duration has a true number-free fallback (G3); verdict fallback links the repo and its Actions page; the suites block describes every suite in spec section 8's table; all links meet 44px and use the link style.
+- P13 Ruling: Task 13 schema-drift test asserts ok.success before the rest.
+- P14 Ruling: .pages.yml sets filename so CMS-created certifications are .yaml; cv path resolved per the verified Pages CMS media semantics; verified against Pages CMS docs in Task 13.
+- P15 Ruling: Task 21 verifies Lighthouse canonical audit on the first real run; any audit skipped must be recorded in the notes and the README as a skipped audit, never silently. Decide in Task 21 with evidence.
+- P16 Ruling: Task 21 verifies beacon blocking effect on best-practices and third-party budgets with a real run; record result.
+- P17 Ruling: EXIF check reads metadata through sharp's exif buffer (covers WebP and AVIF) and fails closed on parse errors; spec E18 requires webp coverage; if wrong, a false build failure that names the file.
+- P18 Ruling: Playwright container job for Firefox uses HOME=/root (Playwright docs recommendation); cannot verify locally, record.
+- P19 Ruling: wrap sharp Buffers in new Uint8Array for Response bodies if astro check complains.
+- P20 Ruling: header tests check exact values against wrangler dev; if Workers adds directives, assert required directives present and no contradicting ones; record what wrangler dev actually returns.
+- P21 Ruling: expected test counts in plan steps are informational; implementers report the real count.
+- P22 Ruling: history fetch does 1 attempt plus 3 retries with backoff, and a 200 with invalid JSON counts as a failure and is retried (spec S445 "retry 3 times").
+- P23 Ruling: retag L3499 (A11Y-03), L3506 (CERT-04), L4644 (STATE-01) to the requirement each test actually proves.
+- P24 Ruling: tests/requirements.ts text copies spec section 8 table text verbatim.
+- P25 Ruling: README and decision 0001 say visual regression runs on desktop Chromium and emulated Pixel only.
+- P26 Ruling: sizes, spacing and tokens snap to DESIGN.md scales; no unused tokens; prose capped at 62ch (DESIGN.md); where DESIGN.md has no value, use the nearest scale value and report it.
+- P27 Ruling: share duplicated logic: months via src/lib/dates.ts, one isObj helper, one frontmatter parser, one serve-and-wait helper; reviewer would flag verbatim duplication.
+- T1-V Ruling: accept current versions from Task 1 (astro 6.4.8 held on 6; vitest 5.0.2, stryker 10.0.0, typescript 6.0.3, happy-dom 20, linkinator 8, playwright 1.63.0); plan says pin current and majors are minimums, peers checked; if wrong, later tasks hit API drift (Vitest JSON reporter shape, Stryker config, linkinator CLI) and fix per smallest-fix rule, each recorded.
+- P22 detail Ruling: fetchLiveQuality makes 1 attempt plus 3 retries (default attempts 4, backoff 1 s, 2 s, 4 s); a 2xx whose body is unparseable or fails upgradeToCurrent counts as a failed attempt and is retried, ending as {kind:'error'} with a reason naming invalid data; spec S445 lists invalid among failures that retry; plan tests adjusted to the spec behavior, none removed.
+- P9 detail Ruling (Task 8): renderLinksBody embeds the state as an HTML comment (<!-- link-state {json} -->) and new parseLinkState(body): LinkState | null reads it back (null when absent or invalid), so an open issue body is the state source (spec D15); the artifact file is used only when no issue is open (Task 24). Cost if wrong: one extra pure function.
+- Task 5 Ruling: malformed REQ-like tags (raw Playwright tag or Vitest title token matching /^@?REQ-/i that tagsIn rejects) are passed into TestResult.tags verbatim (without @) so buildMatrix reports them as unknown-tag; tagsIn keeps the plan's contract; spec S388 "CI fails when a test uses a tag that is not in the registry" outranks the plan's silent drop; cost if wrong: a false gate failure naming the odd tag.
+- Task 7 Ruling: spec wins over brief code: manifest membership uses Object.hasOwn; placeholder detection matches true/True/TRUE, optional matching quotes, optional trailing # comment; frontmatterOf normalizes CRLF (same fail-open class, pulled in from the minor); cost if wrong: a false refusal naming the file, which is the safe direction for a launch gate.
+- T9-A Ruling: retag the JSON-LD escaping unit test from @REQ-CSP-01 to @REQ-PREV-01 (P3; spec has no separate JSON-LD escaping id); cost if wrong: tag choice only.
+- T9-B Ruling: EXIF read via sharp(file).metadata().exif buffer parsed by exifr (covers WebP/AVIF), fail closed when an image cannot be read or parsed; check-content fails when profile.md has no frontmatter (P17); cost if wrong: false build failure naming the file.
+- T9-C Ruling: do not run `git config core.hooksPath .githooks` (repo config on owner machine); hook exercised by running it directly; Ceylan enables it (Needs me).
+- T9-D Ruling: frontmatter.ts gains splitFrontmatter(text) -> {frontmatter, body} | null, frontmatterOf delegates to it; check-content imports it (P27).
+- T10-A Ruling (P11): renderer injection test uses hostile-valid.json (schema-valid HTML strings); add loader tests that hostile.json and an oversized document (built in-test past LIMITS) both yield null and settle unavailable.
+- T10-B Ruling (P12): integrity sentence uses spec wording "The previous deploy was verified live: every file served matched the tested build (N files, checked TIME)."; every anchor a renderer creates carries class "lnk" (link colour and 44px target from base.css).
+- T10-C Ruling (P27): export MONTHS from src/lib/dates.ts and have formatMonthYear and render-quality use it; no second months array.
+- T11-A Ruling (P24): registry text is the spec section 8 table text word for word with Markdown backticks removed (the text is shown publicly on /quality); a unit test compares registry text to the spec table so drift fails CI; cost if wrong: a stricter test than the plan.
+- T10-D Ruling: minors 2 and 3 enter the fix round because they are spec compliance: trend label must be "Lighthouse mobile score" (spec line 166) and a throwing renderer must clear its live slot (spec line 151 "any failure keeps the fallback"); cost if wrong: two one-line changes.
+- T12-A Ruling (P3): component test '@REQ-CSP-01 no analytics beacon unless the real build has a token' retagged @REQ-HEALTH-01 (a tokenless beacon is a console/CSP error); cost if wrong: tag choice only.
+- T12-B Ruling (P26): tokens are exactly the DESIGN.md table; drop --face (unused), --rose-start and --peach-end; brush gradient runs --rose-mark to --coral and the second pass uses --peach (DESIGN.md: "Colors come from tokens"); photo-mark.svg's own stop colours differ slightly and are recorded as an open question for Ceylan; cost if wrong: a subtle gradient shade difference, fixable by adding two tokens to DESIGN.md.
+- T12-C Ruling (P26): off-scale sizes snap to the DESIGN.md type scale (19px row title to 20px, 13px label to 14px, any 15px to 16px, 34px to the nearest listed role); spacing to the 4px scale list; report each change.
+- T14-A Ruling (P23): ring test (asserts decorative ring and mask markup, not reduced motion) retagged @REQ-HERO-01 since it checks the hero photo frame; tick-decorative test keeps @REQ-CERT-04 (the tick is the CERT-04 mark and the test proves the Verify link, not the tick, carries the meaning); reduced motion stays covered by the Task 20 E2E; cost if wrong: matrix lists one less-direct test under HERO-01.
+- T11-B Ruling: accept the pnpm patch of @stryker-mutator/vitest-runner 10.0.0 (latest; without it every describe-nested test was skipped and scores were false); record for Ceylan with removal condition (upstream fix); cost if wrong: a patch to maintain on upgrades.
+- T11-C Ruling: set ignoreStatic: false (plan had true): static mutants include the gate regexes (TAG, HEX64, FLAG, schema anchors), and honest evidence outranks 16 s; accepted score 99.85 with 2 documented equivalent survivors, threshold 90 unchanged; cost if wrong: slightly longer CI run.
+- T13-A Ruling: new pure helper src/lib/build-date.ts: buildToday(kind: string | undefined, now: Date): Date returns 2026-09-27T00:00:00Z when kind === 'fixture', else now; unit tested; Tasks 16, 17 and 19 pages use buildToday(import.meta.env.BUILD_KIND ?? process.env.BUILD_KIND, new Date()) instead of new Date(). Fixture content adds a certification expiring 2026-09-27 (spec S352 "one expiring today"), and the future and past expiry fixtures stay correct forever. Removes the plan's deviation (plan L3081) and a time bomb (fixed future expiry would become expired and break E2E and the daily run); cost if wrong: one small helper.
+- T13-B Ruling (P13): drift test asserts ok.success before reading ok.data.
+- T13-C Ruling (P14): verify .pages.yml keys against Pages CMS docs (context7 or /browse); certifications collection writes .yaml files (filename or format option); cv field path semantics verified and cv.pdf.ts resolves what Pages CMS actually writes.
+- T13-D Ruling: REQ-CONTENT-01 requires small or disallowed photos to fail the pipeline; move enforcement into scripts/check-content.ts (CI runs it, plan L5506): read the profile photo path from frontmatter, get format and dimensions with sharp metadata, apply photoProblem, report a plain problem; unit tests with generated images (799px short side fails, 800 passes, gif fails); cost if wrong: duplicate check if a later Astro resolves image() at schema time.
+- T17-A Ruling (P12): /quality order follows spec section 4: top line, verdict (with glossary and two-builds sentence), requirements matrix, deploy integrity, over time (trends), mutation testing, the suites, pipeline duration.
+- T17-B Ruling (P12): verdict fallback links both the repo and its Actions page (spec S171); matrix, integrity, trends and mutation fallbacks link the latest CI run; duration gets a true number-free fallback sentence with the CI link (G3), never empty.
+- T17-C Ruling (P12): the suites block describes every suite in spec section 8's Suites table (Unit, Component, Build, Mutation, E2E, @real, Accessibility, Visual regression, Performance, Links, Smoke) in words that match what the pipeline does (e.g. "mutation-tested business logic", visual regression on desktop Chromium and emulated Pixel only); the page says there is no pass or fail column because only fully green builds deploy.
+- T17-D Ruling (P26): .gloss uses the 14px glossary size and a 62ch cap; footer year from buildToday (T13-A).
+- T17-E Ruling: tag both @REQ-QUAL-01 (the /quality static content is part of that requirement's rendering); no new registry id (the spec's registry is fixed to section 8); cost if wrong: two tests listed under QUAL-01.
+- T18-A Ruling (P26): 404 code uses the DESIGN.md display size (96px desktop, 60px mobile like the name) instead of 120px; nf-text margin 20px to 24px; cost if wrong: a smaller 404 numeral.
+- T18-B Ruling (P27): src/og/profile-photo.ts reads profile frontmatter through src/lib/frontmatter.ts splitFrontmatter (or the content collection), no new frontmatter regex.
+- T19-A Ruling (P3): states-page test retagged @REQ-STATE-01 (the page is the harness for empty, sparse and overflow states); the real-build absence stays covered by the dist-scan check (REQ-CSP-01); today uses FIXTURE_TODAY from src/lib/build-date.ts.
+- T20-A Ruling: spec S354 states "sparse and full history; matrix at many rows" are client-rendered from quality.json, so Task 20's visual and E2E tests cover them on /quality with page.route variants (sparse: 2 history points; many rows: a valid document near LIMITS.requirements), not on the states page; cost if wrong: two extra routed variants.
+- T18-C Ruling: the OG card must keep the ring and photo fully on the 1200x630 canvas for any name up to 40 characters (spec D19 rule applied to the preview card; the fixture's 40-character name pushes the photo off-canvas today): fixed photo column, text column with a max width, name font size scaled down by length; a test decodes the PNG (sharp raw) and asserts ring pixels are present near the right-hand photo area for the 40-character name; cost if wrong: a smaller name on long-name cards.
+- T20-B Ruling: visual baselines are produced only by the Linux Playwright container workflow (spec E23, Task 26 Step 3); local macOS screenshots are never committed; locally the @visual tests are run once to prove they execute (missing-baseline failure expected and recorded) and otherwise excluded with --grep-invert @visual; cost if wrong: visual suite unproven until the workflow runs.
+- T20-C Ruling (P23): the section-order test (plan L4644, tagged STATE-01) is retagged @REQ-A11Y-04 and additionally asserts every section is labelled by its heading, so the tag is truthful; G2 order has no own requirement id.
+- T20-D Ruling: locally, real-build tests run against dist-served built by copying dist plus tests/fixtures/quality/valid.json as the stand-in (spec E12); dist itself must not contain quality.json; Task 22 later scripts this.
+- T19-B Ruling: fix the plan-mandated cleanup with try/finally restoring the previous BUILD_KIND value; remove the unused req import (same file, trivial); cost if wrong: none.
+- T21-A Ruling (P15): if Lighthouse's canonical audit fails because the canonical host (SITE_URL) differs from localhost, first try auditing through the canonical host mapped to the local server (Chrome --host-resolver-rules "MAP <site host> 127.0.0.1:<port>" with the audited URLs on that host, http), so the tested artifact stays unchanged; only if that is impossible use skipAudits: ['canonical'] and record it in the notes and README as a skipped audit; never rebuild with a different SITE_URL for Lighthouse.
+- T21-B Ruling (P16): run Lighthouse locally against a real build made with a dummy CF_BEACON_TOKEN (never committed, never a real token) to see whether the blocked beacon costs best-practices (console errors) or the third-party budget; if it does, fix it without weakening the budgets (for example block the beacon so it is not requested at all, or document the exact audit impact and the chosen remedy).
+- T22-A Ruling (Task 5 warn): build-report treats a missing or unreadable Lighthouse assertion-results.json or manifest.json for either build as "not covered" (never as an empty passing list), and fails with a named problem when reports-in has no vitest.json or no Playwright JSON; spec: "A missing, unreadable or empty report means not covered."
+- T22-B Ruling (Task 10 warn): quality.json history always includes the current deploy's point (appendHistory before writing), so /quality never renders "This is deploy 0".
+- T22-C Ruling (P5): every SITE_URL read uses `||` fallback semantics or fails loudly when empty in build-report (history fetch needs a real URL).
+- T20-E Ruling: credential ID tension (spec S296 no mid-token break vs no horizontal scroll at 375px for IDs over about 35 characters) is recorded as an open question for Ceylan, not a stop: current code keeps IDs unbroken; real IDs are known at launch (Task 26) and can be checked then; cost if wrong: a sideways scroll only if a real ID exceeds about 35 characters.
+- T20-F Ruling: pull five test-strengthening minors into the fix round because each makes an existing tag fully truthful at low risk: focus ring asserts the site's 2px solid outline on skip link, CV button and Email link (A11Y-02); .cid-token renders as one line box on /__states (spec "never break mid-token"); all 5 ticked rows have a Verify link (CERT-04); real build has at least one visible certification (guards the glob); oversized variant fails for the matrix limit reason. Other minors stay deferred.
+- OWNER DECISION (Ceylan, via AskUserQuestion, 2026-09-28): raise the first-party JS budget to 10 KB brotli and keep zod/mini in the browser (E6). Spec not edited by us; Ceylan carries the change into spec section 6 and the REQ-PERF-02 row.
+- T21-C Ruling: bundle test limit 10 * 1024; tests/requirements.ts REQ-PERF-02 text says 10 KB; the spec-parity unit test gets one explicit owner-approved override entry for REQ-PERF-02 with a comment pointing at the notes file, so the public /quality text matches what is tested; cost if wrong: one override to remove once the spec is updated.
+- T21-D Ruling: lighthouserc third-party count budget is 1 when CF_BEACON_TOKEN is set (the beacon is the one third-party script the spec allows) and 0 otherwise; avoids a launch-day failure; cost if wrong: one extra allowed third-party request only when the beacon is configured.
+- T23-A Ruling: playwright.config sets updateSnapshots: 'none' unconditionally; only the visual-baselines workflow and test:visual:update pass --update-snapshots explicitly (local default 'missing' silently wrote 24 baselines in Task 22 and made @visual pass against itself); cost if wrong: one flag.
+- T23-B Ruling: non-deploy CI jobs use SITE_URL = vars.SITE_URL or the example default (P5) so Dependabot and PR runs, which may lack repository variables, still build and report; the deploy job refuses when vars.SITE_URL is empty; history fetch against the example host falls back as designed.
+- T22-D Ruling: buildMatrix (src/lib/traceability.ts, unit and mutation tested) reports a named problem when no result comes from REAL_PROJECT, alongside the fixture-project check (spec E15: a missing report means not covered).
+- T22-E Ruling: gate-cli stale fails closed (exit 1, plain message) when the head of main cannot be determined (ls-remote error or no refs/heads/main); isStale in src/lib keeps its semantics; a later push or the daily run redeploys; supersedes the Task 7 acceptance of fail-open for this path because an older run could overwrite a newer deploy; cost if wrong: an occasional failed deploy job on a transient git error.
+- T22-F Ruling: pull three minors in: stand-in-quality overlap guard uses r === '..' || r.startsWith('..' + sep); the stale skip note is also appended to GITHUB_STEP_SUMMARY (spec "skip with a job summary note"); scan-dist records forbidStates in its output and build-report requires forbidStates true on dist-scan-real.json.
+- T23-C Ruling: every `uses:` in every workflow is pinned to a full 40-character commit SHA with a trailing version comment (spec section 7 "Third-party actions are pinned to commit SHAs"; the plan used tags); SHAs resolved with unauthenticated `git ls-remote https://github.com/<owner>/<repo> refs/tags/<tag>` (public, no account); cost if wrong: none, Dependabot keeps them current.
+- T23-D Ruling: CI jobs use scripts/serve-and-wait.sh instead of inline wait loops (P27); the fixture job uploads dist-scan-fixture.json from the chromium leg only (P2); the container job sets HOME=/root (P18); the real job passes CF_BEACON_TOKEN (vars) to both the real build and the real lhci step (Task 21 warn); scripts/check-content.ts runs before the real build (REQ-CONTENT-01).
+- T23-E Ruling (P6): the report job downloads live-check from the latest completed smoke run on main whatever its conclusion, not only successful runs.
+- T23-F Ruling: verify locally that the pinned wrangler installs with --ignore-scripts and that `wrangler deploy --dry-run` works from that install against dist (no account, no network deploy); record the result; if dry-run needs workerd, record exactly what fails and whether a real deploy would.
+- T23-G Ruling: validate every workflow file locally by parsing it with the yaml package and checking structurally: permissions contents read at workflow level, report job adds actions read, every job has timeout-minutes, every uses is SHA-pinned, the deploy job runs no pnpm or npm install of project dependencies and passes Cloudflare secrets only to the wrangler step, deploy only on main with environment production and the concurrency group; record results (actionlint unavailable).
+- T24-A Ruling: run the plan's `pnpm dlx @action-validator/cli` over every workflow including ci.yml (schema validation in place of the unavailable actionlint); use pin-github-action or git ls-remote for SHA pins (T23-C); record results.
+- T24-B Ruling (P20): smoke header assertions stay exact, matching the verified wrangler dev behavior; production Workers behavior is verified at the first live smoke run; record as unverified.
+- T24-C Ruling (P7, P8, P9): smoke steps with tee use bash pipefail; smoke.yml and links-weekly.yml create their labels idempotently (gh label create --force) before issue-sync; links-weekly keeps state in the open issue body (parseLinkState) and, when no issue is open, in an artifact uploaded by the previous run and downloaded with gh run download (not actions/cache).
+- T23-H Ruling: pull in three small items: RUN_STARTED_AT assigned before echo so a gh failure is a visible warning, never a silent 0; overwrite: true on the site-real and manifest-real uploads so a Lighthouse rerun can upload again; the E12 `test ! -e dist/quality.json` also runs before the site-real upload.
+- T25-A Ruling: README, decisions and runbook describe what was built, not the plan text: visual regression on desktop Chromium and emulated Pixel only (P25); JS budget 10 KB brotli by owner decision (spec update pending); Stryker vitest-runner patch and its removal condition; ignoreStatic false; updateSnapshots none and baselines only from the visual-baselines workflow; enabling the pre-commit hook; the fail-closed stale check (a transient GitHub error fails the deploy job, rerun recovers); link-check state in the issue body or previous-run artifact; SHA-pinned actions; every command in the README verified by running it.
+- FINAL Ruling: one fix wave covers all 6 Important plus these minors because each touches a public claim, privacy, the gate or the deploy token: live-check fetch timeout; test.fail/test.fails not counted as coverage; vitest suite classification independent of absolute paths; XMP and IPTC location metadata checked; href guard rejects tab and newline variants; Pages CMS About body saved as markdown; /quality smoke copy and CI link wording; README Run it covers every suite and a clear domain-move step; two comments citing uncommitted task reports; walk duplicate removed. Deferred with ruling (no public or gate effect): off-scale spacing (visual baselines not yet made; DESIGN.md polish pass later), 109 ruling-citation comments (the notes file is committed, so they resolve), remaining minors per the reviewer's triage.
+- Parked Ruling: repoPath slices at the first /tests/ (a checkout path containing a tests folder would misclassify); same assumption as fixPath; does not trigger with this repo name; cost if wrong: component/build tests shown as unit.
+- Parked Ruling: smoke copy says "the home page" while the test also checks the photo renders; understatement, not untrue.
+- Parked Ruling: EXIF and IPTC key lists omit copyright fields (Copyright, CopyrightNotice); owner decides whether a name in copyright counts as identifying (spec E18 names GPS and identifying data).
