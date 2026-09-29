@@ -12,3 +12,6 @@ reports/
 test-results/
 playwright-report/
 .wrangler/
+dist-gate/
+out/
+reports-in/
