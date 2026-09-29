@@ -3,6 +3,26 @@ import { isRecord } from './guards';
 
 const isObj = isRecord;
 
+export type Lhr = { requestedUrl: string; categories: Record<string, { score: number | null }> };
+
+const CATEGORIES = ['performance', 'accessibility', 'best-practices', 'seo'] as const;
+
+/** One Lighthouse run per entry of an lhci filesystem manifest.json (url plus summary
+ * scores from 0 to 1). Entries without a URL are dropped; a missing or non-numeric
+ * score reads as null. */
+export function lhrsFromManifest(manifest: unknown): Lhr[] {
+  if (!Array.isArray(manifest)) return [];
+  return manifest.filter(isObj).filter((m) => typeof m.url === 'string').map((m) => {
+    const summary = isObj(m.summary) ? m.summary : {};
+    const categories: Lhr['categories'] = {};
+    for (const key of CATEGORIES) {
+      const score = summary[key];
+      categories[key] = { score: typeof score === 'number' ? score : null };
+    }
+    return { requestedUrl: m.url as string, categories };
+  });
+}
+
 export function lighthouseEvidence(input: {
   lhrs: { requestedUrl: string }[];
   assertions: { level: string; passed: boolean }[];

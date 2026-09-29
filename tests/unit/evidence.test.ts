@@ -1,4 +1,4 @@
-import { combineEvidence, distScanEvidence, lighthouseEvidence, linksEvidence, medianScores } from '../../src/lib/evidence';
+import { combineEvidence, distScanEvidence, lhrsFromManifest, lighthouseEvidence, linksEvidence, medianScores } from '../../src/lib/evidence';
 
 const urls = ['http://localhost:8788/', 'http://localhost:8788/quality'];
 const lhrs = (n: number) => urls.flatMap((u) => Array.from({ length: n }, () => ({ requestedUrl: u })));
@@ -100,4 +100,29 @@ test('@REQ-TRACE-01 median scores are 0 with no runs or a missing category, and 
   expect(medianScores([run], urls[0]!)).toEqual({ performance: 91, accessibility: 92, bestPractices: 93, seo: 94 });
   const { seo: _seo, ...partial } = run.categories;
   expect(medianScores([{ ...run, categories: partial }], urls[0]!).seo).toBe(0);
+});
+
+test('@REQ-TRACE-01 lhci manifest entries become one run per entry with their category scores', () => {
+  const manifest = [
+    { url: urls[0], isRepresentativeRun: true, summary: { performance: 0.97, accessibility: 1, 'best-practices': 1, seo: 0.9 } },
+    { url: urls[1], summary: { performance: 1, accessibility: '1', seo: null } },
+  ];
+  expect(lhrsFromManifest(manifest)).toEqual([
+    { requestedUrl: urls[0], categories: {
+      performance: { score: 0.97 }, accessibility: { score: 1 }, 'best-practices': { score: 1 }, seo: { score: 0.9 },
+    } },
+    { requestedUrl: urls[1], categories: {
+      performance: { score: 1 }, accessibility: { score: null }, 'best-practices': { score: null }, seo: { score: null },
+    } },
+  ]);
+});
+
+test('@REQ-TRACE-01 lhci manifest reading drops entries without a URL and never throws on bad input', () => {
+  expect(lhrsFromManifest([null, 'x', { summary: {} }, { url: 7 }, { url: urls[0] }])).toEqual([
+    { requestedUrl: urls[0], categories: {
+      performance: { score: null }, accessibility: { score: null }, 'best-practices': { score: null }, seo: { score: null },
+    } },
+  ]);
+  expect(lhrsFromManifest({ url: urls[0] })).toEqual([]);
+  expect(lhrsFromManifest(null)).toEqual([]);
 });

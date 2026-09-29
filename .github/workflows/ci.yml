@@ -107,10 +107,16 @@ jobs:
           CI: 'true'
           PW_JSON: reports/playwright-fixture-${{ matrix.project }}.json
       - name: Lighthouse on the fixture build (once)
+        id: lhci
         if: matrix.project == 'chromium'
         run: |
           export CHROME_PATH=$(node -e "import('@playwright/test').then(m=>console.log(m.chromium.executablePath()))")
           LHCI_BUILD=fixture pnpm lhci
+      # Spec section 6: if only performance misses 95 on one job, that job may be rerun once.
+      # Every attempt writes its scores to its own job summary, so both scores are recorded.
+      - name: Lighthouse scores in the job summary
+        if: always() && steps.lhci.outcome != 'skipped'
+        run: pnpm tsx scripts/lighthouse-summary.ts fixture
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
@@ -151,10 +157,13 @@ jobs:
           CF_BEACON_TOKEN: ${{ vars.CF_BEACON_TOKEN }}
       - run: pnpm tsx scripts/scan-dist.ts dist reports/dist-scan-real.json --forbid-states
       - run: pnpm tsx scripts/write-manifest.ts dist manifest/manifest.json
+      - name: site-real carries no quality.json (E12)
+        run: test ! -e dist/quality.json
+      # overwrite lets a rerun of this job upload again.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with: { name: site-real, path: dist, include-hidden-files: true }
+        with: { name: site-real, path: dist, include-hidden-files: true, overwrite: true }
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with: { name: manifest-real, path: manifest/manifest.json }
+        with: { name: manifest-real, path: manifest/manifest.json, overwrite: true }
       - name: Serve the real build with a stand-in quality.json (E12)
         run: |
           pnpm tsx scripts/stand-in-quality.ts dist dist-served "$SITE_URL"
@@ -165,11 +174,16 @@ jobs:
           CI: 'true'
           PW_JSON: reports/playwright-real.json
       - name: Lighthouse on the real build
+        id: lhci
         run: |
           export CHROME_PATH=$(node -e "import('@playwright/test').then(m=>console.log(m.chromium.executablePath()))")
           LHCI_BUILD=real pnpm lhci
         env:
           CF_BEACON_TOKEN: ${{ vars.CF_BEACON_TOKEN }}
+      # Same one-rerun policy and per-attempt record as the fixture job.
+      - name: Lighthouse scores in the job summary
+        if: always() && steps.lhci.outcome != 'skipped'
+        run: pnpm tsx scripts/lighthouse-summary.ts real
       - name: Internal link check
         run: pnpm exec linkinator http://localhost:8788 --recurse --format json --skip "^(?!http://localhost:8788)" > reports/links.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -204,13 +218,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          # History never blocks a deploy (spec section 8): every lookup that fails warns and
+          # leaves its value empty, so build-report takes its warned fallback path.
           # Main runs only: a pull request from a fork branch named main is not one.
           main_runs() {
             gh run list --workflow ci.yml --branch main --status "$1" --limit 20 --json databaseId,event \
               -q '.[] | select(.event != "pull_request") | .databaseId'
           }
+          prev=$(main_runs success) || { echo "::warning::Could not list successful main runs; no history fallback."; prev=; }
           # First line without a pipe into head, which pipefail could turn into a failure.
-          prev=$(main_runs success)
           prev=${prev%%$'\n'*}
           if [ -n "$prev" ]; then
             gh run download "$prev" -n quality-json -D reports-in/prev-quality \
@@ -218,18 +234,21 @@ jobs:
           fi
           # smoke.yml runs as a job of the deploying ci run, so live-check belongs to that run.
           # Take the newest completed run whose smoke job ran, whatever its conclusion, so a
-          # failed live check shows as failed instead of an older passing one.
-          # An assignment, so a failing gh call fails the step instead of skipping the loop.
-          completed=$(main_runs completed)
+          # failed live check shows as failed instead of an older passing one. A lookup that
+          # fails stops the search rather than skipping to an older run.
+          completed=$(main_runs completed) || { echo "::warning::Could not list completed main runs; quality.json records no live check."; completed=; }
           for id in $completed; do
-            ran=$(gh run view "$id" --json jobs -q '[.jobs[] | select((.name | startswith("smoke")) and .conclusion != "skipped")] | length')
+            ran=$(gh run view "$id" --json jobs -q '[.jobs[] | select((.name | startswith("smoke")) and .conclusion != "skipped")] | length') \
+              || { echo "::warning::Could not read the jobs of run $id; quality.json records no live check."; break; }
             if [ "$ran" -gt 0 ]; then
               gh run download "$id" -n live-check -D reports-in/prev-live-check \
                 || echo "::warning::The latest smoke run ($id) left no live-check artifact; quality.json records no live check."
               break
             fi
           done
-          echo "RUN_STARTED_AT=$(gh api "repos/$GH_REPO/actions/runs/${{ github.run_id }}" --jq .run_started_at)" >> "$GITHUB_ENV"
+          started=$(gh api "repos/$GH_REPO/actions/runs/${{ github.run_id }}" --jq .run_started_at) \
+            || { echo "::warning::Could not read this run's start time; quality.json records a pipeline duration of 0."; started=; }
+          echo "RUN_STARTED_AT=$started" >> "$GITHUB_ENV"
       - run: pnpm tsx scripts/build-report.ts
         env:
           STRYKER_URL: ${{ needs.logic.outputs.stryker_url }}

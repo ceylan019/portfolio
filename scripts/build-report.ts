@@ -17,7 +17,9 @@ import { REQUIREMENTS } from '../tests/requirements';
 import {
   buildMatrix, describeProblem, normalizePlaywright, normalizeVitest, type CheckEvidence, type TestResult,
 } from '../src/lib/traceability';
-import { combineEvidence, distScanEvidence, lighthouseEvidence, linksEvidence, medianScores } from '../src/lib/evidence';
+import {
+  combineEvidence, distScanEvidence, lhrsFromManifest, lighthouseEvidence, linksEvidence, medianScores, type Lhr,
+} from '../src/lib/evidence';
 import { mutationSummary } from '../src/lib/mutation';
 import { appendHistory, fetchLiveQuality, resolveHistory } from '../src/lib/history';
 import { SCHEMA_VERSION, liveCheckSchema, parseQualityReport } from '../src/lib/quality-schema';
@@ -100,9 +102,6 @@ if (vitestPaths.length === 0) reportProblems.push(`No Vitest report: ${R} has no
 if (playwrightPaths.length === 0) reportProblems.push(`No Playwright report: ${R} has no playwright-*.json.`);
 const results = [...testResults(vitestPaths, normalizeVitest), ...testResults(playwrightPaths, normalizePlaywright)].map(fixPath);
 
-type Lhr = { requestedUrl: string; categories: Record<string, { score: number | null }> };
-const scoreOf = (x: unknown) => (typeof x === 'number' ? x : null);
-
 /** Lighthouse evidence for one build from lhci-<build>/<build>/manifest.json and
  * lhci-<build>/assertion-results.json (ruling T22-A: either file missing or unreadable
  * means not covered, never an empty passing list). */
@@ -120,16 +119,7 @@ function lhci(build: 'fixture' | 'real'): { lhrs: Lhr[]; evidence: CheckEvidence
   const assertions = load(assertionsPath);
   if (!assertions.ok || !Array.isArray(assertions.data)) return notCovered(`${assertionsPath} is unreadable`);
 
-  const lhrs: Lhr[] = manifest.data.filter(isRecord).filter((m) => typeof m.url === 'string').map((m) => {
-    const s = isRecord(m.summary) ? m.summary : {};
-    return {
-      requestedUrl: m.url as string,
-      categories: {
-        performance: { score: scoreOf(s.performance) }, accessibility: { score: scoreOf(s.accessibility) },
-        'best-practices': { score: scoreOf(s['best-practices']) }, seo: { score: scoreOf(s.seo) },
-      },
-    };
-  });
+  const lhrs = lhrsFromManifest(manifest.data);
   // lhci saves only failed assertions by default; a malformed entry counts as a failed error.
   const asserted = assertions.data.map((a) => (isRecord(a) && typeof a.level === 'string' && typeof a.passed === 'boolean'
     ? { level: a.level, passed: a.passed } : { level: 'error', passed: false }));
