@@ -649,3 +649,56 @@ Commits `c4e9ac2` and `c9d6bd0`. New files: `README.md`, `docs/runbook.md` and `
 - Important, fixed: the README first claimed every command had been run.
 - Important, fixed: the README, decision 0004 and a code comment said the deploy job "installs nothing". It installs no project dependencies and fetches only the pinned wrangler with install scripts disabled.
 - A scoped re-review confirmed both fixes. The reviewer checked every other factual claim against the repository and found no mismatch.
+
+## Needs me
+
+### Before the first push
+
+1. **Task 26 Step 1.** Remove the old-email backup refs: `git update-ref -d refs/original/refs/heads/main && git branch -D backup/pre-email-rewrite`, then check `git log --all --format='%ae' | sort -u` shows only your personal address. I did not touch these refs.
+2. **Review and merge `feat/phase-1-site`.** Nothing was pushed, and there is no pull request.
+3. **Update the spec for the JavaScript budget.** Change "under 5 KB brotli-compressed" in section 6 and the REQ-PERF-02 row in section 8 to 10 KB (your decision on 28 September 2026). Then delete the one override for REQ-PERF-02 in `tests/unit/requirements.test.ts`.
+4. **Delete the untracked `.probe/` folder** at the repo root. It holds esbuild size probes from Task 21, and deleting it was not permitted in this session.
+5. **Enable the local EXIF hook** once with `git config core.hooksPath .githooks`.
+
+### Accounts, secrets and settings (Task 26 Step 2)
+
+6. **GitHub:** turn on 2FA, create the public repository and push `main`.
+7. **Cloudflare:**
+   - Create an API token with only "Workers Scripts: Edit" on your one account, and note the account ID.
+   - Create a Web Analytics site and copy its token.
+8. **GitHub settings:**
+   - An environment called `production`, restricted to `main`, with secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+   - A repository secret `STRYKER_DASHBOARD_API_KEY`, from dashboard.stryker-mutator.io after signing in with GitHub and enabling the project.
+   - Repository variables `SITE_URL` (`https://ceylan-akyol.<your-account-subdomain>.workers.dev`) and `CF_BEACON_TOKEN`.
+   - The deploy job refuses to run while `SITE_URL` is empty. The other jobs fall back to the example URL.
+9. **Pages CMS:** sign in with GitHub and open the repository.
+
+### Content and first deploy (Task 26 Steps 3 to 6)
+
+10. **Visual baselines.** Run the `visual-baselines` workflow (Actions tab, Run workflow). Download the `visual-baselines` artifact, compare the images with `docs/superpowers/specs/assets/final-mockups.png`, copy them into `tests/e2e/__screenshots__`, and commit. Until then, every CI run fails on REQ-VIS-01 and nothing deploys, by design. The visual set holds 24 images: the pages and the states page in both themes on desktop Chromium and emulated Pixel, plus the sparse-history and many-rows `/quality` states.
+11. **Replace the placeholder content:**
+    - A photo at least 800px on the short side, with its metadata stripped (`exiftool -all= photo.jpg`), and its description.
+    - A public CV PDF without your phone number or home address.
+    - One file per certification.
+    - The tagline and About text (under about 90 words, not repeating the tagline).
+    - Remove `placeholder: true` from every content file. The deploy refuses while any remains.
+12. **Check two things after your first CMS upload.** The build must still find the photo and the CV: the Pages CMS path format was taken from its docs, not from a live upload (Task 13). Also check your real credential IDs. An unbroken ID longer than about 35 characters would make the page scroll sideways at 375px (the open question in Task 20).
+13. **Watch the first deploy.** In the `ci` run, all five test jobs should be green, deploy not skipped, `smoke` green, and the `live-check` artifact should show `"ok": true`. Then open `SITE_URL` and `SITE_URL/quality` on a phone and a laptop, in light and dark mode.
+14. **Post-launch checks.** Run `/design-review` on the live site, check securityheaders.com for an A, and record both results.
+
+### Only a real run can verify
+
+15. **First CI run on GitHub:**
+    - Firefox with `HOME=/root` in the Playwright container.
+    - WebKit's Alt+Tab keyboard path on Linux (it was checked on macOS only).
+    - The background `wrangler dev` surviving between container steps.
+    - wrangler `--ignore-scripts` on Linux.
+    - Whether the logic job's 15-minute limit is enough for Stryker on a 2-core runner.
+    - Whether a reran job can re-upload its artifacts.
+16. **First deploy:** production Workers headers match the exact values the smoke tests expect. `/quality` on the real build scored exactly 95 for performance locally, so the one-rerun policy may come into play.
+17. **First daily and weekly runs:**
+    - The daily smoke path (mode input empty).
+    - The `gh` label, issue and artifact calls with the job token.
+    - Whether `gh workflow enable` in keepalive resets GitHub's 60-day timer.
+    - Whether linkinator reaches every certification verify URL.
+18. **Dependabot:** whether repository variables reach its runs (the fallback `SITE_URL` covers the case where they don't). `@axe-core/playwright` is outside the Playwright group. Change that if "all Playwright packages" was meant to include it.
