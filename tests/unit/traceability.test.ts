@@ -301,7 +301,7 @@ describe('buildMatrix edge cases', () => {
     expect(buildMatrix([req('REQ-X-01')], results, []).counts.testRuns).toBe(5);
   });
 });
-test('@REQ-TRACE-01 a REQ-like token must start with @REQ- to count as a malformed tag', () => {
+test('@REQ-TRACE-01 a REQ-like token counts as a malformed tag only when an @ sign starts it', () => {
   const report = { testResults: [{ name: '/repo/tests/unit/x.test.ts', assertionResults: [{ fullName: 'mail@REQ-hero-01 @REQ-CV-01', status: 'passed' }] }] };
   expect(normalizeVitest(report, '/repo')[0]!.tags).toEqual(['REQ-CV-01']);
 });
