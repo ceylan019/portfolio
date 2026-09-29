@@ -8,7 +8,8 @@ Work in progress. This section is updated after every task.
 
 ### Spec deviations
 
-None so far. Where the plan and the spec disagreed, the spec was followed; the pre-flight table and each task section list those plan changes (P11 hostile fixture, P22 retries, Task 5 malformed tags, Task 6 JSON-LD type, Task 7 fail-open gates).
+- REQ-PERF-02 JavaScript budget raised from 5 KB to 10 KB brotli by your decision on 2026-09-28 (Task 21). Please update spec section 6 and the REQ-PERF-02 row; then remove the parity-test override.
+- Otherwise none. Where the plan and the spec disagreed, the spec was followed; the pre-flight table and each task section list those plan changes (P11 hostile fixture, P22 retries, Task 5 malformed tags, Task 6 JSON-LD type, Task 7 fail-open gates).
 
 ### Open questions
 
@@ -19,6 +20,8 @@ None so far. Where the plan and the spec disagreed, the spec was followed; the p
 
 - Task 26 (launch) is yours. Its steps are listed under "Needs me" at the end of this file.
 - Enable the local EXIF pre-commit hook: `git config core.hooksPath .githooks` (Task 9).
+- Update the spec for the 10 KB JavaScript budget (Task 21).
+- Delete the untracked `.probe/` scratch folder (Task 21).
 
 ### Known gaps
 
@@ -469,3 +472,39 @@ Suites: home, quality, quality-data, nojs, overflow, a11y, headers, previews, he
 - Not yet verified: whether Alt+Tab behaves the same in WebKit inside the Linux container. It is confirmed on macOS only, and the first CI run will show it.
 
 **Open question for you:** spec section 6 asks for both "credential IDs never break mid-token" and "no horizontal scroll at 375px". The schema allows credential IDs up to 60 characters, and an unbroken ID longer than about 35 characters cannot fit a 375px screen. The site keeps IDs unbroken, and every tested ID fits. If one of your real IDs is longer than about 35 characters, choose between capping the ID length in the schema and allowing a break only for IDs that cannot fit.
+
+## Task 21: Lighthouse budgets and the JavaScript budget test
+
+Commits `588e0f8` and `8e7fb5b`. New files: `lighthouserc.cjs`, `tests/build/bundle.test.ts` and `src/lib/format.ts`. The suite passes 321 of 321.
+
+**Your decision (28 September 2026):** the first-party JavaScript budget goes up from 5 KB to 10 KB brotli, and zod/mini stays in the browser (E6).
+
+The measurements behind it, taken with esbuild against the installed zod 4.6.5:
+- zod/mini with a two-field schema: 4.2 KB brotli.
+- The full `quality.json` schema alone: 6.6 KB.
+- The schema with every limit check removed: 5.6 KB.
+- The whole first-party bundle: 9.4 KB (9,423 bytes). It now passes the 10,240-byte limit.
+
+**Needs me:** carry this decision into the spec. Section 6 says "under 5 KB brotli-compressed", and the REQ-PERF-02 row in section 8 says "under 5 KB brotli". The registry text already says 10 KB, so the public `/quality` page matches what is tested. The spec-parity unit test has one narrow override for REQ-PERF-02 text only, with a comment pointing here. Remove it once the spec is updated.
+
+**Changes from the plan:**
+- The beacon budget (ruling P16). With a dummy analytics token, Lighthouse still counts the blocked beacon request as one third-party resource. The plan's budget of 0 would have failed on the first CI run after you add `CF_BEACON_TOKEN`. The budget now allows 1 only for the real build with a token set. Both states were proven with real Lighthouse runs: [1,1,1] with the token, [0,0,0] without.
+- `src/lib/format.ts` now holds the `plural` helper, so the home page renderer no longer imports the `/quality` renderer module. It did not shrink the bundle, but it removes the coupling. This goes slightly beyond the plan's file list.
+
+**Verified against real tools (Lighthouse 12.6.1 through @lhci/cli 0.15.1, 3 runs per URL, mobile by default):**
+
+| Build | Page | Performance | Accessibility | Best practices | SEO | Total | Fonts |
+|---|---|---|---|---|---|---|---|
+| real | / | 100 | 100 | 100 | 100 | 97.8 KB | 75.0 KB |
+| real | /quality | 95 | 100 | 100 | 100 | 95.5 KB | 75.0 KB |
+| fixture | / | 100 | 100 | 100 | 100 | 98.3 KB | 75.0 KB |
+| fixture | /quality | 96 | 100 | 100 | 100 | 95.5 KB | 75.0 KB |
+
+- The canonical audit passes on `localhost`, even though the canonical URL points at the `workers.dev` host (ruling P15). No audit is skipped.
+- The blocked beacon causes no console errors, so best practices stays at 100.
+- `/quality` on the real build sits exactly at the 95 performance threshold. The spec's one-rerun policy for runner noise may be needed in CI.
+
+**Needs me:**
+- Delete the untracked `.probe/` folder at the repo root. It holds esbuild size probes from this investigation, and deleting it was not permitted in this session.
+
+**Reviewer findings:** none blocking. Carried to Task 23: `CF_BEACON_TOKEN` must reach both the real build step and the real Lighthouse step.
