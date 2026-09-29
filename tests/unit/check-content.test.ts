@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import sharp from 'sharp';
 import {
-  checkContent, checkImage, checkProfilePhoto, normalizePhotoFormat,
+  checkContent, checkImage, checkProfilePhoto, iptcProblemKeys, normalizePhotoFormat, xmpProblemKeys,
 } from '../../scripts/check-content';
 import { resolvePhotoPath } from '../../src/lib/content-paths';
 
@@ -106,6 +106,97 @@ describe('check-content image privacy (CLI)', () => {
 
   test('@REQ-PRIV-01 a corrupted EXIF chunk fails closed instead of passing', async () => {
     expect(await checkImage(corruptedJpegPath)).toBe(`${corruptedJpegPath}: could not read metadata.`);
+  });
+});
+
+// XMP and IPTC carry the same kinds of data as EXIF (E18). sharp 0.35.5 writes XMP with
+// withXmp() for every format; it cannot write IPTC, so that block is built by hand as a
+// JPEG APP13 Photoshop resource, the way cameras and editors store it.
+const xmpPacket = (props: string) => `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<rdf:Description rdf:about="" xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" ${props}/>
+</rdf:RDF></x:xmpmeta><?xpacket end="w"?>`;
+const XMP_GPS = xmpPacket('exif:GPSLatitude="52,22.1N" exif:GPSLongitude="4,53.6E"');
+const XMP_CREATOR = xmpPacket('dc:creator="Jane Doe"');
+const XMP_CLEAN = xmpPacket('xmp:CreatorTool="Photos 9.0"');
+
+function iptcJpeg(jpeg: Buffer, datasets: [number, string][]): Buffer {
+  const records = Buffer.concat(datasets.map(([tag, value]) => {
+    const v = Buffer.from(value, 'latin1');
+    return Buffer.concat([Buffer.from([0x1c, 0x02, tag, v.length >> 8, v.length & 0xff]), v]);
+  }));
+  const size = Buffer.alloc(4); size.writeUInt32BE(records.length);
+  const pad = Buffer.alloc(records.length % 2);
+  const irb = Buffer.concat([Buffer.from('Photoshop 3.0\0', 'latin1'), Buffer.from('8BIM', 'latin1'), Buffer.from([0x04, 0x04, 0, 0]), size, records, pad]);
+  const length = Buffer.alloc(2); length.writeUInt16BE(irb.length + 2);
+  return Buffer.concat([jpeg.subarray(0, 2), Buffer.from([0xff, 0xed]), length, irb, jpeg.subarray(2)]);
+}
+
+describe('check-content XMP and IPTC privacy', () => {
+  let dir: string;
+  const blank = () => sharp({ create: { width: 8, height: 8, channels: 3, background: { r: 10, g: 20, b: 30 } } });
+  const file = (name: string) => join(dir, name);
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'check-content-xmp-'));
+    await blank().withXmp(XMP_GPS).jpeg().toFile(file('xmp-gps.jpg'));
+    await blank().withXmp(XMP_GPS).webp().toFile(file('xmp-gps.webp'));
+    await blank().withXmp(XMP_GPS).png().toFile(file('xmp-gps.png'));
+    await blank().withXmp(XMP_CREATOR).avif().toFile(file('xmp-creator.avif'));
+    await blank().withXmp(XMP_CLEAN).webp().toFile(file('xmp-clean.webp'));
+    await blank().withXmp('this is not an XMP packet').jpeg().toFile(file('xmp-broken.jpg'));
+    const jpeg = await blank().jpeg().toBuffer();
+    await writeFile(file('iptc-byline.jpg'), iptcJpeg(jpeg, [[0, '\x00\x04'], [80, 'Jane Doe'], [90, 'Amsterdam']]));
+    await writeFile(file('iptc-clean.jpg'), iptcJpeg(jpeg, [[0, '\x00\x04'], [25, 'portrait']]));
+    // An IPTC resource holding bytes that are not IPTC datasets.
+    const broken = iptcJpeg(jpeg, [[80, 'Jane Doe']]);
+    const dataset = broken.indexOf(Buffer.from([0x1c, 0x02, 80]));
+    broken.fill(0x20, dataset, dataset + 3);
+    await writeFile(file('iptc-broken.jpg'), broken);
+  });
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  test('@REQ-PRIV-01 GPS in XMP is rejected in JPEG, WebP and PNG files', async () => {
+    for (const name of ['xmp-gps.jpg', 'xmp-gps.webp', 'xmp-gps.png']) {
+      expect(await checkImage(file(name))).toBe(
+        `${file(name)} contains identifying metadata (XMP exif:GPSLatitude, XMP exif:GPSLongitude). Strip it first: see docs/runbook.md.`,
+      );
+    }
+  });
+  test('@REQ-PRIV-01 a creator in XMP is rejected, in AVIF too', async () => {
+    expect(await checkImage(file('xmp-creator.avif'))).toContain('(XMP dc:creator)');
+  });
+  test('@REQ-PRIV-01 XMP without identifying properties passes', async () => {
+    expect(await checkImage(file('xmp-clean.webp'))).toBeNull();
+  });
+  test('@REQ-PRIV-01 an XMP packet exifr cannot parse fails closed', async () => {
+    expect(await checkImage(file('xmp-broken.jpg'))).toBe(`${file('xmp-broken.jpg')}: could not read metadata.`);
+  });
+  test('@REQ-PRIV-01 an IPTC by-line and city are rejected', async () => {
+    expect(await checkImage(file('iptc-byline.jpg'))).toContain('(IPTC Byline, IPTC City)');
+  });
+  test('@REQ-PRIV-01 IPTC without identifying datasets passes', async () => {
+    expect(await checkImage(file('iptc-clean.jpg'))).toBeNull();
+  });
+  test('@REQ-PRIV-01 an IPTC resource exifr cannot read fails closed', async () => {
+    expect(await checkImage(file('iptc-broken.jpg'))).toBe(`${file('iptc-broken.jpg')}: could not read metadata.`);
+  });
+  test('@REQ-PRIV-01 the XMP and IPTC readers parse raw blocks and report null when they cannot', async () => {
+    expect(await xmpProblemKeys(Buffer.from(XMP_GPS))).toEqual(['exif:GPSLatitude', 'exif:GPSLongitude']);
+    expect(await xmpProblemKeys(Buffer.from(XMP_CLEAN))).toEqual([]);
+    expect(await xmpProblemKeys(Buffer.from('<x:xmpmeta><rdf:RDF><rdf:Description exif:GPSLatitude="1'))).toBeNull();
+    expect(await xmpProblemKeys(Buffer.alloc(0))).toBeNull();
+    const { iptc } = await sharp(file('iptc-byline.jpg')).metadata();
+    expect(await iptcProblemKeys(iptc!)).toEqual(['Byline', 'City']);
+    // A resource block with no IPTC resource (print settings only, say) has nothing to check.
+    expect(await iptcProblemKeys(Buffer.from('Photoshop 3.0\x008BIM\x03\xed\0\0\0\0\0\x10resolution-data!', 'latin1'))).toEqual([]);
+    expect(await iptcProblemKeys(Buffer.alloc(0))).toEqual([]);
+    // An IPTC resource whose datasets cannot be read fails closed.
+    expect(await iptcProblemKeys(Buffer.from('Photoshop 3.0\x008BIM\x04\x04\0\0\0\0\0\x08garbage!', 'latin1'))).toBeNull();
+    // Another resource in front of the IPTC one (a thumbnail, say) does not hide it.
+    expect(await iptcProblemKeys(Buffer.concat([Buffer.from('Photoshop 3.0\x008BIM\x04\x0c\0\0\0\0\0\x04\x1c\x02\x50\x00', 'latin1'), iptc!.subarray(14)]))).toEqual(['Byline', 'City']);
   });
 });
 

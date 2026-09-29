@@ -1,15 +1,18 @@
 // Usage: tsx scripts/check-content.ts [content dir, default src/content] [--images-only file ...]
-// Blocks images that carry GPS or owner EXIF data, a profile photo that is the wrong file
-// type or too small, and an About text that repeats the tagline or runs long (E18, G1,
-// D14, REQ-CONTENT-01). Exits 1 with one plain message per problem found.
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+// Blocks images that carry GPS, owner or creator data in EXIF, XMP or IPTC, a profile
+// photo that is the wrong file type or too small, and an About text that repeats the
+// tagline or runs long (E18, G1, D14, REQ-CONTENT-01). Exits 1 with one plain message per
+// problem found.
+import { existsSync, readFileSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import sharp from 'sharp';
 import exifr from 'exifr';
+import * as exifrModule from 'exifr';
 import { parse as parseYaml } from 'yaml';
 import { isRecord } from '../src/lib/guards';
-import { identifyingExifKeys } from '../src/lib/exif';
+import { identifyingExifKeys, identifyingIptcKeys, identifyingXmpKeys } from '../src/lib/exif';
+import { walkFiles } from './node-fs';
 import { aboutProblems } from '../src/lib/content-rules';
 import { splitFrontmatter } from '../src/lib/frontmatter';
 import { resolvePhotoPath } from '../src/lib/content-paths';
@@ -20,7 +23,8 @@ const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.h
 // sharp's metadata().exif buffer keeps the "Exif\0\0" chunk tag in front of the TIFF payload
 // for JPEG and WebP source images (not for PNG), but exifr's own format sniffing only
 // recognizes a bare TIFF header, so the tag has to be stripped before the buffer is handed
-// to exifr. Verified with sharp 0.35.5 and exifr 7.1.3, see task-9-report.md.
+// to exifr. Verified with sharp 0.35.5 and exifr 7.1.3 by reading generated JPEG, WebP and
+// AVIF files back (tests/unit/check-content.test.ts builds the same files).
 const EXIF_CHUNK_TAG = Buffer.from('Exif\0\0', 'latin1');
 
 function tiffPayload(exif: Buffer): Buffer {
@@ -29,43 +33,94 @@ function tiffPayload(exif: Buffer): Buffer {
 
 // exifr does not always reject a malformed TIFF payload by throwing. A structure that
 // starts out valid but is truncated or corrupted partway through resolves with an object
-// shaped like { errors: [...] } instead (verified with sharp 0.35.5 and exifr 7.1.3, see
-// task-9-report.md). Both outcomes must fail closed, or a corrupted GPS chunk would read
-// as "no identifying tags" and pass.
+// shaped like { errors: [...] } instead (verified with sharp 0.35.5 and exifr 7.1.3 on a
+// JPEG whose EXIF chunk was overwritten partway through). Both outcomes must fail closed,
+// or a corrupted GPS chunk would read as "no identifying tags" and pass.
 function hasParseErrors(tags: unknown): boolean {
   return isRecord(tags) && Array.isArray(tags.errors) && tags.errors.length > 0;
 }
 
-function walk(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir).flatMap((name) => {
-    const path = join(dir, name);
-    return statSync(path).isDirectory() ? walk(path) : [path];
-  });
+const walk = (dir: string): string[] => (existsSync(dir) ? walkFiles(dir).map((f) => join(dir, f)) : []);
+
+// sharp returns XMP as the raw packet and IPTC as the Photoshop resource block, for every
+// format it reads. exifr's sidecar() parses each on its own (verified with sharp 0.35.5 and
+// exifr 7.1.3: withXmp() round-trips through JPEG, PNG, WebP and AVIF, and a JPEG APP13
+// IPTC block comes back through metadata().iptc). sharp cannot write IPTC, so the tests
+// build that block by hand. exifr resolves a packet it cannot read as XML to undefined
+// rather than throwing, so a present packet with no parsed result fails closed too.
+//
+// exifr 7.1.3's ESM build (what Vite and Vitest load) exports sidecar() by name only,
+// while its CommonJS build (what tsx loads through package.json "main") has it only on the
+// default export. Take whichever exists.
+const sidecar: typeof exifr.sidecar = (exifrModule as Partial<typeof exifrModule>).sidecar ?? exifr.sidecar;
+type Parsed = { ok: true; tags: Record<string, unknown> } | { ok: false };
+async function parseSegment(buf: Buffer, type: 'xmp' | 'iptc'): Promise<Parsed> {
+  try {
+    const tags: unknown = await sidecar(buf, {}, type);
+    return isRecord(tags) && !hasParseErrors(tags) ? { ok: true, tags } : { ok: false };
+  } catch {
+    return { ok: false };
+  }
 }
 
-/** Reads one image's EXIF through sharp, which covers WebP and AVIF unlike exifr's own file
- * reader, and reports it as a problem when it carries GPS or owner metadata. Fails closed:
- * an image sharp cannot read, or an EXIF buffer exifr cannot parse, is reported as a
- * problem too, never passed through silently (E18). */
+/** Reads a raw XMP packet and returns its identifying keys, or null when the packet
+ * cannot be parsed (the caller fails closed). */
+export async function xmpProblemKeys(xmp: Buffer): Promise<string[] | null> {
+  const r = await parseSegment(xmp, 'xmp');
+  return r.ok ? identifyingXmpKeys(r.tags) : null;
+}
+
+// The Photoshop resource that holds IPTC: "8BIM" followed by resource id 0x0404. sharp
+// returns the whole resource block, which may hold other resources (a thumbnail, print
+// settings) before it, and exifr's sidecar() reads datasets from the start of what it is
+// given, so the block is cut at this resource first.
+const IPTC_RESOURCE = Buffer.from([0x38, 0x42, 0x49, 0x4d, 0x04, 0x04]);
+
+/** Reads a raw IPTC (Photoshop resource) block and returns its identifying keys. A block
+ * with no IPTC resource has nothing to check. One whose IPTC resource yields no datasets
+ * cannot be read, so it returns null and the caller fails closed (exifr resolves such a
+ * block to an empty object rather than throwing). */
+export async function iptcProblemKeys(iptc: Buffer): Promise<string[] | null> {
+  const at = iptc.indexOf(IPTC_RESOURCE);
+  if (at < 0) return [];
+  const r = await parseSegment(iptc.subarray(at), 'iptc');
+  return r.ok && Object.keys(r.tags).length > 0 ? identifyingIptcKeys(r.tags) : null;
+}
+
+/** Reads one image's EXIF, XMP and IPTC through sharp, which covers WebP and AVIF unlike
+ * exifr's own file reader, and reports it as a problem when any of them carries GPS,
+ * owner or creator metadata. Fails closed: an image sharp cannot read, or a metadata block
+ * exifr cannot parse, is reported as a problem too, never passed through silently (E18). */
 export async function checkImage(file: string): Promise<string | null> {
-  let exif: Buffer | undefined;
+  const unreadable = `${file}: could not read metadata.`;
+  let meta: { exif?: Buffer; xmp?: Buffer; iptc?: Buffer };
   try {
-    ({ exif } = await sharp(file).metadata());
+    meta = await sharp(file).metadata();
   } catch {
-    return `${file}: could not read metadata.`;
+    return unreadable;
   }
-  if (!exif) return null;
 
-  let tags: Record<string, unknown> | undefined;
-  try {
-    tags = await exifr.parse(tiffPayload(exif), { gps: true, tiff: true, exif: true });
-  } catch {
-    return `${file}: could not read metadata.`;
+  const keys: string[] = [];
+  if (meta.exif) {
+    let tags: Record<string, unknown> | undefined;
+    try {
+      tags = await exifr.parse(tiffPayload(meta.exif), { gps: true, tiff: true, exif: true });
+    } catch {
+      return unreadable;
+    }
+    if (hasParseErrors(tags)) return unreadable;
+    keys.push(...identifyingExifKeys(tags));
   }
-  if (hasParseErrors(tags)) return `${file}: could not read metadata.`;
-
-  const keys = identifyingExifKeys(tags);
+  if (meta.xmp) {
+    const xmpKeys = await xmpProblemKeys(meta.xmp);
+    if (!xmpKeys) return unreadable;
+    keys.push(...xmpKeys.map((k) => `XMP ${k}`));
+  }
+  if (meta.iptc) {
+    const iptcKeys = await iptcProblemKeys(meta.iptc);
+    if (!iptcKeys) return unreadable;
+    keys.push(...iptcKeys.map((k) => `IPTC ${k}`));
+  }
   return keys.length > 0
     ? `${file} contains identifying metadata (${keys.join(', ')}). Strip it first: see docs/runbook.md.`
     : null;

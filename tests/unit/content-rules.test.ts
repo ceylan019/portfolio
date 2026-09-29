@@ -1,4 +1,6 @@
-import { identifyingExifKeys } from '../../src/lib/exif';
+import {
+  identifyingExifKeys, identifyingIptcKeys, identifyingXmpKeys, IDENTIFYING_IPTC_KEYS, IDENTIFYING_XMP_KEYS,
+} from '../../src/lib/exif';
 import { aboutProblems, sentences, wordCount, MAX_ABOUT_WORDS } from '../../src/lib/content-rules';
 import { personJsonLd, serializeJsonLd } from '../../src/lib/jsonld';
 
@@ -11,6 +13,46 @@ describe('EXIF', () => {
     expect(identifyingExifKeys({ Artist: '', GPSLatitude: null })).toEqual([]);
     expect(identifyingExifKeys(undefined)).toEqual([]);
     expect(identifyingExifKeys({ Make: 'Apple', Orientation: 1 })).toEqual([]);
+  });
+});
+
+// Shapes as exifr 7.1.3 returns them: XMP grouped by namespace prefix next to an xmlns
+// map, IPTC flat under exifr's dataset names.
+describe('XMP and IPTC', () => {
+  test('@REQ-PRIV-01 XMP GPS, creator and owner properties are identifying, named with their prefix', () => {
+    const xmp = {
+      xmlns: { exif: 'http://ns.adobe.com/exif/1.0/', dc: 'http://purl.org/dc/elements/1.1/' },
+      exif: { GPSLatitude: '52,22.1N', GPSLongitude: '4,53.6E', ExposureTime: 0.01 },
+      dc: { creator: 'Jane Doe', title: 'Portrait' },
+      xmpRights: { Owner: 'Jane' },
+      aux: { OwnerName: 'Jane', Lens: '50mm' },
+      tiff: { Make: 'Apple' },
+    };
+    expect(identifyingXmpKeys(xmp)).toEqual(['aux:OwnerName', 'dc:creator', 'exif:GPSLatitude', 'exif:GPSLongitude', 'xmpRights:Owner']);
+  });
+  test('@REQ-PRIV-01 every listed XMP property and any GPS property is caught in any namespace', () => {
+    for (const name of IDENTIFYING_XMP_KEYS) expect(identifyingXmpKeys({ ns: { [name]: 'x' } })).toEqual([`ns:${name}`]);
+    expect(identifyingXmpKeys({ exifEX: { GPSDestLatitude: 1 } })).toEqual(['exifEX:GPSDestLatitude']);
+    expect(identifyingXmpKeys({ ns: { creator: ['A', 'B'] } })).toEqual(['ns:creator']);
+  });
+  test('@REQ-PRIV-01 empty XMP values, other properties, the xmlns map and non-object entries are fine', () => {
+    expect(identifyingXmpKeys({ dc: { creator: '', rights: 'CC BY' }, exif: { GPSLatitude: null, gps: 'x' } })).toEqual([]);
+    // xmlns maps prefixes to URIs: a prefix that happens to be named like a property is not one.
+    expect(identifyingXmpKeys({ xmlns: { creator: 'http://example.com/ns', GPS: 'http://example.com/gps' } })).toEqual([]);
+    expect(identifyingXmpKeys({ x: 'adobe:ns:meta/', y: null, z: ['creator'] })).toEqual([]);
+    expect(identifyingXmpKeys(undefined)).toEqual([]);
+    expect(identifyingXmpKeys(null)).toEqual([]);
+  });
+  test('@REQ-PRIV-01 IPTC creator, owner and place datasets are identifying, sorted', () => {
+    expect(identifyingIptcKeys({ ApplicationRecordVersion: '\u0000\u0004', Byline: 'Jane Doe', City: 'Amsterdam', Keywords: 'portrait' })).toEqual(['Byline', 'City']);
+    for (const name of IDENTIFYING_IPTC_KEYS) expect(identifyingIptcKeys({ [name]: 'x' })).toEqual([name]);
+    // Listed order is Credit before Contact; the report is sorted.
+    expect(identifyingIptcKeys({ Credit: 'x', Contact: 'y' })).toEqual(['Contact', 'Credit']);
+  });
+  test('@REQ-PRIV-01 empty IPTC values and missing blocks are fine', () => {
+    expect(identifyingIptcKeys({ Byline: '', City: null, Headline: 'x' })).toEqual([]);
+    expect(identifyingIptcKeys(undefined)).toEqual([]);
+    expect(identifyingIptcKeys({})).toEqual([]);
   });
 });
 
