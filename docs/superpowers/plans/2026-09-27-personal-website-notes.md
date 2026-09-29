@@ -702,3 +702,37 @@ Commits `c4e9ac2` and `c9d6bd0`. New files: `README.md`, `docs/runbook.md` and `
     - Whether `gh workflow enable` in keepalive resets GitHub's 60-day timer.
     - Whether linkinator reaches every certification verify URL.
 18. **Dependabot:** whether repository variables reach its runs (the fallback `SITE_URL` covers the case where they don't). `@axe-core/playwright` is outside the Playwright group. Change that if "all Playwright packages" was meant to include it.
+
+## Final local check suite
+
+Run on 28 September 2026 against `a17256f`. The only commit after that, `c9d5f75`, changes this notes file. The suite ran on macOS with Node 22.23.3, and the full table is kept in the controller's workspace. Results, including the expected failures:
+
+| Check | Result |
+|---|---|
+| `pnpm install --frozen-lockfile --offline` | Pass. The lockfile is consistent. |
+| `pnpm check` (astro check) | Pass: 114 files, 0 errors, 0 warnings, 7 hints (zod 4 deprecation hints in `content-schemas.ts`). |
+| `pnpm build:real` | Pass. `dist/quality.json` is absent, as spec E12 requires. |
+| `pnpm test:unit` (unit, component, build) | Pass: 27 files, 344 of 344 tests. |
+| `pnpm test:mutation` (Stryker on `src/lib`) | Pass: 99.78% (threshold 90). Of 1,382 mutants: 1,366 killed, 2 survived, 2 timed out, 1 had no coverage and 11 were ignored as equivalent. |
+| Content check (real and fixture) | Pass on both. |
+| Placeholder gate on `src/content` | **Refuses (exit 1), as it should.** `istqb-ctfl.yaml` and `profile.md` still carry `placeholder: true`. On the fixture content it passes. |
+| Dist scans | Pass. Real (with `--forbid-states`): 3 HTML files, 0 findings. Fixture: 4 HTML files, 0 findings. |
+| Manifest | 34 files written, and the verification against it passes. |
+| Fixture E2E, 5 projects, visual excluded | Pass: 255 of 255 (51 per project), 0 failed, skipped or flaky. |
+| Visual tests (chromium and pixel) | **Fail (24 of 24), as expected**, because no baselines exist yet. They only come from the container workflow. No screenshot files were written. |
+| Real E2E (`real-chromium`, stand-in `quality.json`) | Pass: 14 of 14. |
+| Lighthouse, real build | Pass, all assertions. `/`: 100/100/100/100. `/quality`: 95/100/100/100. |
+| Lighthouse, fixture build | Pass, all assertions. `/`: 100 in every category. `/quality`: 96/100/100/100. |
+| Internal link check (linkinator, real build) | Pass: 23 links, 0 broken. |
+
+About the mutation results:
+- The 2 survivors are the `Intl.NumberFormat` locale string in `format.ts` and `render-quality.ts`. The runner cannot record import-time errors (Task 11 explains why), and the tests do fail when the mutation is applied by hand.
+- The mutant with no coverage is the `CV_FILENAME` constant in `site.ts`. Component tests use it, but Stryker runs only the unit tests.
+
+Not run locally:
+- Anything inside the Playwright Linux container or on GitHub Actions.
+- The Stryker Dashboard upload, which needs your key.
+- Lighthouse CI upload: results stayed on the local filesystem.
+- A real deploy and the live smoke and hash check.
+
+Leftover `wrangler dev` servers started by subagents during the session were stopped afterwards, and ports 8787 and 8788 are free.
