@@ -16,12 +16,13 @@ const repo = process.env.REPO_URL ?? 'https://github.com/example/ceylan-akyol-si
 const actions = `${repo}/actions/workflows/ci.yml`;
 
 // T17-B: the verdict fallback links both the repository and its Actions page.
-// Every other data block on this page links only the latest CI run.
+// Every other data block links the list of ci.yml runs. The newest run is not known
+// when the page is built, so the link says what it opens: the run history.
 const verdictLinks = [
   { href: repo, label: 'Browse the source' },
   { href: actions, label: 'View the CI history' },
 ];
-const ciLink = [{ href: actions, label: 'See the latest CI run' }];
+const ciLink = [{ href: actions, label: 'See the CI run history' }];
 ---
 <Base title={`How ${profile.name}'s site is tested`} description="Every promise this site makes is tied to the checks that prove it." path="/quality">
   <div class="page q">
@@ -74,7 +75,7 @@ const ciLink = [{ href: actions, label: 'See the latest CI run' }];
           <div><dt>Visual regression</dt><dd>Screenshots on desktop Chromium and emulated Pixel, in both themes, compared against approved baselines.</dd></div>
           <div><dt>Performance</dt><dd>Lighthouse CI, mobile, 3 runs per page, on both builds. The real build's median is recorded.</dd></div>
           <div><dt>Links</dt><dd>Internal links are checked on every run. External links, including verify links, are checked weekly.</dd></div>
-          <div><dt>Smoke</dt><dd>Playwright checks the live site after each deploy and daily: the page loads, the CV, 404, headers and the live file check.</dd></div>
+          <div><dt>Smoke</dt><dd>Playwright checks the live site after each deploy and daily: the home page, the CV, 404, headers, quality.json and the preview image. After each deploy, every live file is also checked against the tested build.</dd></div>
         </dl>
       </section>
       <DataBlock name="duration" fallback="Pipeline duration is unavailable right now." links={ciLink} />

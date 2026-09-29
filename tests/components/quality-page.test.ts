@@ -49,17 +49,18 @@ test('@REQ-QUAL-01 the duration block has a true, number-free fallback that is n
   expect(fallback).not.toMatch(/\d/);
   expect(fallback.replace(/<[^>]+>/g, '').trim().length).toBeGreaterThan(0);
   expect(fallback).toContain('Pipeline duration is unavailable right now.');
-  expect(fallback).toContain('See the latest CI run');
+  expect(fallback).toContain('See the CI run history');
 });
 
-test('@REQ-QUAL-01 the matrix, integrity, trends and mutation fallbacks each link the latest CI run', async () => {
+test('@REQ-QUAL-01 the matrix, integrity, trends and mutation fallbacks each link the CI run history, labelled as such', async () => {
   const html = await renderPage();
   for (const name of ['matrix', 'integrity', 'trends', 'mutation']) {
     const start = html.indexOf(`data-block="${name}"`);
     const end = html.indexOf('data-slot="live"', start);
     const block = html.slice(start, end);
     expect(block).toContain('unavailable right now.');
-    expect(block).toContain('See the latest CI run');
+    expect(block).toMatch(/<a class="lnk" href="https:\/\/github\.com\/example\/ceylan-akyol-site\/actions\/workflows\/ci\.yml">See the CI run history<\/a>/);
+    expect(block).not.toContain('latest CI run');
   }
 });
 
@@ -103,6 +104,15 @@ test('@REQ-QUAL-01 the suites section names every suite from spec section 8, in 
   expect(suites).toContain('desktop Chromium and emulated Pixel');
   expect(suites).toContain('light and dark themes');
   expect(suites).toContain('mobile, 3 runs');
+});
+
+test('@REQ-QUAL-01 the smoke suite says the live file check runs after each deploy, not daily', async () => {
+  const html = await renderPage();
+  const smoke = html.slice(html.indexOf('<dt>Smoke</dt>'), html.indexOf('data-block="duration"'));
+  const dd = smoke.slice(smoke.indexOf('<dd>'), smoke.indexOf('</dd>'));
+  expect(dd).toContain('after each deploy and daily: the home page, the CV, 404, headers, quality.json and the preview image.');
+  expect(dd).toContain('After each deploy, every live file is also checked against the tested build.');
+  expect(dd).not.toMatch(/daily[^.]*live file/);
 });
 
 test('@REQ-QUAL-01 the glossary line uses the spec terms for tests, test runs, browser engines and device profiles', async () => {
