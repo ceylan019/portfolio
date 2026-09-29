@@ -514,7 +514,7 @@ The measurements behind it, taken with esbuild against the installed zod 4.6.5:
 Commits `f50c774`, `8c2a716` and `7150b5e`. New files in `scripts/`: `node-fs.ts`, `scan-dist.ts`, `write-manifest.ts`, `stand-in-quality.ts`, `build-report.ts` and `gate-cli.ts` (bundled to `dist-gate/gate-cli.mjs`). The unit suite passes 324 of 324, and Stryker scores 99.78.
 
 **Changes from the plan:**
-- Ruling T22-A: `build-report` fails closed on missing evidence. A missing or unreadable Lighthouse file for either build means "not covered". A missing Vitest, Playwright or mutation report is a named problem, and so is a missing live-check file.
+- Ruling T22-A: `build-report` fails closed on missing evidence. A missing or unreadable Lighthouse file for either build means "not covered". A missing Vitest, Playwright or mutation report is a named problem. The live check is optional by design: the first deploy has none, and /quality then says the check runs after this deploy.
 - The traceability gate now also requires results from the real-build project (`real-chromium`). Before this fix, a missing real Playwright report passed the gate silently, dropping the real-content count check, the real-build axe run and the real 404 and header checks. This was shown end to end: without the file, `build-report` now exits 1 with "No results from project(s): real-chromium."
 - The stale-commit check fails closed. If the head of `main` cannot be read (ls-remote error, or no `main`), `gate-cli` exits 1 and nothing is deployed. The plan deployed in that case, which could let an older run overwrite a newer deploy. A brief GitHub outage now fails the deploy job, and a rerun recovers. The skip note for a superseded commit also goes to the job summary, as spec section 7 says.
 - `scan-dist` records whether it ran with `--forbid-states`, and the report requires that on the real scan, which carries REQ-CSP-01's states-page rule.
@@ -540,3 +540,57 @@ Commits `f50c774`, `8c2a716` and `7150b5e`. New files in `scripts/`: `node-fs.ts
 - Important, fixed (my ruling): the stale check deployed when the head of `main` was unknown.
 - Minor, deferred: a browser project counts as present even when all of its results are skipped. That was already true for every project.
 - Minor, deferred: the evidence loaders in `build-report` live outside `src/lib`, so they are not mutation tested.
+
+## Task 23: The ci.yml pipeline
+
+Commits `318ca6c`, `100e905` and `093d589`. New files: `.github/workflows/ci.yml` and `scripts/lighthouse-summary.ts`. `playwright.config.ts` now sets `updateSnapshots: 'none'`, and the Lighthouse manifest reader moved into `src/lib/evidence.ts`. The unit suite passes 326 of 326, and the mutation score on `evidence.ts` is 100.
+
+**What the workflow does:**
+- A `versions` job reads the Playwright version from `package.json`.
+- `logic` runs check, a real build, the unit, component and build tests, and Stryker, with the dashboard upload on main only.
+- `fixture` runs as a 5-project matrix in the Playwright container. It builds the fixture site, scans it, serves it, runs Playwright, and runs Lighthouse on the chromium leg only.
+- `real` runs the content check, then the real build and scan. It uploads `site-real` and `manifest-real`, then serves the build with the stand-in `quality.json` and runs the @real tests, axe, Lighthouse and the link check.
+- `report` checks the evidence and runs the traceability gate, then writes `quality.json` and the gate bundle.
+- `deploy` runs on `main` only, in the `production` environment, with no project install. It verifies the manifest, refuses placeholders and handles stale commits, then copies `quality.json` in and runs a pinned wrangler with install scripts disabled.
+- `smoke` calls `smoke.yml` after a deploy.
+
+The daily schedule runs the same gates.
+
+**Changes from the plan:**
+- Ruling T23-C: every action is pinned to a full commit SHA with a version comment, because spec section 7 requires SHA pinning and the plan used tags. The versions are newer than the plan's (checkout v7.0.1, pnpm/action-setup v6.1.0, setup-node v7.0.0, upload-artifact v7.0.1, download-artifact v8.0.1). The plan's versions run on node20, which GitHub is retiring. The reviewer re-resolved all five SHAs.
+- Ruling T23-A: Playwright never writes a missing baseline during a normal run. Only the baselines workflow may do that.
+- Ruling T23-B: jobs other than deploy fall back to the example `SITE_URL` when the repository variable is not visible, which may be the case for Dependabot. The deploy job refuses to run without a real `SITE_URL`.
+- Ruling P2: the fixture dist scan uploads from the chromium leg only.
+- Ruling P18: the container sets `HOME=/root` for Firefox.
+- Task 21's warning: `CF_BEACON_TOKEN` reaches both the real build and the real Lighthouse run.
+- The content check runs before the real build (REQ-CONTENT-01).
+- The Playwright container jobs install Node 22 from `.nvmrc`, not the image's Node 24, because the real job builds the artifact that gets deployed.
+- The spec says "History never blocks a deploy". A failing GitHub API lookup for history or the live check now logs a warning and continues, where it would have failed the report job.
+- The spec's Lighthouse rerun rule says the rerun and both scores go in the job summary. The plan moved that elsewhere. A summary step after each Lighthouse run now writes the run attempt and the scores.
+- The two build artifacts can be uploaded again on a rerun (`overwrite: true`). The check that the real site contains no `quality.json` runs before its upload.
+
+**Verified locally (not on GitHub, not in the container):**
+- Every job's commands were run in order, and every artifact path matched what `build-report` reads.
+- The report gate failed only on REQ-VIS-01, because no visual baselines exist yet.
+- wrangler 4.142.0 installs with `--ignore-scripts`, and `wrangler deploy --dry-run` exits 0. This was tested on macOS only.
+- A structural check of `ci.yml` (46 checks, run from a throwaway script) passed:
+  - permissions and the report job's `actions: read`
+  - `timeout-minutes` on every job
+  - SHA pins
+  - no install in the deploy job
+  - secrets only in the wrangler step
+  - the main-only, production, concurrency and schedule settings
+- `@action-validator/cli` 0.6.0 accepts the file. actionlint was not available.
+- The history-lookup fallbacks were exercised with a stub `gh` in five failure modes, and the step exits 0 in each.
+
+**Not verified until the first real run:**
+- `HOME=/root` for Firefox, the background `wrangler dev` surviving between container steps, and setup-node and pnpm inside the container.
+- wrangler `--ignore-scripts` on Linux.
+- Whether a reran job can re-upload artifacts.
+- The 15-minute timeout of the logic job with Stryker on a 2-core runner.
+
+**Reviewer findings:**
+- Important, fixed: the history lookups could block a deploy.
+- Important, fixed: Lighthouse scores were missing from the job summary.
+- Small items ruled in and fixed. A scoped re-review confirmed each fix and that no fallback can turn a failing suite green.
+- Minor, deferred: wrangler's deeper dependencies are resolved when the deploy job runs, with install scripts off. A committed deploy lockfile would pin them fully.
