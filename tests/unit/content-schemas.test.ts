@@ -49,3 +49,11 @@ test('@REQ-CONTENT-02 .pages.yml defines exactly the schema fields with the same
   expect(fields('profile')).toEqual(sorted(PROFILE_FIELDS));
   expect(fields('certifications')).toEqual(sorted(CERTIFICATION_FIELDS));
 });
+// Pages CMS's rich-text field takes a "format" option of markdown or html
+// (pagescms.org/docs/configuration/fields/rich-text). profile.md's body is Markdown (spec
+// section 4, About), so the option is set explicitly and the CMS never writes HTML there.
+test('@REQ-CONTENT-02 the CMS saves the About body as Markdown', () => {
+  const cms = parse(readFileSync('.pages.yml', 'utf8')) as { content: { name: string; fields: { name: string; type: string; options?: { format?: string } }[] }[] };
+  const body = cms.content.find((c) => c.name === 'profile')!.fields.find((f) => f.name === 'body')!;
+  expect(body).toMatchObject({ type: 'rich-text', options: { format: 'markdown' } });
+});

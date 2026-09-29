@@ -24,7 +24,7 @@ content:
       - { name: availability, label: Availability line, type: string }
       - { name: showAvailability, label: Show availability on the site, type: boolean, default: false }
       - { name: placeholder, label: Placeholder (blocks deploy), type: boolean, default: false }
-      - { name: body, label: About (at most about 90 words), type: rich-text }
+      - { name: body, label: About (at most about 90 words), type: rich-text, options: { format: markdown } }
 
   - name: certifications
     label: Certifications
