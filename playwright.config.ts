@@ -13,6 +13,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
+  // Ruling T23-A: never write a missing baseline during a test run. Playwright's
+  // default ('missing') writes it and then passes @visual against itself. Only
+  // test:visual:update and the visual-baselines workflow pass --update-snapshots.
+  updateSnapshots: 'none',
   reporter: [['list'], ['json', { outputFile: process.env.PW_JSON || 'reports/playwright.json' }]],
   snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}-{projectName}{ext}',
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.001, animations: 'disabled' } },
