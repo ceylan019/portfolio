@@ -10,6 +10,12 @@ updates:
         patterns: ['@playwright/*', 'playwright', 'playwright-core']
       astro:
         patterns: ['astro', '@astrojs/*']
+  # The deploy job's own lockfile (E17): wrangler and nothing else, kept current on its
+  # own. The root wrangler pin is for local serving; deploy/package.json started at the
+  # same version.
+  - package-ecosystem: npm
+    directory: /deploy
+    schedule: { interval: weekly }
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }

@@ -1,5 +1,10 @@
 name: ci
 
+# Every upload-artifact step in this workflow sets overwrite: true. Spec section 6 lets a
+# job whose Lighthouse performance score misses 95 be rerun once, and a rerun uploads under
+# the same artifact names; without overwrite that upload fails on the name the first
+# attempt already used.
+
 on:
   push:
     branches: [main]
@@ -70,6 +75,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: logic-reports
+          overwrite: true
           path: |
             reports/vitest.json
             reports/mutation/mutation.json
@@ -121,6 +127,7 @@ jobs:
         if: always()
         with:
           name: fixture-${{ matrix.project }}
+          overwrite: true
           path: |
             reports/playwright-fixture-${{ matrix.project }}.json
             reports/dist-scan-fixture.json
@@ -129,6 +136,7 @@ jobs:
         if: matrix.project == 'chromium'
         with:
           name: lhci-fixture
+          overwrite: true
           path: .lighthouseci
           include-hidden-files: true
 
@@ -159,7 +167,6 @@ jobs:
       - run: pnpm tsx scripts/write-manifest.ts dist manifest/manifest.json
       - name: site-real carries no quality.json (E12)
         run: test ! -e dist/quality.json
-      # overwrite lets a rerun of this job upload again.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with: { name: site-real, path: dist, include-hidden-files: true, overwrite: true }
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -190,12 +197,13 @@ jobs:
         if: always()
         with:
           name: real-reports
+          overwrite: true
           path: |
             reports/playwright-real.json
             reports/dist-scan-real.json
             reports/links.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with: { name: lhci-real, path: .lighthouseci, include-hidden-files: true }
+        with: { name: lhci-real, path: .lighthouseci, include-hidden-files: true, overwrite: true }
 
   report:
     needs: [logic, fixture, real]
@@ -247,16 +255,16 @@ jobs:
             fi
           done
           started=$(gh api "repos/$GH_REPO/actions/runs/${{ github.run_id }}" --jq .run_started_at) \
-            || { echo "::warning::Could not read this run's start time; quality.json records a pipeline duration of 0."; started=; }
+            || { echo "::warning::Could not read this run's start time; quality.json records no pipeline duration."; started=; }
           echo "RUN_STARTED_AT=$started" >> "$GITHUB_ENV"
       - run: pnpm tsx scripts/build-report.ts
         env:
           STRYKER_URL: ${{ needs.logic.outputs.stryker_url }}
       - run: pnpm exec esbuild scripts/gate-cli.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist-gate/gate-cli.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with: { name: quality-json, path: out/quality.json }
+        with: { name: quality-json, path: out/quality.json, overwrite: true }
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with: { name: gate-cli, path: dist-gate/gate-cli.mjs }
+        with: { name: gate-cli, path: dist-gate/gate-cli.mjs, overwrite: true }
 
   deploy:
     needs: report
@@ -270,7 +278,9 @@ jobs:
     outputs:
       deployed: ${{ steps.stale.outputs.stale == 'false' }}
     # E17: this job installs no project dependencies. Node runs the bundled gate
-    # CLI, and wrangler comes from a pinned install without install scripts.
+    # CLI, and wrangler comes from deploy/package-lock.json, which pins every package
+    # in wrangler's tree to an exact version and integrity hash, so nothing is resolved
+    # at deploy time. npm ci installs exactly that lockfile, without install scripts.
     steps:
       - name: Refuse without the live site URL (ruling T23-B)
         env:
@@ -296,16 +306,14 @@ jobs:
       - run: node gate/gate-cli.mjs placeholders src/content
       - id: stale
         run: node gate/gate-cli.mjs stale ${{ github.sha }} https://github.com/${{ github.repository }}.git
-      - name: Install a pinned wrangler without install scripts (E17)
+      - name: Install the locked wrangler without install scripts (E17)
         if: steps.stale.outputs.stale == 'false'
-        run: |
-          v=$(node -p "require('./package.json').devDependencies.wrangler")
-          npm install --prefix /tmp/wrangler --no-save --ignore-scripts --no-audit --no-fund "wrangler@$v"
+        run: npm ci --ignore-scripts --no-audit --no-fund --prefix deploy
       - name: Deploy
         if: steps.stale.outputs.stale == 'false'
         run: |
           cp quality/quality.json dist/quality.json
-          /tmp/wrangler/node_modules/.bin/wrangler deploy
+          deploy/node_modules/.bin/wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
