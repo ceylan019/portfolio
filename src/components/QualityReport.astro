@@ -1,0 +1,81 @@
+---
+// The /quality report body (spec section 4, "/quality"). The page loads the
+// profile and passes it in, so the body renders in component tests without
+// the content store. Order follows the spec exactly (ruling T17-A): top line;
+// verdict, with the glossary line and the two-builds sentence; requirements
+// matrix; deploy integrity; over time; mutation testing; the suites; pipeline
+// duration.
+import TopLine from './TopLine.astro';
+import DataBlock from './DataBlock.astro';
+import Footer from './Footer.astro';
+
+interface Props { name: string; year: number; repo: string }
+const { name, year, repo } = Astro.props;
+const actions = `${repo}/actions/workflows/ci.yml`;
+
+// T17-B: the verdict fallback links both the repository and its Actions page.
+// Every other data block links the list of ci.yml runs. The newest run is not known
+// when the page is built, so the link says what it opens: the run history.
+const verdictLinks = [
+  { href: repo, label: 'Browse the source' },
+  { href: actions, label: 'View the CI history' },
+];
+const ciLink = [{ href: actions, label: 'See the CI run history' }];
+---
+  <div class="page q">
+    <TopLine name={name} />
+    <main id="main">
+      <header class="qhead">
+        <h1 class="qh1">How this site<br />is tested</h1>
+        <DataBlock
+          name="verdict"
+          fallback="Every promise this site makes is tied to the checks that prove it. Live results could not be loaded; the source and CI history are linked here."
+          links={verdictLinks}
+          fallbackClass="lede"
+        />
+        <p class="gloss">A <b>test</b> is one test case. A <b>test run</b> is one test in one device profile. Browser engines: Chromium, Firefox and WebKit. Device profiles: desktop Chromium, desktop Firefox, desktop WebKit, emulated iPhone (WebKit) and emulated Pixel (Chromium). Behavior is tested on fixed test content in every engine and device profile; the real content is checked for accessibility, performance, links and key behavior before deploy.</p>
+      </header>
+      <section class="sec" aria-labelledby="req-heading">
+        <div class="side">
+          <h2 id="req-heading">Requirements</h2>
+          <p class="note">Every row links to the exact tests, pinned to the deployed commit. There is no pass or fail column, because only fully green builds deploy.</p>
+        </div>
+        <DataBlock name="matrix" fallback="Requirement coverage is unavailable right now." links={ciLink} />
+      </section>
+      <DataBlock name="integrity" fallback="The live file check result is unavailable right now." links={ciLink} />
+      <section class="sec" aria-labelledby="trend-heading">
+        <div class="side">
+          <h2 id="trend-heading">Over time</h2>
+          <p class="note">The last 50 deploys.</p>
+        </div>
+        <DataBlock name="trends" fallback="Trend data is unavailable right now." links={ciLink} />
+      </section>
+      <section class="sec" aria-labelledby="mut-heading">
+        <div class="side">
+          <h2 id="mut-heading">Mutation testing</h2>
+          <p class="note">Covers the business logic in src/lib only.</p>
+        </div>
+        <DataBlock name="mutation" fallback="Mutation results are unavailable right now." links={ciLink} />
+      </section>
+      <section class="sec" aria-labelledby="suites-heading">
+        <div class="side">
+          <h2 id="suites-heading">The suites</h2>
+        </div>
+        <dl class="suites">
+          <div><dt>Unit</dt><dd>Vitest on src/lib: certification rules, schema checks, the traceability builder and more.</dd></div>
+          <div><dt>Component</dt><dd>Vitest with the Astro Container API, rendering components in their empty, single, many and long-text states.</dd></div>
+          <div><dt>Build</dt><dd>A check on the emitted bundle: first-party JavaScript stays under 10 KB brotli-compressed and never inlined.</dd></div>
+          <div><dt>Mutation</dt><dd>StrykerJS plants deliberate bugs in the mutation-tested business logic and checks that the tests catch them.</dd></div>
+          <div><dt>End to end</dt><dd>Playwright in 5 device profiles: desktop Chromium, desktop Firefox, desktop WebKit, emulated iPhone and emulated Pixel.</dd></div>
+          <div><dt>@real</dt><dd>Playwright on desktop Chromium against the real build: hero, CV, certification count, 404 and headers.</dd></div>
+          <div><dt>Accessibility</dt><dd>axe checks for zero automated WCAG 2.2 AA violations, in light and dark themes, on both builds.</dd></div>
+          <div><dt>Visual regression</dt><dd>Screenshots on desktop Chromium and emulated Pixel, in both themes, compared against approved baselines.</dd></div>
+          <div><dt>Performance</dt><dd>Lighthouse CI, mobile, 3 runs per page, on both builds. The real build's median is recorded.</dd></div>
+          <div><dt>Links</dt><dd>Internal links are checked on every run. External links, including verify links, are checked weekly.</dd></div>
+          <div><dt>Smoke</dt><dd>Playwright checks the live site after each deploy and daily: the home page, the CV, 404, headers, quality.json and the preview image. After each deploy, every live file is also checked against the tested build.</dd></div>
+        </dl>
+      </section>
+      <DataBlock name="duration" fallback="Pipeline duration is unavailable right now." links={ciLink} />
+    </main>
+    <Footer name={name} year={year} />
+  </div>

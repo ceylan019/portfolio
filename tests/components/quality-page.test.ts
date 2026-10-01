@@ -1,10 +1,14 @@
 import { experimental_AstroContainer as AstroContainer } from 'astro/container';
 import TopLine from '../../src/components/TopLine.astro';
 import DataBlock from '../../src/components/DataBlock.astro';
-import QualityPage from '../../src/pages/quality.astro';
+import QualityReport from '../../src/components/QualityReport.astro';
 
 const render = async (C: any, props: Record<string, unknown>) => (await AstroContainer.create()).renderToString(C, { props });
-const renderPage = async () => (await AstroContainer.create()).renderToString(QualityPage, {});
+// The report body takes the profile as props, so these tests never need Astro's
+// content store (under Vitest, Astro reads the store only `astro dev` writes).
+const renderPage = async () => (await AstroContainer.create()).renderToString(QualityReport, {
+  props: { name: 'Ceylan Akyol', year: 2026, repo: 'https://github.com/example/ceylan-akyol-site' },
+});
 
 test('@REQ-NAV-01 the top line links home and to the CV', async () => {
   const html = await render(TopLine, { name: 'Ceylan Akyol' });
