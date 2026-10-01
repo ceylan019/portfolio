@@ -41,6 +41,6 @@ GitHub disables scheduled workflows in public repositories after 60 days without
 
 ## Swapping in the custom domain
 
-1. Buy the domain (Cloudflare Registrar) and add it as a custom domain on the `ceylan-akyol` Worker.
+1. Buy the domain (Cloudflare Registrar) and add it as a custom domain on the `cv` Worker.
 2. Set the repository variable `SITE_URL` to the new URL and push any commit.
 3. Add a 301 redirect from the `workers.dev` host to the new domain (a small Worker script in front of the assets), then share the new link so previews refresh.

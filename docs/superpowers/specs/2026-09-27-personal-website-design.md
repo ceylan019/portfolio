@@ -109,7 +109,7 @@ A personal portfolio for Ceylan Akyol, a QA automation engineer who is employed 
                                         │
                                         ▼
                           Cloudflare Workers static assets
-                          ceylan-akyol.<account>.workers.dev
+                          cv.ceylan-akyol.workers.dev
                                         │
                                         ▼
                     smoke.yml after deploy and daily: live checks +
@@ -119,7 +119,7 @@ A personal portfolio for Ceylan Akyol, a QA automation engineer who is employed 
 - **Framework:** Astro, static output, no adapter. Config: `build.format: 'file'`, `trailingSlash: 'never'` (E22), `build.inlineStylesheets: 'never'`, `vite.build.assetsInlineLimit: 0` so scripts are never inlined into HTML (E3, commented in config).
 - **Client JavaScript:** first-party client JavaScript is limited to reading `/quality.json` on `/` and `/quality`, bundled by Astro to `/_astro/*.js`. Both pages are fully usable without it. The Cloudflare Web Analytics beacon is the only third-party script; it is included only in the real build. JSON-LD is a non-executable data block and is not client JavaScript.
 - **Shared data code (E6, E7):** one `quality.json` schema in `zod/mini` in `src/lib/quality-schema.ts`, used by the CI writer, the tests and the browser. One browser loader, `src/lib/quality-client.ts`, fetches once per page, validates, sets states, and hands typed data to one small renderer per data block.
-- **Hosting:** Cloudflare Workers with static assets, deployed with `wrangler deploy`. Worker name `ceylan-akyol`, which sets the `workers.dev` URL. `not_found_handling` is `404-page`; default `html_handling` serves `quality.html` at `/quality`. Free tier.
+- **Hosting:** Cloudflare Workers with static assets, deployed with `wrangler deploy`. Worker name `cv` on the account subdomain `ceylan-akyol`, which gives the `workers.dev` URL `https://cv.ceylan-akyol.workers.dev` (renamed from `ceylan-akyol` on 2026-10-01, before the first deploy). `not_found_handling` is `404-page`; default `html_handling` serves `quality.html` at `/quality`. Free tier.
 - **Repository:** public on GitHub. Commits use a repo-local personal email (D16).
 - **Tooling:** pnpm and Node 22 LTS, pinned in `packageManager` and `.nvmrc`.
 - **Fonts:** Schibsted Grotesk (SIL Open Font License), self-hosted through Fontsource, weights 400, 500, 700 and 800 only, Latin subset (D26; 700 added on 2026-10-01 so headings and buttons render at the bold weight DESIGN.md specifies). A TTF copy lives in `src/og/fonts/` for OG image generation, since satori cannot read WOFF2.

@@ -22,7 +22,7 @@
 - Dates render as "Month Year" in English ("March 2024"), computed in UTC. A certification is expired only when its expiry date is strictly before today (UTC date).
 - Copy terms, exactly: "test", "test run", "3 browser engines and 5 device profiles", "automated accessibility violations (axe)", "in CI". Sentence case; no all-caps labels.
 - Links open in the same tab. Link targets at least 44px tall; CV button at least 48px.
-- Worker name `ceylan-akyol`; site URL `https://ceylan-akyol.<account-subdomain>.workers.dev` supplied through `SITE_URL`.
+- Worker name `cv` on the account subdomain `ceylan-akyol`; site URL `https://cv.ceylan-akyol.workers.dev` supplied through `SITE_URL` (renamed on 2026-10-01, see the notes file).
 - Written text in docs, comments, commit messages and UI copy never uses a dash as sentence punctuation (no em dash, en dash or spaced hyphen joining clauses).
 - Commits: small, one per task step marked "Commit"; author email is the repo-local personal address (already configured).
 

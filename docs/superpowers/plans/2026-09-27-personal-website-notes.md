@@ -685,7 +685,7 @@ Commits `c4e9ac2` and `c9d6bd0`. New files: `README.md`, `docs/runbook.md` and `
 8. **GitHub settings:**
    - An environment called `production`, restricted to `main`, with secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
    - A repository secret `STRYKER_DASHBOARD_API_KEY`, from dashboard.stryker-mutator.io after signing in with GitHub and enabling the project.
-   - Repository variables `SITE_URL` (`https://ceylan-akyol.<your-account-subdomain>.workers.dev`) and `CF_BEACON_TOKEN`.
+   - Repository variables `SITE_URL` (`https://cv.ceylan-akyol.workers.dev`) and `CF_BEACON_TOKEN`.
    - The deploy job refuses to run while `SITE_URL` is empty. The other jobs fall back to the example URL.
 9. **Pages CMS:** sign in with GitHub and open the repository.
 
@@ -940,3 +940,5 @@ Checks:
 - `astro check` reports 0 errors.
 
 I found this after an earlier mistake of mine while testing the cache theory: I moved `.astro/` aside and restored it into the wrong place. The stray copy is now outside the project.
+
+**Worker renamed to `cv` (1 October 2026).** You chose the account subdomain `ceylan-akyol` and the Worker name `cv`, so the site URL is `https://cv.ceylan-akyol.workers.dev`. The new name is in `wrangler.jsonc`, spec section 3 (diagram and hosting line), the plan's global constraint and the runbook. The renaming happened before the first deploy, so no old Worker exists. `SITE_URL` must be set to exactly `https://cv.ceylan-akyol.workers.dev`.
