@@ -21,7 +21,9 @@ module.exports = {
       url: [`${base}/`, `${base}/quality`],
       numberOfRuns: 3,
       settings: {
-        chromeFlags: '--no-sandbox --headless=new',
+        // --disable-dev-shm-usage: in Docker, /dev/shm is 64 MB and Chrome's tab
+        // crashed during Lighthouse's full-page screenshot; this keeps that memory on disk.
+        chromeFlags: '--no-sandbox --headless=new --disable-dev-shm-usage',
         blockedUrlPatterns: ['*cloudflareinsights.com*'],
       },
     },

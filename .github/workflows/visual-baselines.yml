@@ -34,6 +34,10 @@ jobs:
     timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v${{ needs.versions.outputs.playwright }}-noble
+      # Chrome keeps rendering memory in /dev/shm, which Docker caps at 64 MB;
+      # Lighthouse's full-page screenshot crashed the tab (TARGET_CRASHED).
+      # Playwright's Docker guide recommends sharing the host's IPC namespace.
+      options: --ipc=host
     env:
       # Ruling P18: same container settings as ci.yml's fixture job.
       HOME: /root
