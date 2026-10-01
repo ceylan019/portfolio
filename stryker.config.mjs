@@ -16,6 +16,10 @@ export default {
   // Vitest 5 matches test names as "describe > test", the runner as "describe test".
   // Static mutants (module-level values such as the gate regexes) are tested too.
   ignoreStatic: false,
+  // Static mutants are most of the run time, and Stryker warns about that on
+  // every run and suggests ignoreStatic. Testing them is deliberate, so the
+  // advice is switched off; the run still fits the logic job's time limit.
+  warnings: { slow: false },
   reporters: ['clear-text', 'progress', 'json', 'html', ...(dashboard ? ['dashboard'] : [])],
   jsonReporter: { fileName: 'reports/mutation/mutation.json' },
   htmlReporter: { fileName: 'reports/mutation/mutation.html' },
