@@ -17,7 +17,7 @@ export const certificationObject = z.object({
   issueDate: z.coerce.date(),
   expiryDate: z.coerce.date().optional(),
   credentialId: z.string().max(60).optional(),
-  verifyUrl: z.string().url().optional(),
+  verifyUrl: z.url().optional(),
   hidden: z.boolean().default(false),
   placeholder: z.boolean().default(false),
 });
@@ -27,23 +27,23 @@ export const certificationRules = certificationObject.refine(
   { message: 'The expiry date cannot be before the issue date.', path: ['expiryDate'] },
 );
 
-export const profileObject = (image: () => z.ZodTypeAny) => z.object({
+export const profileObject = (image: () => z.ZodType) => z.object({
   name: z.string().min(1).max(60),
   title: z.string().min(1).max(60),
   tagline: z.string().min(1).max(160),
   photo: image(),
   photoAlt: z.string().min(1).max(200),
-  email: z.string().email(),
-  linkedinUrl: z.string().url(),
-  githubUrl: z.string().url(),
+  email: z.email(),
+  linkedinUrl: z.url(),
+  githubUrl: z.url(),
   cv: z.string().regex(/\.pdf$/i, 'The CV must be a PDF.'),
   availability: z.string().max(100).optional(),
   showAvailability: z.boolean().default(false),
   placeholder: z.boolean().default(false),
 });
 
-const fieldsOf = (shape: Record<string, z.ZodTypeAny>) =>
-  Object.entries(shape).map(([name, s]) => ({ name, required: !s.isOptional() }));
+const fieldsOf = (shape: Record<string, z.ZodType>) =>
+  Object.entries(shape).map(([name, s]) => ({ name, required: !s.safeParse(undefined).success }));
 
 // z.string() stands in for image(): both are required, which is what the drift test compares.
 export const PROFILE_FIELDS = fieldsOf(profileObject(() => z.string()).shape);
