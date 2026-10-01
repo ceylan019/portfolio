@@ -17,7 +17,7 @@ defaults:
 
 jobs:
   versions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 3
     outputs:
       playwright: ${{ steps.v.outputs.playwright }}
@@ -30,7 +30,7 @@ jobs:
 
   baselines:
     needs: versions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v${{ needs.versions.outputs.playwright }}-noble

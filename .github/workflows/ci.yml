@@ -30,7 +30,7 @@ env:
 
 jobs:
   versions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 3
     outputs:
       playwright: ${{ steps.v.outputs.playwright }}
@@ -43,7 +43,7 @@ jobs:
         run: echo "playwright=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
 
   logic:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       stryker_url: ${{ steps.dashboard.outputs.url }}
@@ -82,7 +82,7 @@ jobs:
 
   fixture:
     needs: versions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v${{ needs.versions.outputs.playwright }}-noble
@@ -146,7 +146,7 @@ jobs:
 
   real:
     needs: versions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v${{ needs.versions.outputs.playwright }}-noble
@@ -215,7 +215,7 @@ jobs:
 
   report:
     needs: [logic, fixture, real]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -277,7 +277,7 @@ jobs:
   deploy:
     needs: report
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: production
     concurrency:
