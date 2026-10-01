@@ -15,7 +15,7 @@
 - Node 22 LTS (`.nvmrc` = `22`), pnpm pinned in `packageManager`; every dependency pinned to an exact version in `package.json`.
 - Astro static output, no adapter; `build.format: 'file'`, `trailingSlash: 'never'`, `build.inlineStylesheets: 'never'`, `vite.build.assetsInlineLimit: 0`.
 - No `style` attributes, no `<style>` elements and no inline scripts in built HTML, except `<script type="application/ld+json">`. CSP: `default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; img-src 'self' data:; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`.
-- First-party client JavaScript under 5 KB brotli; it only reads `/quality.json` on `/` and `/quality`. Both pages are fully usable without it.
+- First-party client JavaScript under 10 KB brotli (raised from 5 KB on 2026-09-28, see the notes file); it only reads `/quality.json` on `/` and `/quality`. Both pages are fully usable without it.
 - Client rendering uses DOM APIs and `textContent` only: never `innerHTML`, never `setAttribute('style', ...)`.
 - `quality.json` limits: 200 requirements, 50 history points, 500 tests per requirement, 200 characters per string.
 - Every Vitest and Playwright test (except `@smoke`) carries at least one `@REQ-XXX-NN` tag that exists in `tests/requirements.ts`.

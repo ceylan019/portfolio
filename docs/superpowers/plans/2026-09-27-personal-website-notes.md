@@ -8,7 +8,7 @@ Status: Tasks 1 to 25 are implemented, each reviewed task by task, followed by a
 
 ### Spec deviations
 
-- **JavaScript budget:** raised from 5 KB to 10 KB brotli by your decision on 28 September 2026 (Task 21). Please update spec section 6 and the REQ-PERF-02 row, then delete the one parity-test override.
+- **JavaScript budget:** raised from 5 KB to 10 KB brotli by your decision on 28 September 2026 (Task 21). Spec section 6, the section 8 suites table and the REQ-PERF-02 row now say 10 KB (updated on your instruction, 1 October 2026), as does the plan's global constraint, and the parity-test override is gone.
 - **Deploy job install:** the job now installs only wrangler, from a committed `deploy/package-lock.json` with install scripts disabled. Spec section 9 (E17) says it "installs no npm packages". It still installs no project dependencies. Please confirm the wording or change the approach.
 - **The verdict on `/quality`:** it says "all N pre-deploy requirements" instead of "all N requirements", because the post-deploy requirement cannot be covered by the build (final review).
 - **Plan changes, not spec deviations:** everywhere else the plan and the spec disagreed, the spec was followed. The pre-flight table and each task section list those changes.
@@ -29,7 +29,7 @@ The full list is under "Needs me" at the end of the file, before the appendix. T
 
 1. Remove the backup refs.
 2. Review and merge.
-3. Update the spec (JavaScript budget, and the E17 wording if you agree).
+3. Settle the E17 wording for the deploy job's wrangler install (the budget text is done).
 4. Delete `.probe/`.
 5. Enable the EXIF hook.
 6. Create the accounts, secrets and variables.
@@ -906,3 +906,13 @@ Copied from the controller's ledger in the order made. Format: ruling; why; what
 - Parked Ruling: repoPath slices at the first /tests/ (a checkout path containing a tests folder would misclassify); same assumption as fixPath; does not trigger with this repo name; cost if wrong: component/build tests shown as unit.
 - Parked Ruling: smoke copy says "the home page" while the test also checks the photo renders; understatement, not untrue.
 - Parked Ruling: EXIF and IPTC key lists omit copyright fields (Copyright, CopyrightNotice); owner decides whether a name in copyright counts as identifying (spec E18 names GPS and identifying data).
+
+## Follow-up on 1 October 2026
+
+On your instruction, the 10 KB JavaScript budget now appears in:
+- spec section 6
+- the section 8 suites table
+- the REQ-PERF-02 row
+- the plan's global constraint
+
+The owner-approved override in `tests/unit/requirements.test.ts` is removed, so the registry is again checked word for word against the spec with no exceptions. The unit suite passes 384 of 384.

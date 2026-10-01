@@ -4,11 +4,6 @@ import type { Requirement } from '../src/lib/traceability';
 // is the spec table's wording with Markdown backticks removed, because it is
 // shown publicly on /quality. tests/unit/requirements.test.ts keeps the two in
 // step. Every test tag must name an id listed here.
-//
-// REQ-PERF-02 is the one exception: the owner raised its budget from 5 KB to
-// 10 KB brotli on 2026-09-28 (docs/superpowers/plans/2026-09-27-personal-website-notes.md),
-// ahead of a spec update. tests/unit/requirements.test.ts carries a narrow,
-// owner-approved override for this one id until the spec table is updated.
 export const REQUIREMENTS: Requirement[] = [
   { id: 'REQ-HERO-01', text: 'Hero shows name, title, tagline and photo with alt text', source: '§4' },
   { id: 'REQ-CV-01', text: 'CV downloads in one click from the hero; /cv.pdf is served as application/pdf', source: '§4' },

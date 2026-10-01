@@ -299,7 +299,7 @@ Dark mode follows `prefers-color-scheme`. There is no manual toggle in phase 1.
 
 - Only three font weights, Latin subset; only the 800 weight is preloaded.
 - Hero photo at displayed sizes, AVIF and WebP, `fetchpriority="high"`.
-- First-party JavaScript under 5 KB **brotli-compressed**, measured by a build test on the emitted bundle. Home page under 250 KB total transfer.
+- First-party JavaScript under 10 KB **brotli-compressed**, measured by a build test on the emitted bundle. (Raised from 5 KB on 2026-09-28: the zod/mini runtime that E6 puts in the browser measures about 6.6 KB brotli on its own.) Home page under 250 KB total transfer.
 - Lighthouse CI asserts score and byte budgets, so a regression names its cause. Rerun policy: if only the performance score misses 95 on a single job, that job may be rerun once; the rerun and both scores are recorded in the job summary. A second miss is a real failure.
 
 ## 7. Pipeline
@@ -363,7 +363,7 @@ Missing, malformed, oversized and hostile `quality.json` variants are served wit
 |---|---|---|---|
 | Unit | Vitest | `src/lib/` | certification rules, schema drift, traceability builder and evidence checks, history merge, fallbacks and upgrades, `quality.json` schema and limits, loader states, JSON-LD escaping, dist scan, manifest verify, placeholder check, stale-SHA check, issue state logic, EXIF check, timeout fallback |
 | Component | Vitest + Astro Container API | components | empty, single, many and long-text states |
-| Build | Vitest | emitted bundle | first-party JS under 5 KB brotli; scripts are external files |
+| Build | Vitest | emitted bundle | first-party JS under 10 KB brotli; scripts are external files |
 | Mutation | StrykerJS + Vitest runner | `src/lib/` | threshold 90, expected at or near 100 |
 | E2E | Playwright, 5 projects, in the Playwright container | fixture build | hero, CV, certification rules, proof strip and `/quality` states, previews, canonical URLs, 404, headers, keyboard, reduced motion, no console errors |
 | `@real` | Playwright, Chromium | real build | hero, CV is a PDF, certification count equals non-hidden files, 404, headers |
@@ -414,7 +414,7 @@ Missing, malformed, oversized and hostile `quality.json` variants are served wit
 | REQ-A11Y-02 | Skip link, logical tab order and visible focus | E2E |
 | REQ-A11Y-03 | Reduced motion shows the brush mark without animation | E2E |
 | REQ-PERF-01 | Mobile Lighthouse in CI: performance at least 95, other categories 100, byte budgets met | check: lighthouse |
-| REQ-PERF-02 | First-party JavaScript under 5 KB brotli, and never inlined | build |
+| REQ-PERF-02 | First-party JavaScript under 10 KB brotli, and never inlined | build |
 | REQ-LINK-01 | No broken internal links | check: links |
 | REQ-NF-01 | Unknown paths return the custom 404 page with status 404 | E2E, @real |
 | REQ-URL-01 | `/quality` and `/quality/` resolve to one canonical URL without a trailing slash | E2E |
