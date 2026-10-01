@@ -72,6 +72,23 @@ jobs:
           else
             echo "::warning::Stryker Dashboard report not found; /quality will omit the report link."
           fi
+      # The commit report above is what /quality links. The dashboard's project
+      # page and badges show the version "main", so the same report is also
+      # published under that name. A failure here only warns (spec section 10:
+      # a dashboard upload failure never blocks anything).
+      - name: Publish the mutation report as the main version
+        if: github.ref == 'refs/heads/main' && steps.dashboard.outputs.url != ''
+        env:
+          STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X PUT \
+            -H "X-Api-Key: $STRYKER_DASHBOARD_API_KEY" -H 'Content-Type: application/json' \
+            --data-binary @reports/mutation/mutation.json \
+            "https://dashboard.stryker-mutator.io/api/reports/github.com/${{ github.repository }}/main") || code=000
+          case "$code" in
+            2??) echo "Published as main: https://dashboard.stryker-mutator.io/reports/github.com/${{ github.repository }}/main" ;;
+            *) echo "::warning::Publishing the mutation report as main failed (HTTP $code); the commit report is unaffected." ;;
+          esac
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: logic-reports
