@@ -980,3 +980,5 @@ Log noise removed afterwards:
 The cause: on GitHub Actions, Vitest 5 adds its `github-actions` reporter by default, and that reporter appends a test report to `$GITHUB_STEP_SUMMARY` after every run. Stryker runs Vitest once per mutant, and every killed mutant is a run with a failing test. So a simulated CI run wrote 266 KB of summary, in 1,496 sections.
 
 `vitest.unit.config.ts`, which only Stryker uses, now sets `reporters: ['default']`. The same simulation then writes nothing, and the score is unchanged at 99.80. `pnpm test:unit` already set its reporters explicitly, so it was never affected.
+
+**Runners pinned (1 October 2026).** On your instruction, all 11 `runs-on` entries across the six workflows now use `ubuntu-24.04` instead of `ubuntu-latest`. GitHub starts moving `ubuntu-latest` to Ubuntu 26 on 19 October 2026, and pinning keeps the pipeline on a known image. Dependabot does not update runner labels, so moving to a newer image is a deliberate edit when you choose to make it. All workflows pass `@action-validator/cli`.
