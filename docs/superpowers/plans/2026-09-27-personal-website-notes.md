@@ -965,3 +965,12 @@ Results after the fix:
 The reservation is now 204px and 336px, a few pixels below the ready height on any platform. The settled layout is therefore exactly the one the baselines were made from, and loading the data shifts the page by only a few pixels. Locally, `/quality` scores 99 to 100 with CLS at 0.016 to 0.037. E2E passes 260 of 260 and real 14 of 14.
 
 Stryker's "static mutants take 87% of the time" advice is switched off with `warnings: { slow: false }`. Testing static mutants (the gate regexes) is deliberate (ruling T11-C). The score is unchanged at 99.80.
+
+**Fourth CI run: everything green up to the launch gate (1 October 2026).** In run 36825966652, every job passed through `report`, so the traceability gate passed on real CI evidence. `deploy` then refused, correctly, because the content still has `placeholder: true`. The Stryker Dashboard warning in `logic` is expected until `STRYKER_DASHBOARD_API_KEY` is set.
+
+Log noise removed afterwards:
+- **Vitest stderr:** Astro 6.4.8's Container API validates its own default config as if it were user config, then warns that `markdown.gfm` and `markdown.smartypants` are deprecated, once per test worker. `tests/setup/quiet-astro-container.ts` (a Vitest setup file) drops exactly that message.
+- **Stryker's per-test list** marked tests that kill no mutants with a cross. It is now off (`clearTextReporter.reportTests: false`); survived mutants and the score table still print.
+- **zod 4 deprecations in `content-schemas.ts`:** `z.url()` and `z.email()` replace `.url()` and `.email()`, `z.ZodType` replaces `ZodTypeAny`, and the CMS drift test decides required fields with `safeParse(undefined)` instead of `isOptional()`. The drift test still passes.
+
+`astro check` now reports 0 errors, 0 warnings and 0 hints, and the unit suite passes 384 of 384 with nothing on stderr.
