@@ -5,6 +5,10 @@ const site = process.env.SITE_URL || 'https://ceylan-akyol.example.workers.dev';
 
 export default defineConfig({
   site,
+  // The content cache (data-store.json) lives here. A separate folder for the
+  // fixture build keeps real and fixture content from meeting in one cache
+  // when both are built on the same machine.
+  cacheDir: process.env.BUILD_KIND === 'fixture' ? './node_modules/.astro-fixture' : './node_modules/.astro',
   output: 'static',
   trailingSlash: 'never',
   build: {
