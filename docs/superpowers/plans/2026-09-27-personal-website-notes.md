@@ -925,3 +925,18 @@ The owner-approved override in `tests/unit/requirements.test.ts` is removed, so 
 - Visual baselines do not exist yet, so nothing needs regenerating.
 
 **E17 reworded (1 October 2026).** On your instruction, the spec now says the deploy job installs no project dependencies, and that its only install is the pinned wrangler, by `npm ci` from the committed `deploy/package-lock.json` with install scripts disabled. That covers section 3's diagram, section 7's deploy job, section 9's secrets and threats, and the E17 row in section 13. The behaviour is unchanged.
+
+**Build warnings and a latent CI failure (1 October 2026).**
+- `astro.config.mjs` hides only Rollup's `INVALID_ANNOTATION` warning from zod's own comments. The bundle is byte for byte the same.
+- The fixture build has its own Astro cache folder (`node_modules/.astro-fixture`), so alternating real and fixture builds no longer warn "Duplicate id profile".
+
+While checking that, I found that the nine `/quality` component tests rendered the whole page, which loads the profile from Astro's content store. Under Vitest, Astro reads that store only from `.astro/data-store.json`, a file written by `astro dev` and not by `astro build` or `astro sync`. The tests passed locally only because `astro dev` had been run on 28 September, so the logic job would have failed on a fresh CI checkout.
+
+The page body now lives in `src/components/QualityReport.astro`, which takes the name, year and repository URL as props. The page loads the profile and passes them in, and the tests render the component directly.
+
+Checks:
+- All 384 tests pass with no dev store present.
+- `dist/quality.html` and `dist-fixture/quality.html` are byte for byte identical to before.
+- `astro check` reports 0 errors.
+
+I found this after an earlier mistake of mine while testing the cache theory: I moved `.astro/` aside and restored it into the wrong place. The stray copy is now outside the project.
