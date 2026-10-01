@@ -118,6 +118,12 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
    .qhead layout; renderVerdict (Task 10) appends the two paragraphs as
    siblings, so the grid, not the renderer, does the column split. */
 [data-block="verdict"] [data-slot="live"] { display: grid; grid-template-columns: 1fr 260px; gap: 48px; align-items: start; }
+/* Reserve the ready verdict's height (G3: the fallback sits in reserved space),
+   so swapping in the live verdict does not push the page down. Without it the
+   shift scored CLS 0.13 and held /quality's Lighthouse performance at 94.
+   Values are the measured ready heights at 1280px and 412px. */
+[data-block="verdict"] { min-height: 212px; }
+@media (max-width: 899px) { [data-block="verdict"] { min-height: 348px; } }
 .meta2 { font-size: 16px; color: var(--muted); line-height: 1.8; margin-top: 22px; }
 /* T17-D: the glossary line uses the DESIGN.md "Labels, IDs, glossary" size
    (14px) and a 62ch cap, not the brief's 15px / 66ch. */
