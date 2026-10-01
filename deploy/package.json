@@ -3,6 +3,6 @@
   "private": true,
   "description": "Only what the deploy job installs (E17): wrangler, from this directory's lockfile, with install scripts disabled.",
   "dependencies": {
-    "wrangler": "4.142.0"
+    "wrangler": "4.143.0"
   }
 }
