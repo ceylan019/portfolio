@@ -950,3 +950,12 @@ Fixes:
 - `--disable-dev-shm-usage` in Lighthouse's Chrome flags.
 
 Locally, Lighthouse still passes with the new flag. `/quality` performance runs scored 94, 96 and 94, so that page sits on the 95 threshold and may need trimming if CI reports it below.
+
+**Second CI run: `/quality` performance at 94 (1 October 2026).** Run 36824150775 confirmed the container crash fix. Every Playwright project passed inside the container (Firefox with `HOME=/root`, WebKit, iPhone, Pixel and Chromium), and so did `logic`. Lighthouse then scored `/quality` at 94 on all six runs.
+
+The cause was layout shift (CLS 0.146): the verdict block grew from its fallback height to its ready height when `quality.json` loaded. Spec G3 says each fallback sits in reserved space, so `base.css` now reserves the measured ready height (212px desktop, 348px below 900px).
+
+Results after the fix:
+- `/quality` scores 99 to 100 on both builds locally, with CLS at 0.018 to 0.038.
+- The settled page is unchanged at the visual-test widths, so the baselines stay valid.
+- Fixture E2E passes 260 of 260, real 14 of 14, and the unit suite 384 of 384.
