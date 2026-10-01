@@ -942,3 +942,11 @@ Checks:
 I found this after an earlier mistake of mine while testing the cache theory: I moved `.astro/` aside and restored it into the wrong place. The stray copy is now outside the project.
 
 **Worker renamed to `cv` (1 October 2026).** You chose the account subdomain `ceylan-akyol` and the Worker name `cv`, so the site URL is `https://cv.ceylan-akyol.workers.dev`. The new name is in `wrangler.jsonc`, spec section 3 (diagram and hosting line), the plan's global constraint and the runbook. The renaming happened before the first deploy, so no old Worker exists. `SITE_URL` must be set to exactly `https://cv.ceylan-akyol.workers.dev`.
+
+**First CI run: Chrome crashed in the container (1 October 2026).** Run 36822067762 passed `logic` (Stryker included, in 3 min 19 s), the Playwright tests, and the visual tests on Pixel. Both Lighthouse steps failed: Chrome's tab crashed (`TARGET_CRASHED`) during Lighthouse's full-page screenshot, so no results were written. The cause is Docker's 64 MB `/dev/shm`.
+
+Fixes:
+- `options: --ipc=host` on the container jobs in `ci.yml` and `visual-baselines.yml`. This is Playwright's recommendation for Chromium in Docker.
+- `--disable-dev-shm-usage` in Lighthouse's Chrome flags.
+
+Locally, Lighthouse still passes with the new flag. `/quality` performance runs scored 94, 96 and 94, so that page sits on the 95 threshold and may need trimming if CI reports it below.
