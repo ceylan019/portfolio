@@ -17,7 +17,6 @@ Status: Tasks 1 to 25 are implemented, each reviewed task by task, followed by a
 
 - **Brush ring colours:** the ring uses the DESIGN.md tokens, but `photo-mark.svg`'s own gradient stops differ slightly. Add tokens to DESIGN.md if you want the SVG's exact shades (Task 12).
 - **Credential IDs:** an ID longer than about 35 characters cannot both stay unbroken and avoid sideways scrolling at 375px (spec section 6). Check your real IDs at launch (Task 20).
-- **Font weight 700:** DESIGN.md asks for weight 700 on `h2` and the button, but only 400, 500 and 800 are loaded, so 700 renders as 800 (final review).
 - **Edge states in the real content:** zero visible certifications, or none with a verify URL, would fail two `@real` tests, although the spec allows those states (final review).
 - **Copyright metadata:** should copyright fields in photo metadata count as identifying (final review)?
 - **Dependabot and Playwright packages:** `@axe-core/playwright` is outside the Dependabot Playwright group. Change this if "all Playwright packages" includes it (Task 24).
@@ -916,3 +915,11 @@ On your instruction, the 10 KB JavaScript budget now appears in:
 - the plan's global constraint
 
 The owner-approved override in `tests/unit/requirements.test.ts` is removed, so the registry is again checked word for word against the spec with no exceptions. The unit suite passes 384 of 384.
+
+**Font weight 700 (your decision A, 1 October 2026).** The site now loads Schibsted Grotesk 400, 500, 700 and 800, still Latin subset only, with 800 the only preloaded file.
+- **What uses which weight:** section headings, buttons, certification titles, labels and the "Expired" label use the real 700. The name, the `/quality` title and the numbers keep 800, as in the approved mockup.
+- **Files changed:** `src/layouts/Base.astro` imports `latin-700.css`. Spec section 3 (fonts), section 6 (type and the performance budget line) and DESIGN.md's family line now list the four weights.
+- **Checks:** both builds succeed, `astro check` reports 0 errors, 384 of 384 unit tests pass and the dist scan is clean. Fixture E2E passes 260 of 260, and real-chromium passes 14 of 14.
+- **Lighthouse (median of 3 runs, all assertions pass):** `/` scores 99 for performance and 100 in the other categories on both builds. `/quality` has a median of 95 on both builds, with individual runs between 93 and 95. It was already at 95 before this change, so it sits on the threshold, and the spec's one-rerun policy may be needed in CI.
+- **Bytes:** fonts are 102.6 KB (budget 120 KB). Total transfer is about 126 KB on `/` and 124 KB on `/quality` (budget 256 KB).
+- Visual baselines do not exist yet, so nothing needs regenerating.

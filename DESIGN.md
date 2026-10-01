@@ -30,7 +30,7 @@ Contrast (checked): ink on bg 15.7 / 15.5; muted 5.3 / 6.8; rose-text 5.4 / 6.6;
 
 ## Type
 
-- **Family:** Schibsted Grotesk only, weights 400, 500 and 800, self-hosted, Latin subset. Only 800 is preloaded.
+- **Family:** Schibsted Grotesk only, weights 400, 500, 700 and 800, self-hosted, Latin subset. Only 800 is preloaded.
 - **Scale:**
 
 | Role | Desktop | Mobile | Weight | Line height |

@@ -122,7 +122,7 @@ A personal portfolio for Ceylan Akyol, a QA automation engineer who is employed 
 - **Hosting:** Cloudflare Workers with static assets, deployed with `wrangler deploy`. Worker name `ceylan-akyol`, which sets the `workers.dev` URL. `not_found_handling` is `404-page`; default `html_handling` serves `quality.html` at `/quality`. Free tier.
 - **Repository:** public on GitHub. Commits use a repo-local personal email (D16).
 - **Tooling:** pnpm and Node 22 LTS, pinned in `packageManager` and `.nvmrc`.
-- **Fonts:** Schibsted Grotesk (SIL Open Font License), self-hosted through Fontsource, weights 400, 500 and 800 only, Latin subset (D26). A TTF copy lives in `src/og/fonts/` for OG image generation, since satori cannot read WOFF2.
+- **Fonts:** Schibsted Grotesk (SIL Open Font License), self-hosted through Fontsource, weights 400, 500, 700 and 800 only, Latin subset (D26; 700 added on 2026-10-01 so headings and buttons render at the bold weight DESIGN.md specifies). A TTF copy lives in `src/og/fonts/` for OG image generation, since satori cannot read WOFF2.
 - **OG image:** satori and @resvg/resvg-js in a static endpoint, with sharp for photo conversion (D7).
 - **Analytics:** Cloudflare Web Analytics. No cookies, no consent banner.
 
@@ -270,7 +270,7 @@ Dark mode follows `prefers-color-scheme`. There is no manual toggle in phase 1.
 
 ### Type
 
-- One family: **Schibsted Grotesk**, weights 400, 500 and 800.
+- One family: **Schibsted Grotesk**, weights 400, 500, 700 and 800: 800 for the name, page title and numbers; 700 for section headings, buttons and labels.
 - Name: weight 800, tight tracking (about -0.035em), very large (about 96px desktop, 60px mobile), set on two lines.
 - Numbers in the proof strip, verdict and trends use weight 800 inside regular sentences, with tabular figures.
 - Sentence case everywhere. No all-caps labels.
@@ -297,7 +297,7 @@ Dark mode follows `prefers-color-scheme`. There is no manual toggle in phase 1.
 
 ### Performance budget (D26, E22)
 
-- Only three font weights, Latin subset; only the 800 weight is preloaded.
+- Only four font weights, Latin subset; only the 800 weight is preloaded.
 - Hero photo at displayed sizes, AVIF and WebP, `fetchpriority="high"`.
 - First-party JavaScript under 10 KB **brotli-compressed**, measured by a build test on the emitted bundle. (Raised from 5 KB on 2026-09-28: the zod/mini runtime that E6 puts in the browser measures about 6.6 KB brotli on its own.) Home page under 250 KB total transfer.
 - Lighthouse CI asserts score and byte budgets, so a regression names its cause. Rerun policy: if only the performance score misses 95 on a single job, that job may be rerun once; the rerun and both scores are recorded in the job summary. A second miss is a real failure.
