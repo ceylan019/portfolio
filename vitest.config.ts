@@ -9,6 +9,7 @@ export default getViteConfig({
     globals: true,
     // Use non-UTC timezone so mutation-testing can distinguish UTC accessors (getUTCMonth) from local ones (getMonth)
     env: { TZ: 'America/New_York' },
+    setupFiles: ['tests/setup/quiet-astro-container.ts'],
   },
 }, {
   // The Astro dev toolbar defaults to enabled, and getViteConfig runs the

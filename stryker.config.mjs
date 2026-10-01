@@ -20,6 +20,10 @@ export default {
   // every run and suggests ignoreStatic. Testing them is deliberate, so the
   // advice is switched off; the run still fits the logic job's time limit.
   warnings: { slow: false },
+  // The per-test list marks tests that kill no mutants (for example tests of
+  // scripts/, which is outside the mutate scope) with a cross that reads like a
+  // failure. Survived mutants and the score table still print.
+  clearTextReporter: { reportTests: false },
   reporters: ['clear-text', 'progress', 'json', 'html', ...(dashboard ? ['dashboard'] : [])],
   jsonReporter: { fileName: 'reports/mutation/mutation.json' },
   htmlReporter: { fileName: 'reports/mutation/mutation.html' },
