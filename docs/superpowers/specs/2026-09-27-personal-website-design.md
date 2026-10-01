@@ -102,7 +102,7 @@ A personal portfolio for Ceylan Akyol, a QA automation engineer who is employed 
                                artifacts: quality-json, gate-cli
                                         │  main only
                                         ▼
-                               job: deploy  (environment: production, no npm install)
+                               job: deploy  (environment: production, no project install)
                                gate-cli: verify site-real vs manifest-real,
                                placeholders, stale SHA; copy quality.json in;
                                pinned wrangler (token only in this step)
@@ -316,7 +316,7 @@ Five jobs; the first three run in parallel (D25). Budget: under 10 minutes from 
 2. **fixture:** runs inside the official Playwright container whose tag is derived from the Playwright version in the lockfile (E23). Build with fixture content (`tests/fixtures/content/`, plus a valid fixture `quality.json`), including `/og.png` and the test-only states page (D20). Dist scan. Serve with `wrangler dev`. Playwright E2E and axe in five projects (desktop Chromium, Firefox, WebKit; emulated iPhone and Pixel), sharded by project. Visual regression on desktop Chromium and emulated Pixel, both themes. Lighthouse on `/` and `/quality`. Uploads reports and `lhci-fixture` (E4).
 3. **real:** build with real content. Dist scan. Write the SHA-256 manifest of every file (D22). Upload `site-real` and `manifest-real` (E5). Then, for testing only, serve the build with a stand-in `quality.json` next to it (the current live file if valid, otherwise the valid fixture) (E12); an assertion confirms `site-real` contains no `quality.json`. `@real` Playwright subset on Chromium (D23), axe in both themes, Lighthouse on `/` and `/quality`, internal link check. Uploads reports and `lhci-real`.
 4. **report:** needs 1 to 3. Checks evidence (section 8), builds the traceability matrix and runs the gate. Writes `quality.json` with merged history (section 8), the mutation link only if the logic job's upload succeeded, and the last live hash result. Bundles the gate CLI (manifest verify, placeholder check, stale-SHA check) into one JavaScript file that uses only Node built-ins. Uploads `quality-json` and `gate-cli`.
-5. **deploy:** `main` only, environment `production`, `concurrency: { group: deploy-main, cancel-in-progress: false }`. No `pnpm install` (E17). Downloads `site-real`, `manifest-real`, `quality-json` and `gate-cli`. Runs `gate-cli`: refuse if `site-real` differs from `manifest-real`; refuse if any content has `placeholder: true`; skip with a job summary note if `github.sha` is no longer the head of `main`. Copies `quality.json` into the site. Runs a pinned wrangler with install scripts disabled; `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are passed only to that step. The token is scoped to Workers Scripts Edit on one account.
+5. **deploy:** `main` only, environment `production`, `concurrency: { group: deploy-main, cancel-in-progress: false }`. No `pnpm install` and no project dependencies (E17); the only install is the pinned wrangler, by `npm ci` from the committed `deploy/package-lock.json` with install scripts disabled. Downloads `site-real`, `manifest-real`, `quality-json` and `gate-cli`. Runs `gate-cli`: refuse if `site-real` differs from `manifest-real`; refuse if any content has `placeholder: true`; skip with a job summary note if `github.sha` is no longer the head of `main`. Copies `quality.json` into the site. Runs a pinned wrangler with install scripts disabled; `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are passed only to that step. The token is scoped to Workers Scripts Edit on one account.
 
 **Dist scan** (both builds, HTML files only): fail on any `style=` attribute (any case), any `<style` element, any inline `<script>` other than `type="application/ld+json"`, and, in the real build, the presence of the states page (D21). It also asserts that it scanned a non-zero number of files including `index.html`.
 
@@ -459,9 +459,9 @@ Caching (D18): `Cache-Control: no-cache` on `/cv.pdf`, `/quality.json` and `/og.
 
 The smoke suite checks the headers; the target is an A on securityheaders.com.
 
-**Secrets:** `CLOUDFLARE_API_TOKEN` (scoped to Workers Scripts Edit on one account) and `CLOUDFLARE_ACCOUNT_ID` live only in the `production` environment and are passed only to the wrangler step of a job that installs no npm dependencies (E17). `STRYKER_DASHBOARD_API_KEY` is a repository secret used only on `main` in the logic job; it can only overwrite this project's dashboard reports (E16).
+**Secrets:** `CLOUDFLARE_API_TOKEN` (scoped to Workers Scripts Edit on one account) and `CLOUDFLARE_ACCOUNT_ID` live only in the `production` environment and are passed only to the wrangler step of a job that installs no project dependencies; its only install is the pinned wrangler from a committed lockfile with install scripts disabled (E17). `STRYKER_DASHBOARD_API_KEY` is a repository secret used only on `main` in the logic job; it can only overwrite this project's dashboard reports (E16).
 
-**Threats considered:** malicious Markdown via a compromised CMS session (CSP and dist scan); a compromised action or package stealing the deploy token (SHA pinning, least-privilege permissions, no install in deploy); JSON-LD breakout (escaped serializer); account takeover (GitHub 2FA); personal data in public history (EXIF check, public CV, runbook guidance, E18).
+**Threats considered:** malicious Markdown via a compromised CMS session (CSP and dist scan); a compromised action or package stealing the deploy token (SHA pinning, least-privilege permissions, no project install in deploy, wrangler installed from a committed lockfile with install scripts disabled); JSON-LD breakout (escaped serializer); account takeover (GitHub 2FA); personal data in public history (EXIF check, public CV, runbook guidance, E18).
 
 The email address is shown as a plain `mailto:` link. Some spam is accepted as the cost of a one-click contact.
 
@@ -540,7 +540,7 @@ Accounts, all free: GitHub (with 2FA), Cloudflare, Pages CMS (GitHub login) and 
 | E14 | `data-settled` marker; tests wait for it and assert the exact state |
 | E15 | Evidence rules require non-empty expected sets; REQ-DEPLOY-01 verified live after deploy |
 | E16 | Stryker key as a repository secret; upload from logic on `main`, versioned by commit SHA |
-| E17 | Deploy job installs no npm packages; bundled gate CLI and pinned wrangler; token scoped and step-local |
+| E17 | Deploy job installs no project dependencies; only the pinned wrangler from a lockfile, with install scripts disabled; bundled gate CLI; token scoped and step-local |
 | E18 | EXIF/GPS check, public CV rule, runbook guidance, local pre-commit hook |
 | E19 | History: 404 starts fresh; other failures retry, then use the last main artifact, then reset |
 | E20 | Keep launching on `workers.dev`; domain migration stays a P1 TODO |

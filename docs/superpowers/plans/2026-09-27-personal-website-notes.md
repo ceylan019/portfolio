@@ -9,7 +9,7 @@ Status: Tasks 1 to 25 are implemented, each reviewed task by task, followed by a
 ### Spec deviations
 
 - **JavaScript budget:** raised from 5 KB to 10 KB brotli by your decision on 28 September 2026 (Task 21). Spec section 6, the section 8 suites table and the REQ-PERF-02 row now say 10 KB (updated on your instruction, 1 October 2026), as does the plan's global constraint, and the parity-test override is gone.
-- **Deploy job install:** the job now installs only wrangler, from a committed `deploy/package-lock.json` with install scripts disabled. Spec section 9 (E17) says it "installs no npm packages". It still installs no project dependencies. Please confirm the wording or change the approach.
+- **Deploy job install:** the job installs only wrangler, from a committed `deploy/package-lock.json` with install scripts disabled, and no project dependencies. E17 was reworded to say exactly this on your instruction (1 October 2026), in the architecture diagram, the deploy job description, the secrets paragraph, the threat list and the E17 row.
 - **The verdict on `/quality`:** it says "all N pre-deploy requirements" instead of "all N requirements", because the post-deploy requirement cannot be covered by the build (final review).
 - **Plan changes, not spec deviations:** everywhere else the plan and the spec disagreed, the spec was followed. The pre-flight table and each task section list those changes.
 
@@ -28,7 +28,7 @@ The full list is under "Needs me" at the end of the file, before the appendix. T
 
 1. Remove the backup refs.
 2. Review and merge.
-3. Settle the E17 wording for the deploy job's wrangler install (the budget text is done).
+3. (Done) The spec now records the 10 KB budget, the 700 font weight and the E17 wording.
 4. Delete `.probe/`.
 5. Enable the EXIF hook.
 6. Create the accounts, secrets and variables.
@@ -923,3 +923,5 @@ The owner-approved override in `tests/unit/requirements.test.ts` is removed, so 
 - **Lighthouse (median of 3 runs, all assertions pass):** `/` scores 99 for performance and 100 in the other categories on both builds. `/quality` has a median of 95 on both builds, with individual runs between 93 and 95. It was already at 95 before this change, so it sits on the threshold, and the spec's one-rerun policy may be needed in CI.
 - **Bytes:** fonts are 102.6 KB (budget 120 KB). Total transfer is about 126 KB on `/` and 124 KB on `/quality` (budget 256 KB).
 - Visual baselines do not exist yet, so nothing needs regenerating.
+
+**E17 reworded (1 October 2026).** On your instruction, the spec now says the deploy job installs no project dependencies, and that its only install is the pinned wrangler, by `npm ci` from the committed `deploy/package-lock.json` with install scripts disabled. That covers section 3's diagram, section 7's deploy job, section 9's secrets and threats, and the E17 row in section 13. The behaviour is unchanged.
