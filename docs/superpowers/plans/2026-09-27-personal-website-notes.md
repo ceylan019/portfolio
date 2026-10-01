@@ -974,3 +974,9 @@ Log noise removed afterwards:
 - **zod 4 deprecations in `content-schemas.ts`:** `z.url()` and `z.email()` replace `.url()` and `.email()`, `z.ZodType` replaces `ZodTypeAny`, and the CMS drift test decides required fields with `safeParse(undefined)` instead of `isOptional()`. The drift test still passes.
 
 `astro check` now reports 0 errors, 0 warnings and 0 hints, and the unit suite passes 384 of 384 with nothing on stderr.
+
+**Fifth CI run: the logic job summary filled with "failures" (1 October 2026).** In run 36827473089 every job passed through `report`, and `deploy` stopped at the placeholder gate as expected. However, the `logic` job summary held hundreds of "❌ 1 failure" blocks.
+
+The cause: on GitHub Actions, Vitest 5 adds its `github-actions` reporter by default, and that reporter appends a test report to `$GITHUB_STEP_SUMMARY` after every run. Stryker runs Vitest once per mutant, and every killed mutant is a run with a failing test. So a simulated CI run wrote 266 KB of summary, in 1,496 sections.
+
+`vitest.unit.config.ts`, which only Stryker uses, now sets `reporters: ['default']`. The same simulation then writes nothing, and the score is unchanged at 99.80. `pnpm test:unit` already set its reporters explicitly, so it was never affected.
