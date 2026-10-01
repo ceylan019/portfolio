@@ -959,3 +959,9 @@ Results after the fix:
 - `/quality` scores 99 to 100 on both builds locally, with CLS at 0.018 to 0.038.
 - The settled page is unchanged at the visual-test widths, so the baselines stay valid.
 - Fixture E2E passes 260 of 260, real 14 of 14, and the unit suite 384 of 384.
+
+**Third CI run: `/quality` visual diffs (1 October 2026).** Run 36825106114 passed the real build, Lighthouse included. All six `/quality` visual tests then failed by about 1% of pixels. The diff images show a sub-pixel offset starting just below the verdict: the 212px and 348px reservation, measured on macOS, was a fraction of a pixel taller than the ready verdict renders on Linux.
+
+The reservation is now 204px and 336px, a few pixels below the ready height on any platform. The settled layout is therefore exactly the one the baselines were made from, and loading the data shifts the page by only a few pixels. Locally, `/quality` scores 99 to 100 with CLS at 0.016 to 0.037. E2E passes 260 of 260 and real 14 of 14.
+
+Stryker's "static mutants take 87% of the time" advice is switched off with `warnings: { slow: false }`. Testing static mutants (the gate regexes) is deliberate (ruling T11-C). The score is unchanged at 99.80.
