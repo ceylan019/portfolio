@@ -1,14 +1,13 @@
 ---
 name: Ceylan Akyol
-title: QA Automation Engineer
+title: Senior QA Automation Engineer
 tagline: I build test automation that teams can read, trust and keep running.
 photo: ../../assets/uploads/photo.jpg
-photoAlt: Placeholder square, to be replaced by Ceylan's photo
-email: hello@example.com
-linkedinUrl: https://www.linkedin.com/in/example
-githubUrl: https://github.com/example
+photoAlt: Ceylan Akyol's photo
+email: akyl.cyln@gmail.com
+linkedinUrl: https://linkedin.com/in/ceylan-akyol
+githubUrl: https://github.com/ceylan019
 cv: src/assets/uploads/cv.pdf
 showAvailability: false
-placeholder: true
 ---
-Placeholder About text. Replace with at most about 90 words that do not repeat the tagline.
+I'm a Senior QA Automation Engineer at CBC/Radio-Canada, Canada's public broadcaster. Across more than eight years in media, banking and enterprise software, I have built automation frameworks in Playwright with TypeScript and Selenium with Java, covering user interfaces, REST and GraphQL APIs, and databases. I wire performance and accessibility checks into CI pipelines, and I use AI tools to turn acceptance criteria into test cases faster. This site is a working example: every claim it makes is tied to a test you can inspect on the [quality page](/quality).
