@@ -38,13 +38,13 @@ Contrast (checked): ink on bg 15.7 / 15.5; muted 5.3 / 6.8; rose-text 5.4 / 6.6;
 | Name (`h1` on `/`) | 96px | 60px | 800, tracking about -0.035em | 0.92 |
 | Page title (`h1` on `/quality`) | 64px | 40px | 800 | 0.95 |
 | Section heading (`h2`) | 24px | 24px | 700 | 1.2 |
-| Proof sentence, verdict | 24px / 21px | 20px / 18px | 500, numbers 800 | 1.45 |
+| Verdict (`/quality`) | 21px | 18px | 500, numbers 800 | 1.45 |
 | Role, tagline | 20px | 18px | 500 / 400 | 1.5 |
-| Body | 18px | 17px | 400 | 1.6 |
+| Body, proof sentence | 18px | 17px | 400, proof numbers 800 | 1.6 |
 | Meta (dates, issuer) | 16px | 16px | 400 | 1.5 |
 | Labels, IDs, glossary | 14px | 14px | 400 to 700 | 1.5 |
 
-- Sentence case everywhere. No all-caps. Numbers use tabular figures. Prose paragraphs are capped at 62 characters; lists and tables are not.
+- Sentence case everywhere. No all-caps. Numbers that are compared (the proof sentence and verdict figures, trend values) use tabular figures; running text does not, because tabular figures widen commas, full stops and colons to the width of a digit. Prose paragraphs are capped at 62 characters; lists and tables are not.
 - **Dates:** always month and year in words: "March 2024".
 
 ## Spacing
@@ -63,6 +63,7 @@ Contrast (checked): ink on bg 15.7 / 15.5; muted 5.3 / 6.8; rose-text 5.4 / 6.6;
 - **Data block:** server-rendered with a true, number-free fallback sentence in reserved space (`data-state="unavailable"`), upgraded to numbers when `quality.json` loads (`ready`), always marked `data-settled` when the loader finishes. Each block settles independently.
 - **Top line (`/quality` and future inner pages):** the name on the left, linking home, and "Download CV (PDF)" on the right. No menu.
 - **Footer:** name and year only.
+- **Not found page (`/404`):** the numeral, the sentence and the home link, centered horizontally and vertically in the viewport. The page has no top line or footer.
 
 ## Motion
 

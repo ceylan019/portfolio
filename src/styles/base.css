@@ -1,7 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; }
 html { -webkit-text-size-adjust: 100%; }
-body { background: var(--bg); color: var(--ink); font: 400 18px/1.6 var(--font); font-variant-numeric: tabular-nums; }
+body { background: var(--bg); color: var(--ink); font: 400 18px/1.6 var(--font); }
 @media (max-width: 899px) { body { font-size: 17px; } }
 img, svg { display: block; max-width: 100%; }
 
@@ -51,14 +51,26 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
 .tick-stop-a { stop-color: var(--rose-mark); }
 .tick-stop-b { stop-color: var(--coral); }
 
-.big { font-size: 24px; line-height: 1.45; font-weight: 500; letter-spacing: -0.01em; max-width: 40ch; }
+/* The home proof sentence reads as body text, like About (owner decision,
+   2026-10-03): same size, weight and 62ch measure; its numbers stay bold. */
+.big { max-width: 62ch; }
 .big b { font-weight: 800; }
-@media (max-width: 899px) { .big { font-size: 20px; } }
+/* Tabular figures only where numbers should line up. On body they also made
+   commas, full stops and colons as wide as a digit, leaving a gap before them. */
+.big b, .lede b, .trend .now { font-variant-numeric: tabular-nums; }
 
 /* Data blocks (E7, E14, G3): fallback until the loader marks the block ready. */
 [data-block][data-state="unavailable"] > [data-slot="live"] { display: none; }
 [data-block][data-state="ready"] > [data-slot="fallback"] { display: none; }
-[data-block="proof-strip"] { min-height: 7.5em; }
+/* Reserve the loaded proof sentence's lines (1.6em each) so the numbers arriving
+   do not shift the page, without leaving an empty gap under it. Bands measured
+   with real content: 3 lines from 527px, 4 lines below that and in the narrow
+   two column band at 900 to 919px, 5 lines below 388px, 6 below 327px. */
+[data-block="proof-strip"] { min-height: 4.8em; }
+@media (min-width: 900px) and (max-width: 919px) { [data-block="proof-strip"] { min-height: 6.4em; } }
+@media (max-width: 526px) { [data-block="proof-strip"] { min-height: 6.4em; } }
+@media (max-width: 387px) { [data-block="proof-strip"] { min-height: 8em; } }
+@media (max-width: 326px) { [data-block="proof-strip"] { min-height: 9.6em; } }
 
 .foot { margin-top: var(--section-gap); padding-top: 24px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 
@@ -172,9 +184,13 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
 /* /404 (Task 18). T18-A: the numeral uses the DESIGN.md "Name" display size (96px
    desktop, 60px under 900px), the same as .name, not the brief's flat 120px; the text
    margin is 24px, snapped to the 4px spacing scale, not the brief's 20px. */
-.nf { padding: 64px 0; }
+/* Centered in the viewport, both ways (owner decision, 2026-10-03): the page has
+   nothing else on it, so a top left block looked unanchored. svh keeps it still
+   while mobile browser bars show and hide. */
+.nf-page { min-height: 100vh; min-height: 100svh; display: grid; place-items: center; padding-block: 32px; }
+.nf { text-align: center; }
 .nf-code { font-size: 96px; font-weight: 800; letter-spacing: -0.035em; line-height: .92; }
-.nf-text { font-size: 20px; margin-top: 24px; max-width: 30ch; }
+.nf-text { font-size: 20px; margin: 24px auto 0; max-width: 30ch; }
 @media (max-width: 899px) {
   .nf-code { font-size: 60px; }
 }
