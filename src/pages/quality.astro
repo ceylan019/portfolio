@@ -1,0 +1,24 @@
+---
+// /quality reads like a signed test report. The
+// body lives in QualityReport.astro; this page loads the profile and the
+// build date and owns the client script.
+import Base from '../layouts/Base.astro';
+import QualityReport from '../components/QualityReport.astro';
+import { loadProfile } from '../lib/content';
+import { buildToday } from '../lib/build-date';
+
+const { data: profile } = await loadProfile();
+const today = buildToday(import.meta.env.BUILD_KIND ?? process.env.BUILD_KIND, new Date());
+const repo = process.env.REPO_URL ?? 'https://github.com/example/ceylan-akyol-site';
+---
+<Base title={`How ${profile.name}'s site is tested`} description="Every promise this site makes is tied to the checks that prove it." path="/quality">
+  <QualityReport name={profile.name} year={today.getUTCFullYear()} repo={repo} />
+</Base>
+<script>
+  import { hydrate } from '../lib/quality-client';
+  import { renderDuration, renderIntegrity, renderMatrix, renderMutation, renderTrends, renderVerdict } from '../lib/render-quality';
+  hydrate(document, {
+    verdict: renderVerdict, integrity: renderIntegrity, matrix: renderMatrix,
+    trends: renderTrends, mutation: renderMutation, duration: renderDuration,
+  }, (url) => fetch(url, { cache: 'no-cache' }));
+</script>

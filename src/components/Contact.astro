@@ -1,0 +1,14 @@
+---
+import { CV_FILENAME } from '../lib/site';
+interface Props { profile: { email: string; linkedinUrl: string; githubUrl: string } }
+const { profile: p } = Astro.props;
+---
+<section class="sec" aria-labelledby="contact-heading">
+  <h2 id="contact-heading">Contact</h2>
+  <div class="cl">
+    <a class="lnk" href="/cv.pdf" download={CV_FILENAME}>Download CV (PDF)</a>
+    <a class="lnk" href={`mailto:${p.email}`}>Email</a>
+    <a class="lnk" href={p.linkedinUrl}>LinkedIn</a>
+    <a class="lnk" href={p.githubUrl}>GitHub</a>
+  </div>
+</section>

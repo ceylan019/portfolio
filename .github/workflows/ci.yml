@@ -1,0 +1,354 @@
+name: ci
+
+# Every upload-artifact step in this workflow sets overwrite: true. The rerun policy lets a
+# job whose Lighthouse performance score misses 95 be rerun once, and a rerun uploads under
+# the same artifact names; without overwrite that upload fails on the name the first
+# attempt already used.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Daily rebuild so certification expiry is never more than a day old.
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # An explicit bash shell runs every step with -e and pipefail.
+    shell: bash
+
+env:
+  # Pull request and Dependabot runs may not see repository variables,
+  # so they build and report against the example URL. The deploy job refuses without it.
+  SITE_URL: ${{ vars.SITE_URL || 'https://ceylan-akyol.example.workers.dev' }}
+  REPO_URL: https://github.com/${{ github.repository }}
+
+jobs:
+  versions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    outputs:
+      playwright: ${{ steps.v.outputs.playwright }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      # The container tag follows the exact @playwright/test pin, which the
+      # frozen lockfile install in every job holds equal to the lockfile.
+      - id: v
+        run: echo "playwright=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
+
+  logic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      stryker_url: ${{ steps.dashboard.outputs.url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm build:real
+      - run: pnpm test:unit
+      - name: Mutation testing
+        run: pnpm test:mutation
+        env:
+          STRYKER_DASHBOARD_API_KEY: ${{ github.ref == 'refs/heads/main' && secrets.STRYKER_DASHBOARD_API_KEY || '' }}
+          STRYKER_PROJECT: github.com/${{ github.repository }}
+      - name: Confirm the dashboard report exists
+        id: dashboard
+        if: github.ref == 'refs/heads/main'
+        run: |
+          api="https://dashboard.stryker-mutator.io/api/reports/github.com/${{ github.repository }}/${{ github.sha }}"
+          if curl -fsS -o /dev/null "$api"; then
+            echo "url=https://dashboard.stryker-mutator.io/reports/github.com/${{ github.repository }}/${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Stryker Dashboard report not found; /quality will omit the report link."
+          fi
+      # The commit report above is what /quality links. The dashboard's project
+      # page and badges show the version "main", so the same report is also
+      # published under that name. A failure here only warns:
+      # a dashboard upload failure never blocks anything.
+      - name: Publish the mutation report as the main version
+        if: github.ref == 'refs/heads/main' && steps.dashboard.outputs.url != ''
+        env:
+          STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X PUT \
+            -H "X-Api-Key: $STRYKER_DASHBOARD_API_KEY" -H 'Content-Type: application/json' \
+            --data-binary @reports/mutation/mutation.json \
+            "https://dashboard.stryker-mutator.io/api/reports/github.com/${{ github.repository }}/main") || code=000
+          case "$code" in
+            2??) echo "Published as main: https://dashboard.stryker-mutator.io/reports/github.com/${{ github.repository }}/main" ;;
+            *) echo "::warning::Publishing the mutation report as main failed (HTTP $code); the commit report is unaffected." ;;
+          esac
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: logic-reports
+          overwrite: true
+          path: |
+            reports/vitest.json
+            reports/mutation/mutation.json
+
+  fixture:
+    needs: versions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.versions.outputs.playwright }}-noble
+      # Chrome keeps rendering memory in /dev/shm, which Docker caps at 64 MB;
+      # Lighthouse's full-page screenshot crashed the tab (TARGET_CRASHED).
+      # Playwright's Docker guide recommends sharing the host's IPC namespace.
+      options: --ipc=host
+    env:
+      # Firefox inside the Playwright container needs HOME=/root.
+      HOME: /root
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit, iphone, pixel]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      # The container brings the browsers; Node comes from .nvmrc like every other job.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:fixture
+      # One leg scans and uploads the fixture build scan; the report expects exactly one.
+      - name: Dist scan of the fixture build
+        if: matrix.project == 'chromium'
+        run: pnpm tsx scripts/scan-dist.ts dist-fixture reports/dist-scan-fixture.json
+      - name: Serve the fixture build
+        run: scripts/serve-and-wait.sh serve:fixture http://localhost:8787/
+      - run: pnpm exec playwright test --project=${{ matrix.project }}
+        env:
+          CI: 'true'
+          PW_JSON: reports/playwright-fixture-${{ matrix.project }}.json
+      - name: Lighthouse on the fixture build (once)
+        id: lhci
+        if: matrix.project == 'chromium'
+        run: |
+          export CHROME_PATH=$(node -e "import('@playwright/test').then(m=>console.log(m.chromium.executablePath()))")
+          LHCI_BUILD=fixture pnpm lhci
+      # If only performance misses 95 on one job, that job may be rerun once.
+      # Every attempt writes its scores to its own job summary, so both scores are recorded.
+      - name: Lighthouse scores in the job summary
+        if: always() && steps.lhci.outcome != 'skipped'
+        run: pnpm tsx scripts/lighthouse-summary.ts fixture
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: fixture-${{ matrix.project }}
+          overwrite: true
+          path: |
+            reports/playwright-fixture-${{ matrix.project }}.json
+            reports/dist-scan-fixture.json
+            test-results/
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: matrix.project == 'chromium'
+        with:
+          name: lhci-fixture
+          overwrite: true
+          path: .lighthouseci
+          include-hidden-files: true
+
+  real:
+    needs: versions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.versions.outputs.playwright }}-noble
+      # Chrome keeps rendering memory in /dev/shm, which Docker caps at 64 MB;
+      # Lighthouse's full-page screenshot crashed the tab (TARGET_CRASHED).
+      # Playwright's Docker guide recommends sharing the host's IPC namespace.
+      options: --ipc=host
+    env:
+      # Same container settings as the fixture job.
+      HOME: /root
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Content checks (REQ-CONTENT-01)
+        run: pnpm tsx scripts/check-content.ts
+      # The beacon token goes to the build and to its Lighthouse run, or the
+      # third-party budget in lighthouserc.cjs no longer matches the build.
+      - run: pnpm build:real
+        env:
+          CF_BEACON_TOKEN: ${{ vars.CF_BEACON_TOKEN }}
+      - run: pnpm tsx scripts/scan-dist.ts dist reports/dist-scan-real.json --forbid-states
+      - run: pnpm tsx scripts/write-manifest.ts dist manifest/manifest.json
+      - name: site-real carries no quality.json
+        run: test ! -e dist/quality.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: site-real, path: dist, include-hidden-files: true, overwrite: true }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: manifest-real, path: manifest/manifest.json, overwrite: true }
+      - name: Serve the real build with a stand-in quality.json
+        run: |
+          pnpm tsx scripts/stand-in-quality.ts dist dist-served "$SITE_URL"
+          test ! -e dist/quality.json
+          scripts/serve-and-wait.sh serve:real http://localhost:8788/
+      - run: pnpm exec playwright test --project=real-chromium
+        env:
+          CI: 'true'
+          PW_JSON: reports/playwright-real.json
+      - name: Lighthouse on the real build
+        id: lhci
+        run: |
+          export CHROME_PATH=$(node -e "import('@playwright/test').then(m=>console.log(m.chromium.executablePath()))")
+          LHCI_BUILD=real pnpm lhci
+        env:
+          CF_BEACON_TOKEN: ${{ vars.CF_BEACON_TOKEN }}
+      # Same one-rerun policy and per-attempt record as the fixture job.
+      - name: Lighthouse scores in the job summary
+        if: always() && steps.lhci.outcome != 'skipped'
+        run: pnpm tsx scripts/lighthouse-summary.ts real
+      - name: Internal link check
+        run: pnpm exec linkinator http://localhost:8788 --recurse --format json --skip "^(?!http://localhost:8788)" > reports/links.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: real-reports
+          overwrite: true
+          path: |
+            reports/playwright-real.json
+            reports/dist-scan-real.json
+            reports/links.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: lhci-real, path: .lighthouseci, include-hidden-files: true, overwrite: true }
+
+  report:
+    needs: [logic, fixture, real]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { path: reports-in }
+      - name: Previous quality.json and the latest live check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # History never blocks a deploy: every lookup that fails warns and
+          # leaves its value empty, so build-report takes its warned fallback path.
+          # Main runs only: a pull request from a fork branch named main is not one.
+          main_runs() {
+            gh run list --workflow ci.yml --branch main --status "$1" --limit 20 --json databaseId,event \
+              -q '.[] | select(.event != "pull_request") | .databaseId'
+          }
+          prev=$(main_runs success) || { echo "::warning::Could not list successful main runs; no history fallback."; prev=; }
+          # First line without a pipe into head, which pipefail could turn into a failure.
+          prev=${prev%%$'\n'*}
+          if [ -n "$prev" ]; then
+            gh run download "$prev" -n quality-json -D reports-in/prev-quality \
+              || echo "::warning::Run $prev has no quality-json artifact; history cannot fall back to it."
+          fi
+          # smoke.yml runs as a job of the deploying ci run, so live-check belongs to that run.
+          # Take the newest completed run whose smoke job ran, whatever its conclusion, so a
+          # failed live check shows as failed instead of an older passing one. A lookup that
+          # fails stops the search rather than skipping to an older run.
+          completed=$(main_runs completed) || { echo "::warning::Could not list completed main runs; quality.json records no live check."; completed=; }
+          for id in $completed; do
+            ran=$(gh run view "$id" --json jobs -q '[.jobs[] | select((.name | startswith("smoke")) and .conclusion != "skipped")] | length') \
+              || { echo "::warning::Could not read the jobs of run $id; quality.json records no live check."; break; }
+            if [ "$ran" -gt 0 ]; then
+              gh run download "$id" -n live-check -D reports-in/prev-live-check \
+                || echo "::warning::The latest smoke run ($id) left no live-check artifact; quality.json records no live check."
+              break
+            fi
+          done
+          started=$(gh api "repos/$GH_REPO/actions/runs/${{ github.run_id }}" --jq .run_started_at) \
+            || { echo "::warning::Could not read this run's start time; quality.json records no pipeline duration."; started=; }
+          echo "RUN_STARTED_AT=$started" >> "$GITHUB_ENV"
+      - run: pnpm tsx scripts/build-report.ts
+        env:
+          STRYKER_URL: ${{ needs.logic.outputs.stryker_url }}
+      - run: pnpm exec esbuild scripts/gate-cli.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist-gate/gate-cli.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: quality-json, path: out/quality.json, overwrite: true }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: gate-cli, path: dist-gate/gate-cli.mjs, overwrite: true }
+
+  deploy:
+    needs: report
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: production
+    concurrency:
+      group: deploy-main
+      cancel-in-progress: false
+    outputs:
+      deployed: ${{ steps.stale.outputs.stale == 'false' }}
+    # This job installs no project dependencies. Node runs the bundled gate
+    # CLI, and wrangler comes from deploy/package-lock.json, which pins every package
+    # in wrangler's tree to an exact version and integrity hash, so nothing is resolved
+    # at deploy time. npm ci installs exactly that lockfile, without install scripts.
+    steps:
+      - name: Refuse without the live site URL
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "::error::Refusing to deploy: the repository variable SITE_URL is empty, so this build carries the example URL. Set SITE_URL to the live site's URL and run ci again."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: .nvmrc, package-manager-cache: false }
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { name: site-real, path: dist }
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { name: manifest-real, path: manifest }
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { name: quality-json, path: quality }
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { name: gate-cli, path: gate }
+      - run: node gate/gate-cli.mjs verify-manifest dist manifest/manifest.json
+      - run: node gate/gate-cli.mjs placeholders src/content
+      - id: stale
+        run: node gate/gate-cli.mjs stale ${{ github.sha }} https://github.com/${{ github.repository }}.git
+      - name: Install the locked wrangler without install scripts
+        if: steps.stale.outputs.stale == 'false'
+        run: npm ci --ignore-scripts --no-audit --no-fund --prefix deploy
+      - name: Deploy
+        if: steps.stale.outputs.stale == 'false'
+        run: |
+          cp quality/quality.json dist/quality.json
+          deploy/node_modules/.bin/wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  smoke:
+    needs: deploy
+    if: needs.deploy.outputs.deployed == 'true'
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/smoke.yml
+    with:
+      mode: post-deploy

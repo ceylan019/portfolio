@@ -1,0 +1,23 @@
+---
+import PhotoFrame from './PhotoFrame.astro';
+import { CV_FILENAME } from '../lib/site';
+interface Props { profile: { name: string; title: string; tagline: string; photo: any; photoAlt: string; email: string; linkedinUrl: string; githubUrl: string; availability?: string; showAvailability: boolean } }
+const { profile: p } = Astro.props;
+---
+<header class="hero">
+  <div class="h-text">
+    <h1 class="name">{p.name}</h1>
+    <p class="role">{p.title}</p>
+    {p.showAvailability && p.availability && <p class="avail">{p.availability}</p>}
+    <p class="tag">{p.tagline}</p>
+    <div class="acts">
+      <a class="btn" href="/cv.pdf" download={CV_FILENAME}>Download CV (PDF)</a>
+      <div class="links">
+        <a class="lnk" href={`mailto:${p.email}`}>Email</a>
+        <a class="lnk" href={p.linkedinUrl}>LinkedIn</a>
+        <a class="lnk" href={p.githubUrl}>GitHub</a>
+      </div>
+    </div>
+  </div>
+  <PhotoFrame photo={p.photo} alt={p.photoAlt} />
+</header>

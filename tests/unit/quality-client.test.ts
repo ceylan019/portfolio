@@ -1,0 +1,128 @@
+// @vitest-environment happy-dom
+import { readFileSync } from 'node:fs';
+import { hydrate, loadQuality, type FetchLike } from '../../src/lib/quality-client';
+import { LIMITS } from '../../src/lib/quality-schema';
+
+const text = (name: string) => readFileSync(`tests/fixtures/quality/${name}.json`, 'utf8');
+const fetchJson = (body: string, ok = true): FetchLike => async () => ({ ok, json: async () => JSON.parse(body) });
+const block = (name: string) => {
+  const div = document.createElement('div');
+  div.dataset.block = name; div.dataset.state = 'unavailable';
+  const fallback = document.createElement('div'); fallback.dataset.slot = 'fallback'; fallback.textContent = 'fallback';
+  const live = document.createElement('div'); live.dataset.slot = 'live';
+  div.append(fallback, live); document.body.append(div); return div;
+};
+beforeEach(() => { document.body.replaceChildren(); });
+
+test('@REQ-QUAL-01 loads and validates the valid fixture', async () => {
+  expect((await loadQuality(fetchJson(text('valid'))))?.counts.testRuns).toBe(312);
+});
+test('@REQ-QUAL-01 returns null on HTTP errors, bad JSON, invalid and future data, and thrown fetches', async () => {
+  expect(await loadQuality(fetchJson(text('valid'), false))).toBeNull();
+  expect(await loadQuality(fetchJson(text('malformed')))).toBeNull();
+  expect(await loadQuality(fetchJson(text('future')))).toBeNull();
+  expect(await loadQuality(async () => { throw new TypeError('offline'); })).toBeNull();
+});
+test('@REQ-QUAL-01 hydrate marks blocks ready and settled on success', async () => {
+  const a = block('a');
+  await hydrate(document, { a: (live, d) => { live.textContent = String(d.counts.testRuns); } }, fetchJson(text('valid')));
+  expect(a.dataset.state).toBe('ready');
+  expect(a.dataset.settled).toBe('true');
+  expect(a.querySelector('[data-slot="live"]')!.textContent).toBe('312');
+});
+test('@REQ-QUAL-01 hydrate leaves blocks unavailable but settled when data fails', async () => {
+  const a = block('a');
+  await hydrate(document, { a: () => {} }, fetchJson(text('malformed')));
+  expect(a.dataset.state).toBe('unavailable');
+  expect(a.dataset.settled).toBe('true');
+});
+test('@REQ-QUAL-01 one failing renderer does not affect other blocks', async () => {
+  const bad = block('bad'); const good = block('good');
+  await hydrate(document, {
+    bad: (l) => { l.append(document.createElement('span')); throw new Error('boom'); },
+    good: (l) => { l.textContent = 'ok'; },
+  }, fetchJson(text('valid')));
+  expect(bad.dataset.state).toBe('unavailable');
+  expect(bad.dataset.settled).toBe('true');
+  expect(bad.querySelector('[data-slot="live"]')!.childElementCount).toBe(0);
+  expect(good.dataset.state).toBe('ready');
+});
+test('@REQ-QUAL-01 a renderer that returns false keeps its block unavailable, with an empty live slot', async () => {
+  const declined = block('declined'); const shown = block('shown'); const done = block('done');
+  // A state other than the server-rendered one proves hydrate sets unavailable itself.
+  declined.dataset.state = 'loading';
+  await hydrate(document, {
+    declined: (l) => { l.append(document.createElement('span')); return false; },
+    shown: (l) => { l.textContent = 'ok'; },
+    done: (l) => { l.textContent = 'done'; return true; },
+  }, fetchJson(text('valid')));
+  expect(declined.dataset.state).toBe('unavailable');
+  expect(declined.dataset.settled).toBe('true');
+  expect(declined.querySelector('[data-slot="live"]')!.childNodes).toHaveLength(0);
+  expect(shown.dataset.state).toBe('ready');
+  expect(done.dataset.state).toBe('ready');
+});
+test('@REQ-QUAL-01 blocks without a renderer settle as unavailable', async () => {
+  const x = block('unknown');
+  await hydrate(document, {}, fetchJson(text('valid')));
+  expect(x.dataset.state).toBe('unavailable');
+  expect(x.dataset.settled).toBe('true');
+});
+test('@REQ-QUAL-01 no blocks means no request', async () => {
+  let calls = 0;
+  await hydrate(document, {}, async () => { calls++; return { ok: true, json: async () => ({}) }; });
+  expect(calls).toBe(0);
+});
+
+// The hostile.json fixture is schema-invalid (negative, huge and wrong-type values), so the
+// loader must reject it outright and the affected block stays unavailable, settled.
+test('@REQ-SEC-02 hostile fixture fails validation and yields no data', async () => {
+  expect(await loadQuality(fetchJson(text('hostile')))).toBeNull();
+});
+test('@REQ-SEC-02 hydrate over the hostile fixture leaves blocks unavailable but settled', async () => {
+  const a = block('a');
+  await hydrate(document, { a: (live, d) => { live.textContent = String(d.counts.testRuns); } }, fetchJson(text('hostile')));
+  expect(a.dataset.state).toBe('unavailable');
+  expect(a.dataset.settled).toBe('true');
+});
+
+// A document whose matrix exceeds LIMITS.requirements is oversized and must be
+// rejected the same way, even though every row in it is otherwise schema valid.
+test('@REQ-SEC-02 an oversized document exceeds schema limits and yields no data', async () => {
+  const valid = JSON.parse(text('valid')) as { matrix: unknown[] };
+  const row = valid.matrix[0];
+  const oversized = { ...valid, matrix: Array.from({ length: LIMITS.requirements + 1 }, () => row) };
+  expect(await loadQuality(fetchJson(JSON.stringify(oversized)))).toBeNull();
+});
+test('@REQ-SEC-02 hydrate over an oversized document leaves blocks unavailable but settled', async () => {
+  const valid = JSON.parse(text('valid')) as { matrix: unknown[] };
+  const row = valid.matrix[0];
+  const oversized = { ...valid, matrix: Array.from({ length: LIMITS.requirements + 1 }, () => row) };
+  const a = block('a');
+  await hydrate(document, { a: (live, d) => { live.textContent = String(d.counts.testRuns); } }, fetchJson(JSON.stringify(oversized)));
+  expect(a.dataset.state).toBe('unavailable');
+  expect(a.dataset.settled).toBe('true');
+});
+
+// Mutation testing.
+test('@REQ-QUAL-01 loadQuality fetches /quality.json by default', async () => {
+  const urls: string[] = [];
+  await loadQuality(async (url) => { urls.push(url); return { ok: true, json: async () => JSON.parse(text('valid')) }; });
+  expect(urls).toEqual(['/quality.json']);
+});
+test('@REQ-QUAL-01 hydrate clears anything already in the live slot before rendering', async () => {
+  const a = block('a');
+  const slot = a.querySelector('[data-slot="live"]')!;
+  slot.append(document.createElement('i'));
+  await hydrate(document, { a: (live) => { live.append(document.createElement('b')); } }, fetchJson(text('valid')));
+  expect(slot.innerHTML).toBe('<b></b>');
+});
+test('@REQ-QUAL-01 a block with no live slot still settles when looking up its renderer throws', async () => {
+  const div = document.createElement('div');
+  div.dataset.block = 'a'; div.dataset.state = 'unavailable';
+  document.body.append(div);
+  const renderers = Object.defineProperty({}, 'a', { get() { throw new Error('boom'); } });
+  await expect(hydrate(document, renderers, fetchJson(text('valid')))).resolves.toBeUndefined();
+  expect(div.dataset.state).toBe('unavailable');
+  expect(div.dataset.settled).toBe('true');
+});

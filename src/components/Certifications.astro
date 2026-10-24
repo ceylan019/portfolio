@@ -1,0 +1,18 @@
+---
+import CertEntry from './CertEntry.astro';
+import { showTickNote, visibleCertifications, type Certification } from '../lib/certifications';
+interface Props { entries: Certification[]; today: Date }
+const { entries, today } = Astro.props;
+const visible = visibleCertifications(entries);
+---
+{visible.length > 0 && (
+  <section class="sec" aria-labelledby="certifications-heading">
+    <div class="side">
+      <h2 id="certifications-heading">Certifications</h2>
+      {showTickNote(visible) && <p class="note">A tick means you can verify it with the issuer.</p>}
+    </div>
+    <ul class="list">
+      {visible.map((entry) => <CertEntry entry={entry} today={today} />)}
+    </ul>
+  </section>
+)}

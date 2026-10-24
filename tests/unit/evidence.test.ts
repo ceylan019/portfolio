@@ -1,0 +1,128 @@
+import { combineEvidence, distScanEvidence, lhrsFromManifest, lighthouseEvidence, linksEvidence, medianScores } from '../../src/lib/evidence';
+
+const urls = ['http://localhost:8788/', 'http://localhost:8788/quality'];
+const lhrs = (n: number) => urls.flatMap((u) => Array.from({ length: n }, () => ({ requestedUrl: u })));
+
+test('@REQ-TRACE-01 lighthouse passes with every URL run 3 times and no error assertions', () => {
+  const e = lighthouseEvidence({ lhrs: lhrs(3), assertions: [], expectedUrls: urls, runsPerUrl: 3 });
+  expect(e).toMatchObject({ name: 'lighthouse', passed: true, examined: 6 });
+  expect(e.detail).toBe('6 runs');
+});
+test('@REQ-TRACE-01 lighthouse fails when a URL has fewer runs', () => {
+  const e = lighthouseEvidence({ lhrs: lhrs(3).slice(1), assertions: [], expectedUrls: urls, runsPerUrl: 3 });
+  expect(e.passed).toBe(false);
+  expect(e.detail).toBe('Too few Lighthouse runs for: http://localhost:8788/');
+});
+test('@REQ-TRACE-01 lighthouse fails on a failed error-level assertion, not on warnings', () => {
+  const base = { lhrs: lhrs(3), expectedUrls: urls, runsPerUrl: 3 };
+  expect(lighthouseEvidence({ ...base, assertions: [{ level: 'warn', passed: false }] }).passed).toBe(true);
+  const e = lighthouseEvidence({ ...base, assertions: [{ level: 'error', passed: false }] });
+  expect(e.passed).toBe(false);
+  expect(e.detail).toBe('1 Lighthouse assertion(s) failed');
+});
+test('@REQ-TRACE-01 lighthouse with no reports examined nothing', () => {
+  expect(lighthouseEvidence({ lhrs: [], assertions: [], expectedUrls: urls, runsPerUrl: 3 })).toMatchObject({ passed: false, examined: 0 });
+});
+
+test('@REQ-TRACE-01 links need a passing report with at least one checked link', () => {
+  const ok = linksEvidence({ passed: true, links: [{ state: 'OK' }, { state: 'SKIPPED' }] });
+  expect(ok).toMatchObject({ passed: true, examined: 1 });
+  expect(ok.detail).toBe('1 links checked');
+  expect(linksEvidence({ passed: true, links: [{ state: 'SKIPPED' }] })).toMatchObject({ passed: false, examined: 0 });
+  expect(linksEvidence({ passed: false, links: [{ state: 'BROKEN' }] }).passed).toBe(false);
+  expect(linksEvidence('garbage')).toMatchObject({ passed: false, examined: 0 });
+});
+
+test('@REQ-TRACE-01 dist scan must include index.html and have no findings', () => {
+  const ok = distScanEvidence({ scanned: ['index.html', 'quality.html'], findings: [] });
+  expect(ok).toMatchObject({ passed: true, examined: 2 });
+  expect(ok.detail).toBe('2 HTML files, 0 findings');
+  expect(distScanEvidence({ scanned: ['quality.html'], findings: [] }).passed).toBe(false);
+  expect(distScanEvidence({ scanned: ['index.html'], findings: [{}] }).passed).toBe(false);
+});
+test('@REQ-TRACE-01 dist scan also accepts index.html nested under a subdirectory', () => {
+  expect(distScanEvidence({ scanned: ['assets/index.html'], findings: [] }).passed).toBe(true);
+});
+
+test('@REQ-TRACE-01 combined evidence needs every part to pass', () => {
+  const ok = { name: 'dist-scan' as const, passed: true, examined: 2, detail: 'a' };
+  expect(combineEvidence([ok, ok])).toEqual({ name: 'dist-scan', passed: true, examined: 4, detail: 'a; a' });
+  expect(combineEvidence([ok, { ...ok, passed: false }]).passed).toBe(false);
+  expect(combineEvidence([])).toEqual({ name: 'dist-scan', passed: false, examined: 0, detail: 'no evidence' });
+});
+
+// This is a unit test of the Lighthouse summarizer, not of the
+// Lighthouse pipeline itself. It is tagged REQ-TRACE-01 rather than
+// REQ-PERF-01 so REQ-PERF-01 is covered only by its declared lighthouse
+// check; otherwise a missing Lighthouse report would never
+// block the gate.
+test('@REQ-TRACE-01 median scores per category, scaled to 0 to 100', () => {
+  const lhr = (p: number) => ({ requestedUrl: urls[0]!, categories: {
+    performance: { score: p }, accessibility: { score: 1 }, 'best-practices': { score: 1 }, seo: { score: null },
+  } });
+  expect(medianScores([lhr(0.91), lhr(0.99), lhr(0.95)], urls[0]!)).toEqual({ performance: 95, accessibility: 100, bestPractices: 100, seo: 0 });
+});
+
+test('@REQ-TRACE-01 median scores only consider runs for the given URL', () => {
+  const lhr = (url: string, p: number) => ({ requestedUrl: url, categories: {
+    performance: { score: p }, accessibility: { score: 1 }, 'best-practices': { score: 1 }, seo: { score: 1 },
+  } });
+  const mixed = [
+    lhr(urls[0]!, 0.5), lhr(urls[0]!, 0.7), lhr(urls[0]!, 0.9),
+    lhr(urls[1]!, 0.1), lhr(urls[1]!, 0.2),
+  ];
+  expect(medianScores(mixed, urls[0]!).performance).toBe(70);
+  expect(medianScores(mixed, urls[1]!).performance).toBe(10);
+});
+
+// Mutation testing.
+test('@REQ-TRACE-01 lighthouse with no reports fails even when no URL was expected', () => {
+  expect(lighthouseEvidence({ lhrs: [], assertions: [], expectedUrls: [], runsPerUrl: 3 }))
+    .toEqual({ name: 'lighthouse', passed: false, examined: 0, detail: '0 runs' });
+});
+test('@REQ-TRACE-01 lighthouse lists every URL that ran too few times', () => {
+  expect(lighthouseEvidence({ lhrs: lhrs(2), assertions: [], expectedUrls: urls, runsPerUrl: 3 }).detail)
+    .toBe('Too few Lighthouse runs for: http://localhost:8788/, http://localhost:8788/quality');
+});
+test('@REQ-TRACE-01 links evidence ignores malformed reports and non-object links', () => {
+  expect(linksEvidence(null)).toEqual({ name: 'links', passed: false, examined: 0, detail: '0 links checked' });
+  expect(linksEvidence({ passed: true, links: 'x' })).toEqual({ name: 'links', passed: false, examined: 0, detail: '0 links checked' });
+  expect(linksEvidence({ passed: true, links: [null, 'x', { state: 'OK' }] }))
+    .toEqual({ name: 'links', passed: true, examined: 1, detail: '1 links checked' });
+});
+test('@REQ-TRACE-01 dist scan evidence is named dist-scan', () => {
+  expect(distScanEvidence({ scanned: ['index.html'], findings: [] }))
+    .toEqual({ name: 'dist-scan', passed: true, examined: 1, detail: '1 HTML files, 0 findings' });
+});
+test('@REQ-TRACE-01 median scores are 0 with no runs or a missing category, and read every category', () => {
+  expect(medianScores([], urls[0]!)).toEqual({ performance: 0, accessibility: 0, bestPractices: 0, seo: 0 });
+  const run = { requestedUrl: urls[0]!, categories: { performance: { score: 0.91 }, accessibility: { score: 0.92 }, 'best-practices': { score: 0.93 }, seo: { score: 0.94 } } };
+  expect(medianScores([run], urls[0]!)).toEqual({ performance: 91, accessibility: 92, bestPractices: 93, seo: 94 });
+  const { seo: _seo, ...partial } = run.categories;
+  expect(medianScores([{ ...run, categories: partial }], urls[0]!).seo).toBe(0);
+});
+
+test('@REQ-TRACE-01 lhci manifest entries become one run per entry with their category scores', () => {
+  const manifest = [
+    { url: urls[0], isRepresentativeRun: true, summary: { performance: 0.97, accessibility: 1, 'best-practices': 1, seo: 0.9 } },
+    { url: urls[1], summary: { performance: 1, accessibility: '1', seo: null } },
+  ];
+  expect(lhrsFromManifest(manifest)).toEqual([
+    { requestedUrl: urls[0], categories: {
+      performance: { score: 0.97 }, accessibility: { score: 1 }, 'best-practices': { score: 1 }, seo: { score: 0.9 },
+    } },
+    { requestedUrl: urls[1], categories: {
+      performance: { score: 1 }, accessibility: { score: null }, 'best-practices': { score: null }, seo: { score: null },
+    } },
+  ]);
+});
+
+test('@REQ-TRACE-01 lhci manifest reading drops entries without a URL and never throws on bad input', () => {
+  expect(lhrsFromManifest([null, 'x', { summary: {} }, { url: 7 }, { url: urls[0] }])).toEqual([
+    { requestedUrl: urls[0], categories: {
+      performance: { score: null }, accessibility: { score: null }, 'best-practices': { score: null }, seo: { score: null },
+    } },
+  ]);
+  expect(lhrsFromManifest({ url: urls[0] })).toEqual([]);
+  expect(lhrsFromManifest(null)).toEqual([]);
+});

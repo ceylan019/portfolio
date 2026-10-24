@@ -1,0 +1,194 @@
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body { background: var(--bg); color: var(--ink); font: 400 18px/1.6 var(--font); }
+@media (max-width: 899px) { body { font-size: 17px; } }
+img, svg { display: block; max-width: 100%; }
+
+.skip { position: absolute; left: 16px; top: -64px; background: var(--ink); color: var(--bg); padding: 12px 16px; border-radius: 8px; z-index: 10; }
+.skip:focus { top: 16px; }
+:focus-visible { outline: 2px solid var(--rose-text); outline-offset: 3px; border-radius: 4px; }
+
+.page { max-width: calc(var(--max) + 2 * var(--gutter)); margin: 0 auto; padding: 64px var(--gutter) 32px; }
+@media (max-width: 899px) { .page { padding-top: 32px; } }
+
+.lnk, .prose a, .list a, .reqs a { color: var(--rose-text); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, var(--rose-text) 40%, transparent); font-weight: 500; }
+.lnk:visited, .prose a:visited, .list a:visited, .reqs a:visited { color: var(--visited); text-decoration-color: var(--muted); }
+.lnk { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* 22px snapped to the 24px spacing-scale step (4, 8, 12, 16, 24, 32, 48, 64, 96). */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px; border-radius: 10px; background: var(--rose-mark); color: var(--on-rose); font-weight: 700; text-decoration: none; }
+.btn:hover { background: var(--rose-mark-hover); }
+.btn:active { background: var(--rose-mark-active); }
+
+.muted { color: var(--muted); }
+h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
+
+.sec { display: grid; grid-template-columns: var(--label-col) 1fr; gap: var(--col-gap); margin-top: var(--section-gap); }
+.sec > .side .note { font-size: 14px; color: var(--muted); margin-top: 8px; max-width: 26ch; line-height: 1.5; }
+@media (max-width: 899px) { .sec { grid-template-columns: 1fr; gap: 12px; } }
+.prose p { max-width: 62ch; }
+.prose p + p { margin-top: 16px; }
+/* A long unbroken URL in About cannot scroll the page sideways at 375px. */
+.prose { overflow-wrap: anywhere; }
+
+.list { list-style: none; padding: 0; }
+.row { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; padding: 16px 0; border-top: 1px solid var(--line); align-items: start; }
+.row:last-child { border-bottom: 1px solid var(--line); }
+.row .meta { display: block; color: var(--muted); font-size: 16px; }
+/* The ID token never breaks mid-token, but the "Credential ID" label may
+   wrap before it, so a long ID cannot scroll the page sideways at 375px. */
+.row .cid { display: block; color: var(--muted); font-size: 14px; }
+.row .cid-token { white-space: nowrap; }
+/* 19px snapped to the 20px type-scale row ("Role, tagline"). */
+.row .title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.35; overflow-wrap: anywhere; }
+.row.expired .title { color: var(--muted); }
+/* 13px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
+.expired-label { display: inline-block; font-size: 14px; font-weight: 700; color: var(--muted); border: 1.5px solid var(--line); border-radius: 6px; padding: 0 8px; margin-left: 6px; vertical-align: 3px; }
+@media (max-width: 899px) { .row { grid-template-columns: 32px 1fr; } .row > :last-child { grid-column: 2; } }
+
+.tick-ink { fill: url(#tick-gradient); }
+.tick-stop-a { stop-color: var(--rose-mark); }
+.tick-stop-b { stop-color: var(--coral); }
+
+/* The home proof sentence reads as body text, like About
+   (2026-10-03): same size, weight and 62ch measure; its numbers stay bold. */
+.big { max-width: 62ch; }
+.big b { font-weight: 800; }
+/* Tabular figures only where numbers should line up. On body they also made
+   commas, full stops and colons as wide as a digit, leaving a gap before them. */
+.big b, .lede b, .trend .now { font-variant-numeric: tabular-nums; }
+
+/* Data blocks: fallback until the loader marks the block ready. */
+[data-block][data-state="unavailable"] > [data-slot="live"] { display: none; }
+[data-block][data-state="ready"] > [data-slot="fallback"] { display: none; }
+/* Reserve the loaded proof sentence's lines (1.6em each) so the numbers arriving
+   do not shift the page, without leaving an empty gap under it. Bands measured
+   with real content: 3 lines from 527px, 4 lines below that and in the narrow
+   two column band at 900 to 919px, 5 lines below 388px, 6 below 327px. */
+[data-block="proof-strip"] { min-height: 4.8em; }
+@media (min-width: 900px) and (max-width: 919px) { [data-block="proof-strip"] { min-height: 6.4em; } }
+@media (max-width: 526px) { [data-block="proof-strip"] { min-height: 6.4em; } }
+@media (max-width: 387px) { [data-block="proof-strip"] { min-height: 8em; } }
+@media (max-width: 326px) { [data-block="proof-strip"] { min-height: 9.6em; } }
+
+.foot { margin-top: var(--section-gap); padding-top: 24px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+
+.defs { position: absolute; }
+
+/* Photo frame: the blush square is reserved before the image loads. */
+.photo-frame { position: relative; width: 250px; aspect-ratio: 1; }
+.photo-frame::before { content: ""; position: absolute; inset: 15.3%; border-radius: 50%; background: var(--blush); }
+.photo-frame .photo, .photo-frame .photo img { position: absolute; inset: 15.3%; width: 69.4%; height: 69.4%; border-radius: 50%; object-fit: cover; }
+.photo-frame .ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+@media (max-width: 899px) { .photo-frame { width: 150px; } }
+
+/* Colors come from tokens.css, not photo-mark.svg's own stop colors.
+   The main stroke is a gradient from --rose-mark to --coral;
+   the second pass is a flat
+   --peach fill rather than a gradient, because tokens.css has no
+   --rose-start or --peach-end token. */
+.ring-stop-start { stop-color: var(--rose-mark); }
+.ring-stop-end { stop-color: var(--coral); }
+.ring-main { fill: url(#ring-main-gradient); }
+.ring-second { fill: var(--peach); }
+
+/* One motion per page load: the ring draws itself, main stroke then second pass (about 900ms). */
+.ring-sweep { fill: none; stroke: #fff; stroke-width: 44; stroke-dasharray: 805; stroke-dashoffset: 0; transform-origin: 150px 150px; }
+.ring-sweep-main { transform: rotate(-50deg) scaleY(-1); animation: ring-draw 600ms cubic-bezier(.6, 0, .3, 1) both; }
+.ring-sweep-second { transform: rotate(-20deg) scaleY(-1); animation: ring-draw 400ms cubic-bezier(.6, 0, .3, 1) 500ms both; }
+@keyframes ring-draw { from { stroke-dashoffset: 805; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .ring-sweep-main, .ring-sweep-second { animation: none; } }
+
+.hero { display: grid; grid-template-columns: 1fr 280px; gap: 48px; align-items: center; }
+.name { font-size: 96px; font-weight: 800; line-height: .92; letter-spacing: -0.035em; overflow-wrap: anywhere; }
+.role { font-size: 20px; font-weight: 500; margin-top: 24px; }
+.avail { font-size: 16px; margin-top: 4px; }
+.tag { font-size: 20px; color: var(--muted); margin-top: 8px; max-width: 38ch; line-height: 1.5; }
+.acts { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; margin-top: 32px; font-size: 17px; }
+.links, .cl { display: flex; flex-wrap: wrap; gap: 0 24px; }
+.proof { padding: 32px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.sub { margin-top: 12px; font-size: 16px; }
+@media (max-width: 899px) {
+  .hero { grid-template-columns: 1fr; gap: 16px; }
+  .hero .photo-frame { order: -1; }
+  .name { font-size: 60px; }
+  .role, .tag { font-size: 18px; }
+  .acts { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 24px; }
+}
+
+/* /quality */
+.topline { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 48px; font-size: 16px; }
+.homelink { font-weight: 800; letter-spacing: -0.02em; font-size: 18px; color: var(--ink); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+.qhead .qh1 { font-size: 64px; font-weight: 800; line-height: .95; letter-spacing: -0.035em; }
+.lede { font-size: 21px; line-height: 1.5; margin-top: 22px; max-width: 46ch; }
+.lede b { font-weight: 800; }
+/* The verdict block's live slot is a two column grid (lede, then deploy meta)
+   so the meta line sits beside the verdict sentence.
+   renderVerdict appends the two paragraphs as
+   siblings, so the grid, not the renderer, does the column split. */
+[data-block="verdict"] [data-slot="live"] { display: grid; grid-template-columns: 1fr 260px; gap: 48px; align-items: start; }
+/* Reserve most of the ready verdict's height (the fallback sits in reserved
+   space), so swapping in the live verdict does not push the page down. Without
+   it the shift scored CLS 0.13 and held /quality's Lighthouse performance at 94.
+   The ready verdict measures about 212px at 1280px and 348px at 412px; the
+   reservation stays a few pixels below that, so font rendering differences
+   between platforms never make it taller than the ready verdict, and the
+   settled layout (and its visual baselines) is unchanged. */
+[data-block="verdict"] { min-height: 204px; }
+@media (max-width: 899px) { [data-block="verdict"] { min-height: 336px; } }
+.meta2 { font-size: 16px; color: var(--muted); line-height: 1.8; margin-top: 22px; }
+/* The glossary line uses the DESIGN.md "Labels, IDs, glossary" size
+   (14px) and a 62ch cap, not 15px / 66ch. */
+.gloss { font-size: 14px; color: var(--muted); margin-top: 16px; max-width: 62ch; }
+.gloss b { color: var(--ink); }
+.integrity { display: flex; gap: 10px; align-items: center; margin-top: 32px; font-size: 16px; }
+[data-block="duration"] { margin-top: 32px; }
+.reqs { list-style: none; padding: 0; border-top: 1px solid var(--line); }
+.req { display: grid; grid-template-columns: 40px 1fr 240px; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); align-items: start; }
+/* 13px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
+.rq-id { font-size: 14px; font-weight: 700; color: var(--muted); }
+/* A flat 17px snapped to the 18px "Body" desktop size; the 899px query below restores 17px on mobile. */
+.rq-text { font-size: 18px; font-weight: 500; margin-top: 2px; overflow-wrap: anywhere; }
+.rq-cov { display: flex; flex-direction: column; font-size: 14px; overflow-wrap: anywhere; }
+.rq-cov .dim { color: var(--muted); }
+.rq-cov details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--rose-text); }
+.trends { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+/* 15px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
+.trend h3 { font-size: 14px; font-weight: 700; }
+.trend .now { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+.trend .cap { font-size: 14px; color: var(--muted); }
+/* Not bundled with .trend .cap at 15px; snapped instead to
+   the 16px "Meta" row, matching .sub and .integrity. */
+.unav { font-size: 16px; color: var(--muted); margin-top: 14px; }
+.spark { width: 100%; height: 56px; margin-top: 6px; }
+.spark-line { stroke: var(--rose-mark); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.sparse { border: 1.5px dashed var(--line); border-radius: 12px; padding: 18px 20px; color: var(--muted); max-width: 52ch; }
+.suites { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 40px; }
+.suites dt { font-weight: 700; }
+.suites dd { color: var(--muted); margin: 0; }
+@media (max-width: 899px) {
+  .qhead .qh1 { font-size: 40px; }
+  .lede { font-size: 18px; }
+  .rq-text { font-size: 17px; }
+  .trends, .suites { grid-template-columns: 1fr; }
+  [data-block="verdict"] [data-slot="live"] { grid-template-columns: 1fr; gap: 8px; }
+}
+@media (max-width: 639px) {
+  .req { grid-template-columns: 30px 1fr; }
+  .req > .rq-cov { grid-column: 2; }
+}
+
+/* /404: the numeral uses the DESIGN.md "Name" display size (96px
+   desktop, 60px under 900px), the same as .name, not a flat 120px; the text
+   margin is 24px, snapped to the 4px spacing scale. */
+/* Centered in the viewport, both ways (2026-10-03): the page has
+   nothing else on it, so a top left block looked unanchored. svh keeps it still
+   while mobile browser bars show and hide. */
+.nf-page { min-height: 100vh; min-height: 100svh; display: grid; place-items: center; padding-block: 32px; }
+.nf { text-align: center; }
+.nf-code { font-size: 96px; font-weight: 800; letter-spacing: -0.035em; line-height: .92; }
+.nf-text { font-size: 20px; margin: 24px auto 0; max-width: 30ch; }
+@media (max-width: 899px) {
+  .nf-code { font-size: 60px; }
+}

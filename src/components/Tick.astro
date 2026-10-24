@@ -1,0 +1,8 @@
+---
+import { TICK_PATH } from '../lib/brush-tick';
+interface Props { size?: number }
+const { size = 30 } = Astro.props;
+---
+<svg class="tick" viewBox="0 0 36 30" width={size} height={Math.round((size * 30) / 36)} aria-hidden="true">
+  <path d={TICK_PATH} class="tick-ink" />
+</svg>
