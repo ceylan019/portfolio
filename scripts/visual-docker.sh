@@ -52,7 +52,7 @@ pnpm build:fixture > /out/build.log 2>&1 || { tail -30 /out/build.log; exit 1; }
 scripts/serve-and-wait.sh serve:fixture http://localhost:8787/
 
 flag=""
-[ "$MODE" = update ] && flag=--update-snapshots
+[ "$MODE" = update ] && flag=--update-snapshots=all
 # Emulating amd64 on Apple silicon is slower than a runner, so the longest
 # page gets more time than the 30 seconds it needs in CI.
 status=0

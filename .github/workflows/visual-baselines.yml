@@ -53,7 +53,7 @@ jobs:
         run: scripts/serve-and-wait.sh serve:fixture http://localhost:8787/
       # Visual baselines exist for desktop Chromium and emulated Pixel only.
       - name: Generate the baselines
-        run: pnpm exec playwright test --grep @visual --project=chromium --project=pixel --update-snapshots
+        run: pnpm exec playwright test --grep @visual --project=chromium --project=pixel --update-snapshots=all
         env:
           CI: 'true'
           PW_JSON: reports/playwright-baselines.json
