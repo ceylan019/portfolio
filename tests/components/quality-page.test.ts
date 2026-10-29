@@ -45,16 +45,18 @@ test('@REQ-QUAL-01 the verdict fallback links both the repository and its Action
   expect(block).toMatch(/<a class="lnk" href="https:\/\/github\.com\/example\/ceylan-akyol-site\/actions\/workflows\/ci\.yml">View the CI history<\/a>/);
 });
 
-test('@REQ-LAYOUT-01 the verdict block carries a hidden, unlinked copy of the ready verdict with the largest figures', async () => {
+test('@REQ-LAYOUT-01 the verdict block carries a hidden, inert, unlinked copy of the ready verdict with the widest figures', async () => {
   const html = await renderPage();
   const block = html.slice(html.indexOf('data-block="verdict"'), html.indexOf('data-block="integrity"'));
   const sizer = block.slice(block.indexOf('data-slot="sizer"'));
   expect(block.indexOf('data-slot="sizer"')).toBeGreaterThan(block.indexOf('data-slot="live"'));
-  expect(block).toMatch(/<div data-slot="sizer" aria-hidden="true">/);
-  expect(sizer).toContain('all 99 pre-deploy requirements');
+  const opening = block.match(/<div data-slot="sizer"[^>]*>/)![0];
+  for (const attribute of ['aria-hidden="true"', 'inert', 'data-nosnippet']) expect(opening).toContain(attribute);
+  expect(sizer).toContain('all 200 pre-deploy requirements');
   expect(sizer).toContain('9,999 tests');
   expect(sizer).toContain('9,999 test runs');
-  expect(sizer).toContain('28 September 2026, 20:48 UTC');
+  expect(sizer).toContain('30 September 2026, 00:00 UTC');
+  expect(sizer).toContain('commit <span class="lnk">0000000</span>');
   expect(sizer).not.toMatch(/href|<a[ >]/);
 });
 

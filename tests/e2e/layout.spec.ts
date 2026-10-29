@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
-import { test, expect, settled, serveQuality, sparseQuality, manyTestsQuality, liveSizedQuality, failedLiveCheckQuality, qualityFixture, straightQuotes } from './fixtures';
+import { test, expect, settled, serveQuality, sparseQuality, manyTestsQuality, liveSizedQuality, widestVerdictQuality, failedLiveCheckQuality, qualityFixture, straightQuotes } from './fixtures';
 import { req } from '../tag';
 import { REQUIREMENTS } from '../requirements';
 
@@ -309,7 +309,7 @@ for (const { name, size } of [{ name: 'desktop', size: DESKTOP }, { name: 'mobil
       else expect(Math.abs(edges.ringLeft - edges.heroLeft)).toBeLessThanOrEqual(2);
     });
 
-    test('the verdict is one left-aligned column with at most one lede line of empty space under it', req('REQ-LAYOUT-01'), async ({ page }) => {
+    test('the verdict is one left-aligned column with at most two lede lines of empty space under it', req('REQ-LAYOUT-01'), async ({ page }) => {
       await open(page, '/quality');
       const block = await rect(page, '[data-block="verdict"]');
       const children = await page.locator('[data-block="verdict"] [data-slot="live"] > *').evaluateAll((elements) => elements.map((element) => {
@@ -322,7 +322,7 @@ for (const { name, size } of [{ name: 'desktop', size: DESKTOP }, { name: 'mobil
         if (index > 0) expect(child.top).toBeGreaterThanOrEqual(children[index - 1]!.bottom - 1);
       }
       const lineHeight = await page.locator('[data-block="verdict"] [data-slot="live"] .lede').evaluate((element) => parseFloat(getComputedStyle(element).lineHeight));
-      expect(block.bottom - children.at(-1)!.bottom).toBeLessThanOrEqual(lineHeight);
+      expect(block.bottom - children.at(-1)!.bottom).toBeLessThanOrEqual(2 * lineHeight);
       const meta = page.locator('[data-block="verdict"] [data-slot="live"] .meta2');
       await expect(meta).toHaveText(/^Deployed .+ UTC, commit [0-9a-f]{7}$/);
       await expect(meta.locator('time')).toHaveCount(1);
@@ -405,7 +405,7 @@ test.describe('between mobile and desktop', () => {
 const RESERVATION_WIDTHS = [320, 360, 375, 380, 390, 412, 600, 768, 899, 900, 1280];
 const TITLE_WIDTHS = [320, 360, 390, 700, 899, 900, 1280];
 
-const VERDICTS = [['fixture figures', qualityFixture('valid')], ['live-sized figures', liveSizedQuality()]] as const;
+const VERDICTS = [['fixture figures', qualityFixture('valid')], ['live-sized figures', liveSizedQuality()], ['the widest figures', widestVerdictQuality()]] as const;
 
 async function verdictHeights(page: Page, body: string): Promise<{ before: number; after: number; emptyBelow: number; lineHeight: number }> {
   let release!: () => void;
@@ -441,20 +441,67 @@ test.describe('verdict reservation', () => {
         await page.setViewportSize({ width, height: 900 });
         const { before, after, emptyBelow, lineHeight } = await verdictHeights(page, body);
         expect(after).toBe(before);
-        expect(emptyBelow).toBeLessThanOrEqual(lineHeight);
+        expect(emptyBelow).toBeLessThanOrEqual(2 * lineHeight);
       });
     }
   }
 });
 
 test.describe('verdict reservation on the mobile profile', () => {
-  test('the verdict block keeps its height at the profile width', req('REQ-LAYOUT-01'), async ({ page, isMobile }, testInfo) => {
-    test.skip(testInfo.project.name !== 'pixel' || !isMobile, 'measured at the Lighthouse mobile width, 412px');
+  test('the verdict block keeps its height at the profile width', req('REQ-LAYOUT-01'), async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'the desktop engines measure it at fixed widths above');
     for (const [, body] of VERDICTS) {
       await page.unroute('**/quality.json');
       const { before, after } = await verdictHeights(page, body);
       expect(after).toBe(before);
     }
+  });
+});
+
+const SWEEPS = [{ viewport: 899, widths: Array.from({ length: 620 }, (_, index) => 280 + index) }, { viewport: 1280, widths: [900, 1280] }] as const;
+
+test.describe('verdict sizer', () => {
+  test.skip(({ isMobile }) => isMobile, 'the mobile device profiles keep their own width');
+
+  for (const { viewport, widths } of SWEEPS) {
+    test(`the widest ready verdict is never taller than the sizer from ${widths[0]} to ${widths.at(-1)}px`, req('REQ-LAYOUT-01'), async ({ page }) => {
+      await serveQuality(page, widestVerdictQuality());
+      await page.setViewportSize({ width: viewport, height: 900 });
+      await open(page, '/quality');
+      const taller = await page.evaluate((pageWidths) => {
+        const slot = (name: string) => document.querySelector<HTMLElement>(`[data-block="verdict"] > [data-slot="${name}"]`)!;
+        const [live, sizer] = [slot('live'), slot('sizer')];
+        live.style.alignSelf = 'start';
+        sizer.style.alignSelf = 'start';
+        const column = document.querySelector<HTMLElement>('.page')!;
+        column.style.margin = '0';
+        return pageWidths.flatMap((width) => {
+          column.style.maxWidth = `${width}px`;
+          const heights = { width, live: live.getBoundingClientRect().height, sizer: sizer.getBoundingClientRect().height };
+          return heights.live > heights.sizer + 0.01 ? [heights] : [];
+        });
+      }, [...widths]);
+      expect(taller).toEqual([]);
+    });
+  }
+});
+
+test.describe('verdict sizer in the page', () => {
+  test('is invisible, covered by the live text and left out of the accessibility tree', req('REQ-LAYOUT-01'), async ({ page }) => {
+    await open(page, '/quality');
+    const block = page.locator('[data-block="verdict"]');
+    await expect(block).toHaveAttribute('data-state', 'ready');
+    const sizer = block.locator('[data-slot="sizer"]');
+    expect(await sizer.evaluate((element) => getComputedStyle(element).visibility)).toBe('hidden');
+    await expect(sizer.getByText('9,999 tests')).toBeHidden();
+    const owner = await block.locator('[data-slot="live"] .lede').evaluate((lede) => {
+      const box = lede.getBoundingClientRect();
+      return document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)?.closest('[data-slot]')?.getAttribute('data-slot');
+    });
+    expect(owner).toBe('live');
+    const snapshot = await block.ariaSnapshot();
+    expect(snapshot).toContain('This build covered all 3 pre-deploy requirements');
+    expect(snapshot).not.toContain('9,999');
   });
 });
 
@@ -583,6 +630,26 @@ test.describe('the line break in the home heading', () => {
     });
     expect(conditions).toHaveLength(1);
     expect(conditions[0]).toMatch(/max-width:\s*899px|width\s*<=\s*899px/);
+    expect(conditions[0]).not.toMatch(/min-width|>=/);
+  });
+});
+
+test.describe('the proof strip reservation', () => {
+  test('covers the narrow two column band with one range, so no width between 899px and 900px lacks a rule', req('REQ-LAYOUT-01'), async ({ page }) => {
+    await open(page, '/');
+    const conditions = await page.evaluate(() => {
+      const found: string[] = [];
+      const visit = (rules: CSSRuleList, media: string) => {
+        for (const rule of rules) {
+          if (rule instanceof CSSMediaRule) visit(rule.cssRules, `${media} ${rule.conditionText}`.trim());
+          else if (rule instanceof CSSStyleRule && rule.selectorText === '[data-block="proof-strip"]' && rule.style.minHeight === '6.4em' && /\b(899|900|919|920)px/.test(media)) found.push(media);
+        }
+      };
+      for (const sheet of document.styleSheets) visit(sheet.cssRules, '');
+      return found;
+    });
+    expect(conditions).toHaveLength(1);
+    expect(conditions[0]).toMatch(/899px\s*<\s*width\s*<\s*920px/);
     expect(conditions[0]).not.toMatch(/min-width|>=/);
   });
 });

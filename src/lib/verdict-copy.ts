@@ -1,5 +1,6 @@
 import { MONTHS } from './dates';
 import { plural } from './format';
+import { LIMITS } from './quality-schema';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -29,11 +30,11 @@ export interface VerdictParts {
 }
 
 export const LARGEST_VERDICT_FIGURES: VerdictFigures = {
-  requirements: 99,
+  requirements: LIMITS.requirements,
   tests: 9999,
   testRuns: 9999,
-  builtAt: '2026-09-28T20:48:00Z',
-  commit: 'dbbdbbd',
+  builtAt: '2026-09-30T00:00:00Z',
+  commit: '0000000',
 };
 
 export const verdictParts = (figures: VerdictFigures): VerdictParts => ({

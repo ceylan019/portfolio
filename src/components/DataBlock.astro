@@ -8,9 +8,6 @@
 // Actions page, so `links` takes any number of entries, not just one. The
 // verdict fallback also reads as a lede sentence rather than a small
 // "unavailable" note, so `fallbackClass` lets a caller opt into that style.
-// A caller may fill the named slot "sizer" with a hidden copy of the ready
-// content built from the largest plausible figures, which holds the block's
-// height at the tallest of the sizer, the fallback and the live content.
 interface FallbackLink { href: string; label: string }
 interface Props { name: string; fallback: string; links?: FallbackLink[]; fallbackClass?: string }
 const { name, fallback, links = [], fallbackClass = 'unav' } = Astro.props;
@@ -22,5 +19,5 @@ const { name, fallback, links = [], fallbackClass = 'unav' } = Astro.props;
     ))}</p>
   </div>
   <div data-slot="live"></div>
-  {Astro.slots.has('sizer') && <div data-slot="sizer" aria-hidden="true"><slot name="sizer" /></div>}
+  {Astro.slots.has('sizer') && <div data-slot="sizer" aria-hidden="true" inert data-nosnippet><slot name="sizer" /></div>}
 </div>

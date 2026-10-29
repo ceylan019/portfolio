@@ -37,7 +37,7 @@ test('@REQ-QUAL-01 verdict states requirements, tests and test runs', () => {
 test('@REQ-LAYOUT-01 the sizer wording is the live verdict wording with the largest figures', () => {
   const sizer = verdictParts(LARGEST_VERDICT_FIGURES);
   const d = fixture('valid');
-  const l = live(); renderVerdict(l, { ...d, counts: { ...d.counts, requirements: 99, tests: 9999, testRuns: 9999 }, builtAt: LARGEST_VERDICT_FIGURES.builtAt, commit: LARGEST_VERDICT_FIGURES.commit });
+  const l = live(); renderVerdict(l, { ...d, counts: { ...d.counts, requirements: LARGEST_VERDICT_FIGURES.requirements, tests: LARGEST_VERDICT_FIGURES.tests, testRuns: LARGEST_VERDICT_FIGURES.testRuns }, builtAt: LARGEST_VERDICT_FIGURES.builtAt, commit: LARGEST_VERDICT_FIGURES.commit });
   const sizerText = [...sizer.lede.map((s) => (typeof s === 'string' ? s : s.strong)), sizer.deployedPrefix, sizer.deployedAt, sizer.commitPrefix, sizer.commit, sizer.ciRunLabel, sizer.sourceLabel].join('');
   expect(squash(l.textContent)).toBe(squash(sizerText));
 });
