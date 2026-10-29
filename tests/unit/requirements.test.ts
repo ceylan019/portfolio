@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { REQUIREMENTS } from '../requirements';
 import { req } from '../tag';
 import { tagsIn } from '../../src/lib/traceability';
+import { LIMITS } from '../../src/lib/quality-schema';
 
 const walk = (d: string): string[] => readdirSync(d).flatMap((n) => { const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p]; });
 
@@ -10,6 +11,14 @@ test('@REQ-TRACE-01 requirement IDs are unique and well formed', () => {
   const ids = REQUIREMENTS.map((r) => r.id);
   expect(new Set(ids).size).toBe(ids.length);
   for (const id of ids) expect(id).toMatch(/^REQ-[A-Z0-9]+-\d{2}$/);
+});
+
+// The report job copies every requirement into quality.json, whose schema
+// rejects the whole file when one of them is over its limits.
+test('@REQ-TRACE-01 the registry fits the quality.json limits', () => {
+  expect(REQUIREMENTS.length).toBeLessThanOrEqual(LIMITS.requirements);
+  const tooLong = REQUIREMENTS.filter((r) => r.text.length > LIMITS.string).map((r) => `${r.id}: ${r.text.length} characters`);
+  expect(tooLong).toEqual([]);
 });
 
 test('@REQ-TRACE-01 every tag used in a test file exists in the registry', () => {
