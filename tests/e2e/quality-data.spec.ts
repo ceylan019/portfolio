@@ -43,8 +43,8 @@ test('schema-valid HTML strings render as text and never execute', req('REQ-SEC-
   await settled(page);
   for (const name of QUALITY_BLOCKS) await expect(page.locator(`[data-block="${name}"]`)).toHaveAttribute('data-state', 'ready');
   const matrix = page.locator('[data-block="matrix"] [data-slot="live"]');
-  await expect(matrix.getByText(`<img src=x onerror="document.body.dataset.pwned='1'">`, { exact: true })).toBeVisible();
-  await expect(matrix.locator('a', { hasText: "</script><script>document.body.dataset.pwned='1'</script>" })).toHaveCount(1);
+  await expect(matrix.getByText("<img src=x onerror=\u201ddocument.body.dataset.pwned=\u20191\u2019\u201d>", { exact: true })).toBeVisible();
+  await expect(matrix.locator('a', { hasText: "</script><script>document.body.dataset.pwned=\u20191\u2019</script>" })).toHaveCount(1);
   // Only the elements the renderers build: no img, script, iframe or anything else from the data.
   const tags = await page.locator('[data-slot="live"] *').evaluateAll((els) => [...new Set(els.map((e) => e.tagName.toLowerCase()))].sort());
   expect(tags.filter((t) => !['a', 'b', 'details', 'div', 'h3', 'li', 'p', 'path', 'polyline', 'span', 'strong', 'summary', 'svg', 'time', 'ul'].includes(t))).toEqual([]);
