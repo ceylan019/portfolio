@@ -33,6 +33,7 @@ module.exports = {
         'categories:accessibility': ['error', { minScore: 1, aggregationMethod: 'median-run' }],
         'categories:best-practices': ['error', { minScore: 1, aggregationMethod: 'median-run' }],
         'categories:seo': ['error', { minScore: 1, aggregationMethod: 'median-run' }],
+        'cumulative-layout-shift': ['error', { maxNumericValue: 0.05, aggregationMethod: 'median-run' }],
         'resource-summary:font:size': ['error', { maxNumericValue: 120000 }],
         'resource-summary:total:size': ['error', { maxNumericValue: 256000 }],
         'resource-summary:third-party:count': ['error', { maxNumericValue: thirdPartyCount }],
