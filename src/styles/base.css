@@ -96,11 +96,11 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
 .defs { position: absolute; }
 
 /* Photo frame: the blush square is reserved before the image loads. */
-.photo-frame { position: relative; width: 250px; aspect-ratio: 1; }
-.photo-frame::before { content: ""; position: absolute; inset: 15.3%; border-radius: 50%; background: var(--blush); }
-.photo-frame .photo, .photo-frame .photo img { position: absolute; inset: 15.3%; width: 69.4%; height: 69.4%; border-radius: 50%; object-fit: cover; }
+.photo-frame { position: relative; width: 224px; aspect-ratio: 1; }
+.photo-frame::before { content: ""; position: absolute; inset: 11.2%; border-radius: 50%; background: var(--blush); }
+.photo-frame .photo, .photo-frame .photo img { position: absolute; inset: 11.2%; width: 77.6%; height: 77.6%; border-radius: 50%; object-fit: cover; }
 .photo-frame .ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-@media (max-width: 899px) { .photo-frame { width: 150px; } }
+@media (max-width: 899px) { .photo-frame { width: 134px; } }
 
 /* Colors come from tokens.css, not photo-mark.svg's own stop colors.
    The main stroke is a gradient from --rose-mark to --coral;
@@ -119,7 +119,7 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
 @keyframes ring-draw { from { stroke-dashoffset: 805; } to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce) { .ring-sweep-main, .ring-sweep-second { animation: none; } }
 
-.hero { display: grid; grid-template-columns: 1fr 280px; gap: 48px; align-items: center; }
+.hero { display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: center; }
 .name { font-size: 96px; font-weight: 800; line-height: .92; letter-spacing: -0.035em; overflow-wrap: anywhere; }
 .role { font-size: 20px; font-weight: 500; margin-top: 24px; }
 .avail { font-size: 16px; margin-top: 4px; }
@@ -133,6 +133,7 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
   .name { font-size: 60px; }
   .role, .tag { font-size: 18px; }
   .acts { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 24px; }
+  .cl { display: grid; grid-template-columns: repeat(2, max-content); gap: 0 24px; }
 }
 
 /* /quality */
