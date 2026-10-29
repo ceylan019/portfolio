@@ -138,9 +138,9 @@ export const renderTrends: Renderer = (live, d) => {
     const values = h.map((p) => p[s.key]);
     const lo = Math.min(...values);
     const hi = Math.max(...values, s.max ?? 0, lo + 1);
-    const points = values.map((v, i) => `${(8 + (i * 204) / (values.length - 1)).toFixed(1)},${(48 - ((v - lo) / (hi - lo)) * 40).toFixed(1)}`).join(' ');
+    const points = values.map((v, i) => `${((i * 220) / (values.length - 1)).toFixed(1)},${(48 - ((v - lo) / (hi - lo)) * 40).toFixed(1)}`).join(' ');
     const item = el('div', undefined, { class: 'trend' });
-    const svg = svgEl('svg', { viewBox: '0 0 220 56', class: 'spark', 'aria-hidden': 'true' });
+    const svg = svgEl('svg', { viewBox: '0 0 220 56', preserveAspectRatio: 'none', class: 'spark', 'aria-hidden': 'true' });
     svg.append(svgEl('polyline', { points, class: 'spark-line', fill: 'none' }));
     const current = values[values.length - 1]!;
     item.append(el('h3', s.label), el('p', s.max === 100 ? `${current}${s.key === 'mutationScore' ? '%' : ''}` : nf.format(current), { class: 'now' }), svg, el('p', s.caption, { class: 'cap' }));

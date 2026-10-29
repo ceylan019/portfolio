@@ -187,22 +187,22 @@ const trendHistory = (runs: number[], mutation: number[], lighthouse: number[]):
 test('@REQ-STATE-01 trends markup with exactly 3 points: labels, current values and line coordinates', () => {
   const d = fixture('valid');
   const trend = (label: string, now: string, points: string, cap: string) =>
-    `<div class="trend"><h3>${label}</h3><p class="now">${now}</p><svg viewBox="0 0 220 56" class="spark" aria-hidden="true">`
+    `<div class="trend"><h3>${label}</h3><p class="now">${now}</p><svg viewBox="0 0 220 56" preserveAspectRatio="none" class="spark" aria-hidden="true">`
     + `<polyline points="${points}" class="spark-line" fill="none"></polyline></svg><p class="cap">${cap}</p></div>`;
-  // x runs from 8 to 212; y maps the lowest value to 48 and the top of the
+  // x runs from 0 to 220; y maps the lowest value to 48 and the top of the
   // range to 8. The range top is the series maximum, or 100 for percentages.
   expect(html((l) => renderTrends(l, { ...d, history: trendHistory([1000, 1500, 2000], [80, 85, 90], [96, 98, 100]) }))).toBe(
     '<div class="trends">'
-    + trend('Test runs passed', '2,000', '8.0,48.0 110.0,28.0 212.0,8.0', 'Across 5 device profiles')
-    + trend('Mutation score', '90%', '8.0,48.0 110.0,38.0 212.0,28.0', 'Share of planted bugs the tests caught')
-    + trend('Lighthouse mobile score', '100', '8.0,48.0 110.0,28.0 212.0,8.0', 'Median of 3 runs in CI')
+    + trend('Test runs passed', '2,000', '0.0,48.0 110.0,28.0 220.0,8.0', 'Across 5 device profiles')
+    + trend('Mutation score', '90%', '0.0,48.0 110.0,38.0 220.0,28.0', 'Share of planted bugs the tests caught')
+    + trend('Lighthouse mobile score', '100', '0.0,48.0 110.0,28.0 220.0,8.0', 'Median of 3 runs in CI')
     + '</div>',
   );
 });
 test('@REQ-STATE-01 a flat trend draws a level line at the bottom, not NaN', () => {
   const l = live(); renderTrends(l, { ...fixture('valid'), history: trendHistory([300, 300, 300], [100, 100, 100], [100, 100, 100]) });
   expect([...l.querySelectorAll('polyline')].map((p) => p.getAttribute('points'))).toEqual([
-    '8.0,48.0 110.0,48.0 212.0,48.0', '8.0,48.0 110.0,48.0 212.0,48.0', '8.0,48.0 110.0,48.0 212.0,48.0',
+    '0.0,48.0 110.0,48.0 220.0,48.0', '0.0,48.0 110.0,48.0 220.0,48.0', '0.0,48.0 110.0,48.0 220.0,48.0',
   ]);
 });
 test('@REQ-STATE-01 sparse trends message markup', () => {
