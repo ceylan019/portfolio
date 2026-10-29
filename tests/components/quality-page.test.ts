@@ -87,7 +87,8 @@ test('@REQ-NAV-01 /quality follows the section order: top line, verdict, matrix,
 test('@REQ-A11Y-04 every labelled section on /quality points at its own heading', async () => {
   const html = await renderPage();
   for (const id of ['req-heading', 'trend-heading', 'mut-heading', 'suites-heading']) {
-    expect(html).toMatch(new RegExp(`<section class="sec" aria-labelledby="${id}">`));
+    const classes = id === 'req-heading' ? 'sec sec-list' : 'sec';
+    expect(html).toMatch(new RegExp(`<section class="${classes}" aria-labelledby="${id}">`));
     expect(html).toContain(`id="${id}"`);
   }
 });

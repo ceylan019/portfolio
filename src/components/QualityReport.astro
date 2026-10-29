@@ -26,7 +26,7 @@ const ciLink = [{ href: actions, label: 'See the CI run history' }];
     <TopLine name={name} />
     <main id="main">
       <header class="qhead">
-        <h1 class="qh1">How this site<br />is tested</h1>
+        <h1 class="qh1">How this site is tested</h1>
         <DataBlock
           name="verdict"
           fallback="Every promise this site makes is tied to the checks that prove it. Live results could not be loaded; the source and CI history are linked here."
@@ -35,7 +35,7 @@ const ciLink = [{ href: actions, label: 'See the CI run history' }];
         />
         <p class="gloss">A <b>test</b> is one test case. A <b>test run</b> is one test in one device profile. Browser engines: Chromium, Firefox and WebKit. Device profiles: desktop Chromium, desktop Firefox, desktop WebKit, emulated iPhone (WebKit) and emulated Pixel (Chromium). Behavior is tested on fixed test content in every engine and device profile; the real content is checked for accessibility, performance, links and key behavior before deploy.</p>
       </header>
-      <section class="sec" aria-labelledby="req-heading">
+      <section class="sec sec-list" aria-labelledby="req-heading">
         <div class="side">
           <h2 id="req-heading">Requirements</h2>
           <p class="note">Every row links to the exact tests, pinned to the deployed commit. There is no pass or fail column, because only fully green builds deploy.</p>

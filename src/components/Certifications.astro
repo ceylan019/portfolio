@@ -6,7 +6,7 @@ const { entries, today } = Astro.props;
 const visible = visibleCertifications(entries);
 ---
 {visible.length > 0 && (
-  <section class="sec" aria-labelledby="certifications-heading">
+  <section class="sec sec-list" aria-labelledby="certifications-heading">
     <div class="side">
       <h2 id="certifications-heading">Certifications</h2>
       {showTickNote(visible) && <p class="note">A tick means you can verify it with the issuer or view the certificate.</p>}

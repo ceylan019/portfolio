@@ -22,19 +22,21 @@ img, svg { display: block; max-width: 100%; }
 .btn:active { background: var(--rose-mark-active); }
 
 .muted { color: var(--muted); }
+h1, h2 { text-wrap: balance; }
 h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
 
 .sec { display: grid; grid-template-columns: var(--label-col) 1fr; gap: var(--col-gap); margin-top: var(--section-gap); }
 .sec > .side .note { font-size: 14px; color: var(--muted); margin-top: 8px; max-width: 26ch; line-height: 1.5; }
 @media (max-width: 899px) { .sec { grid-template-columns: 1fr; gap: 12px; } }
+.sec-list > .side { padding-top: 16px; }
+@media (max-width: 899px) { .sec-list > .side { padding-top: 0; } }
 .prose p { max-width: 62ch; }
 .prose p + p { margin-top: 16px; }
 /* A long unbroken URL in About cannot scroll the page sideways at 375px. */
 .prose { overflow-wrap: anywhere; }
 
-.list { list-style: none; padding: 0; }
-.row { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; padding: 16px 0; border-top: 1px solid var(--line); align-items: start; }
-.row:last-child { border-bottom: 1px solid var(--line); }
+.list, .reqs { list-style: none; padding: 0; border-top: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--line); align-items: start; }
 .row .meta { display: block; color: var(--muted); font-size: 16px; }
 /* The ID token never breaks mid-token, but the "Credential ID" label may
    wrap before it, so a long ID cannot scroll the page sideways at 375px. */
@@ -122,7 +124,6 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
 .tag { font-size: 20px; color: var(--muted); margin-top: 8px; max-width: 38ch; line-height: 1.5; }
 .acts { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; margin-top: 32px; font-size: 17px; }
 .links, .cl { display: flex; flex-wrap: wrap; gap: 0 24px; }
-.proof { padding: 32px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .sub { margin-top: 12px; font-size: 16px; }
 @media (max-width: 899px) {
   .hero { grid-template-columns: 1fr; gap: 16px; }
@@ -135,7 +136,7 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
 /* /quality */
 .topline { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 48px; font-size: 16px; }
 .homelink { font-weight: 800; letter-spacing: -0.02em; font-size: 18px; color: var(--ink); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
-.qhead .qh1 { font-size: 64px; font-weight: 800; line-height: .95; letter-spacing: -0.035em; }
+.qhead .qh1 { font-size: 64px; font-weight: 800; line-height: .95; letter-spacing: -0.035em; max-width: 9em; }
 .lede { font-size: 21px; line-height: 1.5; margin-top: 22px; max-width: 46ch; }
 .lede b { font-weight: 800; }
 /* The verdict block's live slot is a two column grid (lede, then deploy meta)
@@ -159,10 +160,9 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
 .gloss b { color: var(--ink); }
 .integrity { display: flex; gap: 10px; align-items: center; margin-top: 32px; font-size: 16px; }
 [data-block="duration"] { margin-top: 32px; }
-.reqs { list-style: none; padding: 0; border-top: 1px solid var(--line); }
 .req { display: grid; grid-template-columns: 40px 1fr 240px; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); align-items: start; }
 /* 13px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
-.rq-id { font-size: 14px; font-weight: 700; color: var(--muted); }
+.rq-id { display: block; font-size: 14px; font-weight: 700; line-height: 2; color: var(--muted); }
 /* A flat 17px snapped to the 18px "Body" desktop size; the 899px query below restores 17px on mobile. */
 .rq-text { font-size: 18px; font-weight: 500; margin-top: 2px; overflow-wrap: anywhere; }
 .rq-cov { display: flex; flex-direction: column; font-size: 14px; overflow-wrap: anywhere; }

@@ -81,3 +81,6 @@ test('@REQ-CERT-07 an entry without a certificate has no thumbnail and no previe
   expect(html).not.toContain('cert-thumb');
   expect(html).not.toContain('<dialog');
 });
+test('@REQ-LAYOUT-01 the certifications section is a list section, so its heading lines up with the first row', async () => {
+  expect(await render([c({})])).toMatch(/<section class="sec sec-list" aria-labelledby="certifications-heading">/);
+});
