@@ -37,7 +37,7 @@
     "@stryker-mutator/vitest-runner": "10.0.0",
     "@lhci/cli": "0.15.1",
     "linkinator": "8.1.0",
-    "satori": "0.33.5",
+    "satori": "0.63.2",
     "@resvg/resvg-js": "2.6.2",
     "sharp": "0.35.5",
     "exifr": "7.1.3",
