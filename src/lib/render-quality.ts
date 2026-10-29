@@ -153,6 +153,6 @@ export const renderDuration: Renderer = (live, d) => {
   if (d.pipelineSeconds === undefined) return false;
   const m = Math.floor(d.pipelineSeconds / 60);
   const s = d.pipelineSeconds % 60;
-  live.append(el('p', `This build went through the pipeline in ${m} min ${s} s.`));
+  live.append(el('p', `This build went through the pipeline in ${m} min ${s} s.`));
   return true;
 };

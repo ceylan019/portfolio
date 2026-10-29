@@ -117,6 +117,7 @@ test('@REQ-QUAL-01 pipeline duration in minutes and seconds', () => {
   const l = live();
   expect(renderDuration(l, fixture('valid'))).toBe(true);
   expect(squash(l.textContent)).toBe('This build went through the pipeline in 8 min 32 s.');
+  expect(l.textContent).toContain('8 min 32 s.');
 });
 test('@REQ-QUAL-01 an unknown pipeline duration renders nothing and asks to keep the fallback', () => {
   const { pipelineSeconds: _drop, ...rest } = fixture('valid');
