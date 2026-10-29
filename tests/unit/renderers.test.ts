@@ -157,10 +157,10 @@ test('@REQ-QUAL-01 matrix markup for tested, check-only and post-deploy rows', (
     '<ul class="reqs">'
     + `<li class="req">${tick}<div><span class="rq-id">REQ-CV-01</span><p class="rq-text">CV downloads in one click from the hero</p></div>`
     + '<div class="rq-cov"><strong>1 test</strong><span>e2e</span><span class="dim">5 device profiles</span>'
-    + `<details><summary>Show the test</summary><ul><li><a href="${blob}/tests/e2e/home.spec.ts#L12" class="lnk">hero CV link returns a PDF</a></li></ul></details></div></li>`
+    + `<details><summary><span class="when-closed">Show the test</span><span class="when-open">Hide the test</span></summary><ul><li><a href="${blob}/tests/e2e/home.spec.ts#L12" class="lnk">hero CV link returns a PDF</a></li></ul></details></div></li>`
     + `<li class="req">${tick}<div><span class="rq-id">REQ-CERT-03</span><p class="rq-text">Expired only when expiry is strictly before today</p></div>`
     + '<div class="rq-cov"><strong>1 test</strong><span>unit</span>'
-    + `<details><summary>Show the test</summary><ul><li><a href="${blob}/tests/unit/certifications.test.ts#L27" class="lnk">expiring today is still valid</a></li></ul></details></div></li>`
+    + `<details><summary><span class="when-closed">Show the test</span><span class="when-open">Hide the test</span></summary><ul><li><a href="${blob}/tests/unit/certifications.test.ts#L27" class="lnk">expiring today is still valid</a></li></ul></details></div></li>`
     + `<li class="req">${tick}<div><span class="rq-id">REQ-PERF-01</span><p class="rq-text">Mobile Lighthouse in CI: performance at least 95</p></div>`
     + '<div class="rq-cov"><strong>Lighthouse CI</strong></div></li>'
     + `<li class="req">${tick}<div><span class="rq-id">REQ-DEPLOY-01</span><p class="rq-text">Every file served live matches the tested build</p></div>`
@@ -179,7 +179,7 @@ test('@REQ-QUAL-01 matrix coverage joins several tests, suites and checks, and c
   const l = live(); renderMatrix(l, { ...d, matrix: rows });
   const [a, b] = [...l.querySelectorAll('.rq-cov')];
   expect(a!.innerHTML.replace(/<ul>.*<\/ul>/, '<ul></ul>')).toBe(
-    '<strong>3 tests, link check</strong><span>e2e, unit</span><span class="dim">1 device profile</span><details><summary>Show the 3 tests</summary><ul></ul></details>',
+    '<strong>3 tests, link check</strong><span>e2e, unit</span><span class="dim">1 device profile</span><details><summary><span class="when-closed">Show the 3 tests</span><span class="when-open">Hide the 3 tests</span></summary><ul></ul></details>',
   );
   expect(a!.querySelectorAll('li')).toHaveLength(3);
   expect(b!.innerHTML).toBe('<strong>Lighthouse CI, built HTML scan</strong>');

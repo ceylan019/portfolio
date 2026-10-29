@@ -36,7 +36,9 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
 .prose { overflow-wrap: anywhere; }
 
 .list, .reqs { list-style: none; padding: 0; border-top: 1px solid var(--line); }
-.row { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.row, .req { display: grid; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.row { grid-template-columns: 40px 1fr auto; }
+.req { grid-template-columns: 40px 1fr 240px; }
 .row .meta { display: block; color: var(--muted); font-size: 16px; }
 /* The ID token never breaks mid-token, but the "Credential ID" label may
    wrap before it, so a long ID cannot scroll the page sideways at 375px. */
@@ -47,7 +49,7 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
 .row.expired .title { color: var(--muted); }
 /* 13px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
 .expired-label { display: inline-block; font-size: 14px; font-weight: 700; color: var(--muted); border: 1.5px solid var(--line); border-radius: 6px; padding: 0 8px; margin-left: 6px; vertical-align: 3px; }
-@media (max-width: 899px) { .row { grid-template-columns: 32px 1fr; } .row > :last-child { grid-column: 2; } }
+@media (max-width: 899px) { .row, .req { grid-template-columns: 32px 1fr; } .row > :last-child, .req > :last-child { grid-column: 2; } }
 
 .cert-body { display: flex; gap: 16px; align-items: flex-start; }
 .cert-thumb { flex: none; display: block; width: 96px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
@@ -160,14 +162,20 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
 .gloss b { color: var(--ink); }
 .integrity { display: flex; gap: 10px; align-items: center; margin-top: 32px; font-size: 16px; }
 [data-block="duration"] { margin-top: 32px; }
-.req { display: grid; grid-template-columns: 40px 1fr 240px; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); align-items: start; }
 /* 13px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
 .rq-id { display: block; font-size: 14px; font-weight: 700; line-height: 2; color: var(--muted); }
 /* A flat 17px snapped to the 18px "Body" desktop size; the 899px query below restores 17px on mobile. */
-.rq-text { font-size: 18px; font-weight: 500; margin-top: 2px; overflow-wrap: anywhere; }
+.rq-text { font-size: 18px; font-weight: 500; overflow-wrap: anywhere; }
 .rq-cov { display: flex; flex-direction: column; font-size: 14px; overflow-wrap: anywhere; }
 .rq-cov .dim { color: var(--muted); }
-.rq-cov details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--rose-text); }
+.rq-cov details summary { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; list-style: none; color: var(--rose-text); }
+.rq-cov details summary::-webkit-details-marker { display: none; }
+.rq-cov details summary::before { content: ""; flex: none; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); }
+.rq-cov details[open] > summary::before { transform: rotate(45deg); }
+.rq-cov details summary span { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, var(--rose-text) 40%, transparent); }
+.rq-cov details:not([open]) .when-open, .rq-cov details[open] .when-closed { display: none; }
+.rq-cov details ul { list-style: none; padding: 0; }
+.rq-cov details a { display: block; min-height: 0; padding-block: 12px; }
 .trends { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
 /* 15px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
 .trend h3 { font-size: 14px; font-weight: 700; }
@@ -188,10 +196,6 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
   .rq-text { font-size: 17px; }
   .trends, .suites { grid-template-columns: 1fr; }
   [data-block="verdict"] [data-slot="live"] { grid-template-columns: 1fr; gap: 8px; }
-}
-@media (max-width: 639px) {
-  .req { grid-template-columns: 30px 1fr; }
-  .req > .rq-cov { grid-column: 2; }
 }
 
 /* /404: the numeral uses the DESIGN.md "Name" display size (96px

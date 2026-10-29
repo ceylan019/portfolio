@@ -88,7 +88,10 @@ function coverage(row: MatrixRow, d: QualityReport): HTMLElement {
   if (where) box.append(el('span', where, { class: 'dim' }));
   if (row.tests.length > 0) {
     const details = el('details');
-    details.append(el('summary', `Show ${row.tests.length === 1 ? 'the test' : `the ${row.tests.length} tests`}`));
+    const label = row.tests.length === 1 ? 'the test' : `the ${row.tests.length} tests`;
+    const summary = el('summary');
+    summary.append(el('span', `Show ${label}`, { class: 'when-closed' }), el('span', `Hide ${label}`, { class: 'when-open' }));
+    details.append(summary);
     const list = el('ul');
     for (const t of row.tests) {
       const li = el('li');
