@@ -1,16 +1,10 @@
 import type { Renderer } from './quality-client';
 import { FIXTURE_PROJECTS, REAL_PROJECT, type MatrixRow, type QualityReport } from './quality-schema';
 import { el, svgEl, tick } from './dom';
-import { MONTHS } from './dates';
 import { plural } from './format';
+import { formatDeployTime, verdictParts } from './verdict-copy';
 
 const nf = new Intl.NumberFormat('en-US');
-const pad = (n: number) => String(n).padStart(2, '0');
-
-export function formatDeployTime(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
-}
 
 const deployTime = (iso: string) => el('time', formatDeployTime(iso), { datetime: iso });
 
@@ -18,21 +12,14 @@ const permalink = (d: QualityReport, file: string, line: number) =>
   `${d.repoUrl}/blob/${d.commit}/${file.split('/').map(encodeURIComponent).join('/')}#L${line}`;
 
 export const renderVerdict: Renderer = (live, d) => {
-  const p = el('p', undefined, { class: 'lede' });
-  p.append(
-    'Every promise this site makes is tied to the checks that prove it. This build covered ',
-    // counts.requirements holds the pre-deploy requirements only: the post-deploy
-    // live check runs after this build, so the build never covers it.
-    el('b', `all ${plural(d.counts.requirements, 'pre-deploy requirement', 'pre-deploy requirements')}`),
-    ' with ',
-    el('b', plural(d.counts.tests, 'test', 'tests')),
-    ' (', el('b', plural(d.counts.testRuns, 'test run', 'test runs')), '), and nothing ships unless every one passes.',
-  );
+  const parts = verdictParts({ ...d.counts, builtAt: d.builtAt, commit: d.commit });
+  const lede = el('p', undefined, { class: 'lede' });
+  lede.append(...parts.lede.map((segment) => (typeof segment === 'string' ? segment : el('b', segment.strong))));
   const meta = el('p', undefined, { class: 'meta2' });
-  meta.append('Deployed ', deployTime(d.builtAt), ', commit ', el('a', d.commit.slice(0, 7), { href: `${d.repoUrl}/commit/${d.commit}` }));
+  meta.append(parts.deployedPrefix, deployTime(d.builtAt), parts.commitPrefix, el('a', parts.commit, { href: `${d.repoUrl}/commit/${d.commit}` }));
   const links = el('div', undefined, { class: 'links' });
-  links.append(el('a', 'View this CI run', { href: d.ciRunUrl }), el('a', 'Browse the source', { href: d.repoUrl }));
-  live.append(p, meta, links);
+  links.append(el('a', parts.ciRunLabel, { href: d.ciRunUrl }), el('a', parts.sourceLabel, { href: d.repoUrl }));
+  live.append(lede, meta, links);
 };
 
 export const renderIntegrity: Renderer = (live, d) => {

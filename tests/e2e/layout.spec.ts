@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
-import { test, expect, settled, serveQuality, sparseQuality, manyTestsQuality, straightQuotes } from './fixtures';
+import { test, expect, settled, serveQuality, sparseQuality, manyTestsQuality, liveSizedQuality, failedLiveCheckQuality, qualityFixture, straightQuotes } from './fixtures';
 import { req } from '../tag';
 import { REQUIREMENTS } from '../requirements';
 
@@ -309,7 +309,7 @@ for (const { name, size } of [{ name: 'desktop', size: DESKTOP }, { name: 'mobil
       else expect(Math.abs(edges.ringLeft - edges.heroLeft)).toBeLessThanOrEqual(2);
     });
 
-    test('the verdict is one left-aligned column with no empty space under it', req('REQ-LAYOUT-01'), async ({ page }) => {
+    test('the verdict is one left-aligned column with at most one lede line of empty space under it', req('REQ-LAYOUT-01'), async ({ page }) => {
       await open(page, '/quality');
       const block = await rect(page, '[data-block="verdict"]');
       const children = await page.locator('[data-block="verdict"] [data-slot="live"] > *').evaluateAll((elements) => elements.map((element) => {
@@ -321,14 +321,15 @@ for (const { name, size } of [{ name: 'desktop', size: DESKTOP }, { name: 'mobil
         expect(child.left).toBeCloseTo(block.left, 0);
         if (index > 0) expect(child.top).toBeGreaterThanOrEqual(children[index - 1]!.bottom - 1);
       }
-      expect(Math.abs(block.bottom - children.at(-1)!.bottom)).toBeLessThanOrEqual(1);
-      const meta = page.locator('[data-block="verdict"] .meta2');
+      const lineHeight = await page.locator('[data-block="verdict"] [data-slot="live"] .lede').evaluate((element) => parseFloat(getComputedStyle(element).lineHeight));
+      expect(block.bottom - children.at(-1)!.bottom).toBeLessThanOrEqual(lineHeight);
+      const meta = page.locator('[data-block="verdict"] [data-slot="live"] .meta2');
       await expect(meta).toHaveText(/^Deployed .+ UTC, commit [0-9a-f]{7}$/);
       await expect(meta.locator('time')).toHaveCount(1);
       expect(await meta.locator('time').evaluate((element) => element.getClientRects().length)).toBe(1);
       expect((await meta.locator('a').boundingBox())!.height).toBeGreaterThanOrEqual(44);
       expect(await meta.evaluate((element) => [getComputedStyle(element).fontSize, getComputedStyle(element).color === getComputedStyle(document.querySelector('.gloss')!).color])).toEqual(['16px', true]);
-      await expect(page.locator('[data-block="verdict"] .links a')).toHaveText(['View this CI run', 'Browse the source']);
+      await expect(page.locator('[data-block="verdict"] [data-slot="live"] .links a')).toHaveText(['View this CI run', 'Browse the source']);
     });
 
     test('the live check sits under the glossary, and the duration sits under the suites', req('REQ-LAYOUT-01'), async ({ page }) => {
@@ -401,26 +402,59 @@ test.describe('between mobile and desktop', () => {
   });
 });
 
-const RESERVATION_WIDTHS = [320, 360, 375, 390, 412, 600, 768, 899, 900, 1280];
+const RESERVATION_WIDTHS = [320, 360, 375, 380, 390, 412, 600, 768, 899, 900, 1280];
 const TITLE_WIDTHS = [320, 360, 390, 700, 899, 900, 1280];
+
+const VERDICTS = [['fixture figures', qualityFixture('valid')], ['live-sized figures', liveSizedQuality()]] as const;
+
+async function verdictHeights(page: Page, body: string): Promise<{ before: number; after: number; emptyBelow: number; lineHeight: number }> {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route('**/quality.json', async (route) => {
+    await gate;
+    await route.fulfill({ status: 200, contentType: 'application/json', body });
+  });
+  await page.goto('/quality');
+  const block = page.locator('[data-block="verdict"]');
+  await expect(block).toHaveAttribute('data-state', 'unavailable');
+  const before = await block.evaluate((element) => element.getBoundingClientRect().height);
+  release();
+  await settled(page);
+  await expect(block).toHaveAttribute('data-state', 'ready');
+  return block.evaluate((element, beforeHeight) => {
+    const last = element.querySelector('[data-slot="live"]')!.lastElementChild!.getBoundingClientRect();
+    return {
+      before: beforeHeight,
+      after: element.getBoundingClientRect().height,
+      emptyBelow: element.getBoundingClientRect().bottom - last.bottom,
+      lineHeight: parseFloat(getComputedStyle(element.querySelector('.lede')!).lineHeight),
+    };
+  }, before);
+}
 
 test.describe('verdict reservation', () => {
   test.skip(({ isMobile }) => isMobile, 'the mobile device profiles keep their own width');
 
-  for (const width of RESERVATION_WIDTHS) {
-    test(`the reservation stays just below the ready verdict at ${width}px`, req('REQ-LAYOUT-01'), async ({ page }, testInfo) => {
-      await page.setViewportSize({ width, height: 900 });
-      await open(page, '/quality');
-      await expectReservation(page, testInfo.project.name === 'chromium');
-    });
+  for (const [label, body] of VERDICTS) {
+    for (const width of RESERVATION_WIDTHS) {
+      test(`the verdict block keeps its height when ${label} arrive at ${width}px`, req('REQ-LAYOUT-01'), async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        const { before, after, emptyBelow, lineHeight } = await verdictHeights(page, body);
+        expect(after).toBe(before);
+        expect(emptyBelow).toBeLessThanOrEqual(lineHeight);
+      });
+    }
   }
 });
 
 test.describe('verdict reservation on the mobile profile', () => {
-  test('the reservation stays just below the ready verdict at the profile width', req('REQ-LAYOUT-01'), async ({ page, isMobile }, testInfo) => {
+  test('the verdict block keeps its height at the profile width', req('REQ-LAYOUT-01'), async ({ page, isMobile }, testInfo) => {
     test.skip(testInfo.project.name !== 'pixel' || !isMobile, 'measured at the Lighthouse mobile width, 412px');
-    await open(page, '/quality');
-    await expectReservation(page, true);
+    for (const [, body] of VERDICTS) {
+      await page.unroute('**/quality.json');
+      const { before, after } = await verdictHeights(page, body);
+      expect(after).toBe(before);
+    }
   });
 });
 
@@ -439,7 +473,7 @@ test.describe('title breaks', () => {
   }
 });
 
-for (const width of [375, 390]) {
+for (const width of [320, 360, 375, 390]) {
   test.describe(`standalone links at ${width}px`, () => {
     test.skip(({ isMobile }) => isMobile, 'the mobile device profiles keep their own width');
 
@@ -474,29 +508,84 @@ for (const width of [390, 320]) {
   });
 }
 
-test.describe('verdict meta line on a small screen', () => {
-  test.use({ viewport: MOBILE });
+async function linkHitSpan(link: ReturnType<Page['locator']>): Promise<{ height: number; foreign: string[] }> {
+  return link.evaluate((anchor) => {
+    anchor.scrollIntoView({ block: 'center' });
+    const box = anchor.getBoundingClientRect();
+    const xs = [box.left + 2, box.left + box.width / 2, box.right - 2];
+    const foreign = new Set<string>();
+    let best = 0;
+    for (const x of xs) {
+      let run = 0;
+      for (let y = Math.floor(box.top); y <= Math.ceil(box.bottom); y++) {
+        const hit = document.elementFromPoint(x, y);
+        const owner = hit?.closest('a');
+        if (owner === anchor) {
+          run++;
+          best = Math.max(best, run);
+        } else {
+          run = 0;
+          if (owner) foreign.add(owner.textContent ?? '');
+        }
+      }
+    }
+    return { height: best, foreign: [...foreign] };
+  });
+}
 
-  test('the meta line wraps on even line spacing while the commit link keeps a 44px target', req('REQ-LAYOUT-01'), async ({ page }) => {
-    await open(page, '/quality');
-    const meta = page.locator('[data-block="verdict"] .meta2');
-    const lines = await lineCenters(meta);
-    expect(lines.length).toBeGreaterThan(1);
-    const lineHeight = await meta.evaluate((element) => parseFloat(getComputedStyle(element).lineHeight));
-    for (const [index, center] of lines.slice(1).entries()) expect(center - lines[index]!).toBeCloseTo(lineHeight, 0);
-    expect((await meta.boundingBox())!.height).toBeCloseTo(lines.length * lineHeight, 0);
-    expect((await meta.locator('a').boundingBox())!.height).toBeGreaterThanOrEqual(44);
+for (const width of [390, 320]) {
+  test.describe(`links inside running text at ${width}px`, () => {
+    test.use({ viewport: { width, height: 844 } });
+    test.skip(({ isMobile }) => isMobile, 'the mobile device profiles keep their own width');
+
+    test('the meta line wraps on even line spacing while the commit link keeps a 44px target that no other link covers', req('REQ-LAYOUT-01'), async ({ page }) => {
+      await open(page, '/quality');
+      const meta = page.locator('[data-block="verdict"] [data-slot="live"] .meta2');
+      const lines = await lineCenters(meta);
+      expect(lines.length).toBeGreaterThan(1);
+      const lineHeight = await meta.evaluate((element) => parseFloat(getComputedStyle(element).lineHeight));
+      for (const [index, center] of lines.slice(1).entries()) expect(center - lines[index]!).toBeCloseTo(lineHeight, 0);
+      expect((await meta.boundingBox())!.height).toBeCloseTo(lines.length * lineHeight, 0);
+      const { height, foreign } = await linkHitSpan(meta.locator('a'));
+      expect(height).toBeGreaterThanOrEqual(44);
+      expect(foreign).toEqual([]);
+    });
+
+    test('the failed live check sentence wraps on even line spacing while its link keeps a 44px target', req('REQ-LAYOUT-01'), async ({ page }) => {
+      await serveQuality(page, failedLiveCheckQuality());
+      await open(page, '/quality');
+      const sentence = page.locator('[data-block="integrity"] .integrity span');
+      await expect(sentence.locator('a')).toHaveText('See the CI history');
+      const lines = await lineCenters(sentence);
+      expect(lines.length).toBeGreaterThan(1);
+      const lineHeight = await sentence.evaluate((element) => parseFloat(getComputedStyle(element.parentElement!).lineHeight));
+      for (const [index, center] of lines.slice(1).entries()) expect(center - lines[index]!).toBeCloseTo(lineHeight, 0);
+      const { height, foreign } = await linkHitSpan(sentence.locator('a'));
+      expect(height).toBeGreaterThanOrEqual(44);
+      expect(foreign).toEqual([]);
+    });
+  });
+}
+
+test.describe('the line break in the home heading', () => {
+  test('is hidden by a max-width query only, so no width between 899px and 900px lacks a rule', req('REQ-LAYOUT-01'), async ({ page }) => {
+    await open(page, '/');
+    const conditions = await page.evaluate(() => {
+      const found: string[] = [];
+      const visit = (rules: CSSRuleList, media: string) => {
+        for (const rule of rules) {
+          if (rule instanceof CSSMediaRule) visit(rule.cssRules, `${media} ${rule.conditionText}`.trim());
+          else if (rule instanceof CSSStyleRule && rule.selectorText.includes('.wide-break')) found.push(media);
+        }
+      };
+      for (const sheet of document.styleSheets) visit(sheet.cssRules, '');
+      return found;
+    });
+    expect(conditions).toHaveLength(1);
+    expect(conditions[0]).toMatch(/max-width:\s*899px|width\s*<=\s*899px/);
+    expect(conditions[0]).not.toMatch(/min-width|>=/);
   });
 });
-
-async function expectReservation(page: Page, strictUpperBound: boolean): Promise<void> {
-  const { reserved, ready } = await page.locator('[data-block="verdict"]').evaluate((block) => ({
-    reserved: parseFloat(getComputedStyle(block).minHeight),
-    ready: block.querySelector('[data-slot="live"]')!.lastElementChild!.getBoundingClientRect().bottom - block.getBoundingClientRect().top,
-  }));
-  expect(reserved).toBeLessThanOrEqual(ready);
-  if (strictUpperBound) expect(ready - reserved).toBeLessThanOrEqual(8);
-}
 
 test.describe('dark mode', () => {
   test.use({ colorScheme: 'dark', viewport: DESKTOP });

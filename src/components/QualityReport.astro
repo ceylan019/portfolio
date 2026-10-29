@@ -8,6 +8,7 @@
 import TopLine from './TopLine.astro';
 import DataBlock from './DataBlock.astro';
 import Footer from './Footer.astro';
+import VerdictSizer from './VerdictSizer.astro';
 
 interface Props { name: string; year: number; repo: string }
 const { name, year, repo } = Astro.props;
@@ -32,7 +33,9 @@ const ciLink = [{ href: actions, label: 'See the CI run history' }];
           fallback="Every promise this site makes is tied to the checks that prove it. Live results could not be loaded; the source and CI history are linked here."
           links={verdictLinks}
           fallbackClass="lede"
-        />
+        >
+          <VerdictSizer slot="sizer" />
+        </DataBlock>
         <p class="gloss">A <b>test</b> is one test case. A <b>test run</b> is one test in one device profile. Browser engines: Chromium, Firefox and WebKit. Device profiles: desktop Chromium, desktop Firefox, desktop WebKit, emulated iPhone (WebKit) and emulated Pixel (Chromium). Behavior is tested on fixed test content in every engine and device profile; the real content is checked for accessibility, performance, links and key behavior before deploy.</p>
         <DataBlock name="integrity" fallback="The live file check result is unavailable right now." links={ciLink} />
       </header>

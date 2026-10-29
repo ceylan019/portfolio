@@ -45,6 +45,24 @@ test('@REQ-QUAL-01 the verdict fallback links both the repository and its Action
   expect(block).toMatch(/<a class="lnk" href="https:\/\/github\.com\/example\/ceylan-akyol-site\/actions\/workflows\/ci\.yml">View the CI history<\/a>/);
 });
 
+test('@REQ-LAYOUT-01 the verdict block carries a hidden, unlinked copy of the ready verdict with the largest figures', async () => {
+  const html = await renderPage();
+  const block = html.slice(html.indexOf('data-block="verdict"'), html.indexOf('data-block="integrity"'));
+  const sizer = block.slice(block.indexOf('data-slot="sizer"'));
+  expect(block.indexOf('data-slot="sizer"')).toBeGreaterThan(block.indexOf('data-slot="live"'));
+  expect(block).toMatch(/<div data-slot="sizer" aria-hidden="true">/);
+  expect(sizer).toContain('all 99 pre-deploy requirements');
+  expect(sizer).toContain('9,999 tests');
+  expect(sizer).toContain('9,999 test runs');
+  expect(sizer).toContain('28 September 2026, 20:48 UTC');
+  expect(sizer).not.toMatch(/href|<a[ >]/);
+});
+
+test('@REQ-LAYOUT-01 only the verdict block carries a sizer', async () => {
+  const html = await renderPage();
+  expect(html.match(/data-slot="sizer"/g)).toHaveLength(1);
+});
+
 test('@REQ-QUAL-01 the duration block has a true, number-free fallback that is never empty', async () => {
   const html = await renderPage();
   const block = html.slice(html.indexOf('data-block="duration"'));

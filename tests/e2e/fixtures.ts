@@ -59,6 +59,18 @@ export function sparseQuality(): string {
   return mustParse({ ...doc, history: doc.history.slice(0, 2) });
 }
 
+/** Valid, with the figures a long-lived site shows: 34 requirements, 412 tests, 2,096 test runs and a September deploy. */
+export function liveSizedQuality(): string {
+  const doc = validQuality();
+  return mustParse({ ...doc, builtAt: '2026-09-30T20:48:00Z', counts: { ...doc.counts, requirements: 34, tests: 412, testRuns: 2096 } });
+}
+
+/** Valid, with a previous live check that found files differing from the tested build. */
+export function failedLiveCheckQuality(): string {
+  const doc = validQuality();
+  return mustParse({ ...doc, liveCheck: { ...doc.liveCheck!, ok: false } });
+}
+
 /** Valid, from a run whose start time and previous live check were both unknown:
  * no pipelineSeconds and no liveCheck. */
 export function firstRunQuality(): string {

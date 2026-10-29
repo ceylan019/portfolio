@@ -14,7 +14,7 @@ img, svg { display: block; max-width: 100%; }
 
 .lnk, .prose a, .list a, .reqs a { color: var(--rose-text); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, var(--rose-text) 40%, transparent); font-weight: 500; }
 .lnk:visited, .prose a:visited, .list a:visited, .reqs a:visited { color: var(--visited); text-decoration-color: var(--muted); }
-.lnk { display: inline-flex; align-items: center; min-height: 44px; text-wrap: pretty; }
+.lnk { display: inline-flex; align-items: center; min-height: 44px; text-wrap: balance; }
 
 /* 22px snapped to the 24px spacing-scale step (4, 8, 12, 16, 24, 32, 48, 64, 96). */
 .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px; border-radius: 10px; background: var(--rose-mark); color: var(--on-rose); font-weight: 700; text-decoration: none; }
@@ -23,8 +23,7 @@ img, svg { display: block; max-width: 100%; }
 
 .muted { color: var(--muted); }
 h1, h2 { text-wrap: balance; }
-.wide-break { display: none; }
-@media (min-width: 900px) { .wide-break { display: inline; } }
+@media (max-width: 899px) { .wide-break { display: none; } }
 h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
 
 .sec { display: grid; grid-template-columns: var(--label-col) 1fr; gap: var(--col-gap); margin-top: var(--section-gap); }
@@ -144,16 +143,12 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
 .qhead .qh1 { font-size: 64px; font-weight: 800; line-height: .95; letter-spacing: -0.035em; }
 .lede { font-size: 21px; line-height: 1.5; margin-top: 24px; max-width: 46ch; }
 .lede b { font-weight: 800; }
-[data-block="verdict"] { min-height: 200px; }
-@media (max-width: 899px) { [data-block="verdict"] { min-height: 182px; } }
-@media (max-width: 469px) { [data-block="verdict"] { min-height: 206px; } }
-@media (max-width: 450px) { [data-block="verdict"] { min-height: 233px; } }
-@media (max-width: 372px) { [data-block="verdict"] { min-height: 260px; } }
-@media (max-width: 339px) { [data-block="verdict"] { min-height: 284px; } }
-@media (max-width: 332px) { [data-block="verdict"] { min-height: 328px; } }
-@media (max-width: 317px) { [data-block="verdict"] { min-height: 355px; } }
+[data-block="verdict"] { display: grid; grid-template-columns: minmax(0, 1fr); }
+[data-block="verdict"] > [data-slot] { grid-area: 1 / 1; }
+[data-block] > [data-slot="sizer"] { visibility: hidden; user-select: none; }
 .meta2 { margin-top: 8px; font-size: 16px; line-height: 1.5; color: var(--muted); }
-.meta2 .lnk { display: inline; min-height: 0; padding-block: 16px; }
+.meta2 .lnk, .integrity span .lnk { display: inline; min-height: 0; padding-block: 16px; }
+.meta2 + .links { margin-top: 16px; }
 time { white-space: nowrap; }
 /* The glossary line uses the DESIGN.md "Labels, IDs, glossary" size
    (14px) and a 62ch cap, not 15px / 66ch. */

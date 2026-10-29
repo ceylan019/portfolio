@@ -6,8 +6,9 @@ import { plural } from '../../src/lib/format';
 import { parseQualityReport, type QualityReport } from '../../src/lib/quality-schema';
 import { renderProofStrip } from '../../src/lib/render-home';
 import {
-  formatDeployTime, renderDuration, renderIntegrity, renderMatrix, renderMutation, renderTrends, renderVerdict,
+  renderDuration, renderIntegrity, renderMatrix, renderMutation, renderTrends, renderVerdict,
 } from '../../src/lib/render-quality';
+import { LARGEST_VERDICT_FIGURES, formatDeployTime, verdictParts } from '../../src/lib/verdict-copy';
 
 const fixture = (name: string): QualityReport => {
   const r = parseQualityReport(JSON.parse(readFileSync(`tests/fixtures/quality/${name}.json`, 'utf8')));
@@ -32,6 +33,13 @@ test('@REQ-QUAL-01 verdict states requirements, tests and test runs', () => {
   const commit = l.querySelector('a[href*="/commit/"]')!;
   expect(commit.getAttribute('href')).toBe('https://github.com/example/ceylan-akyol-site/commit/e5cdb92a1b2c3d4e5f60718293a4b5c6d7e8f901');
   expect(commit.textContent).toBe('e5cdb92');
+});
+test('@REQ-LAYOUT-01 the sizer wording is the live verdict wording with the largest figures', () => {
+  const sizer = verdictParts(LARGEST_VERDICT_FIGURES);
+  const d = fixture('valid');
+  const l = live(); renderVerdict(l, { ...d, counts: { ...d.counts, requirements: 99, tests: 9999, testRuns: 9999 }, builtAt: LARGEST_VERDICT_FIGURES.builtAt, commit: LARGEST_VERDICT_FIGURES.commit });
+  const sizerText = [...sizer.lede.map((s) => (typeof s === 'string' ? s : s.strong)), sizer.deployedPrefix, sizer.deployedAt, sizer.commitPrefix, sizer.commit, sizer.ciRunLabel, sizer.sourceLabel].join('');
+  expect(squash(l.textContent)).toBe(squash(sizerText));
 });
 test('@REQ-QUAL-01 deploy time reads as day month year, UTC', () => {
   expect(formatDeployTime('2026-09-27T09:14:00Z')).toBe('27 September 2026, 09:14 UTC');
