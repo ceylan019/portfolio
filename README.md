@@ -43,7 +43,7 @@ export CHROME_PATH=$(node -e "import('@playwright/test').then(m=>console.log(m.c
 LHCI_BUILD=fixture pnpm lhci              # mobile, 3 runs each of / and /quality
 ```
 
-The `@visual` tests compare against baselines made in the Playwright container, so they are left out locally. `visual-baselines.yml` makes the baselines (see the runbook); after that, `pnpm exec playwright test --grep @visual` runs them.
+The `@visual` tests compare against baselines made in CI's Playwright container, so the commands above leave them out. `pnpm test:visual` runs them in that container through Docker, as `linux/amd64` like the GitHub runners, and `pnpm test:visual:update` writes new baselines (see the runbook). The `visual-baselines` workflow does the same on GitHub.
 
 **Real build: `@real` and axe with the stand-in `quality.json`, Lighthouse, links**
 

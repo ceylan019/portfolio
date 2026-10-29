@@ -7,3 +7,5 @@ Date: 2026-09-27
 **Why:** Screenshots of real content change whenever content changes. Rendering differs across machines unless fonts and browsers are identical.
 
 **Consequences:** Baselines are regenerated only by the `visual-baselines` workflow, which runs in the same container as CI and uploads the images as an artifact for review. Playwright itself is configured with `updateSnapshots: 'none'` everywhere else, so a missing baseline fails a local or CI run instead of silently writing one. Baselines are never generated on a laptop.
+
+**Update (2026-10-29):** 0009 adds a local way to make baselines, inside the same container.

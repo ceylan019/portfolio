@@ -11,7 +11,7 @@
 - Open the run's summary. The report job lists any requirement without coverage, unknown or missing tags, and which checks failed.
 - Lighthouse performance below 95 on a single job (`fixture` or `real`) only: rerun that job once from the Actions tab. Each attempt writes its scores to that job's summary, so both are recorded. A second miss is a real regression, not noise.
 - A transient GitHub error while reading the head of `main` fails the deploy job closed: it refuses to deploy rather than risk deploying a superseded commit. Rerunning the job recovers once GitHub answers again.
-- Visual regression failed after an intended design change: run the `visual-baselines` workflow (Actions tab, "Run workflow"), download its `visual-baselines` artifact, review the images, copy them into `tests/e2e/__screenshots__`, and commit them. Baselines are never generated on a laptop: Playwright is configured with `updateSnapshots: 'none'` everywhere except that workflow, so a local run can fail against a missing baseline but can never quietly create one.
+- Visual regression failed after an intended design change: run `pnpm test:visual:update` (needs Docker), review the images it lists as changed, and commit them. It runs CI's Playwright container as `linux/amd64`, so the images match CI's byte for byte. Without Docker, run the `visual-baselines` workflow (Actions tab, "Run workflow"), download its `visual-baselines` artifact, and copy the images into `tests/e2e/__screenshots__`. A plain `playwright test` run never writes baselines: Playwright is configured with `updateSnapshots: 'none'`, so it can fail against a missing baseline but can never quietly create one.
 
 ## Where warnings appear
 
