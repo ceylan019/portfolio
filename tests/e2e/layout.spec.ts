@@ -329,6 +329,7 @@ for (const { name, size } of [{ name: 'desktop', size: DESKTOP }, { name: 'mobil
       expect(await meta.locator('time').evaluate((element) => element.getClientRects().length)).toBe(1);
       expect((await meta.locator('a').boundingBox())!.height).toBeGreaterThanOrEqual(44);
       expect(await meta.evaluate((element) => [getComputedStyle(element).fontSize, getComputedStyle(element).color === getComputedStyle(document.querySelector('.gloss')!).color])).toEqual(['16px', true]);
+      expect(await page.locator('[data-block="verdict"] .meta2').evaluateAll((elements) => elements.map((element) => getComputedStyle(element).fontVariantNumeric))).toEqual(['normal', 'normal']);
       await expect(page.locator('[data-block="verdict"] [data-slot="live"] .links a')).toHaveText(['View this CI run', 'Browse the source']);
     });
 

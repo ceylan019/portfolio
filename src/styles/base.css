@@ -146,7 +146,7 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
 [data-block="verdict"] { display: grid; grid-template-columns: minmax(0, 1fr); }
 [data-block="verdict"] > [data-slot] { grid-area: 1 / 1; }
 [data-block] > [data-slot="sizer"] { visibility: hidden; user-select: none; }
-.meta2 { margin-top: 8px; font-size: 16px; line-height: 1.5; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meta2 { margin-top: 8px; font-size: 16px; line-height: 1.5; color: var(--muted); }
 [data-slot="sizer"] .meta2 { padding-inline-end: 8px; }
 .meta2 .lnk, .integrity span .lnk { display: inline; min-height: 0; padding-block: 16px; }
 .meta2 + .links { margin-top: 16px; }

@@ -33,7 +33,7 @@ export const LARGEST_VERDICT_FIGURES: VerdictFigures = {
   requirements: LIMITS.requirements,
   tests: 9999,
   testRuns: 9999,
-  builtAt: '2026-09-30T00:00:00Z',
+  builtAt: '2090-09-30T00:00:00Z',
   commit: '0000000',
 };
 

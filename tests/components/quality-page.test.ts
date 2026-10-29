@@ -55,7 +55,7 @@ test('@REQ-LAYOUT-01 the verdict block carries a hidden, inert, unlinked copy of
   expect(sizer).toContain('all 200 pre-deploy requirements');
   expect(sizer).toContain('9,999 tests');
   expect(sizer).toContain('9,999 test runs');
-  expect(sizer).toContain('30 September 2026, 00:00 UTC');
+  expect(sizer).toContain('30 September 2090, 00:00 UTC');
   expect(sizer).toContain('commit <span class="lnk">0000000</span>');
   expect(sizer).not.toMatch(/href|<a[ >]/);
 });

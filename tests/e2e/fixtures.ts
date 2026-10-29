@@ -66,7 +66,7 @@ export function liveSizedQuality(): string {
 
 export function widestVerdictQuality(): string {
   const doc = validQuality();
-  return mustParse({ ...doc, builtAt: '2030-09-30T00:00:00Z', commit: '0'.repeat(40), counts: { ...doc.counts, requirements: 200, tests: 9999, testRuns: 9999 } });
+  return mustParse({ ...doc, builtAt: '2090-09-30T00:00:00Z', commit: '0'.repeat(40), counts: { ...doc.counts, requirements: 200, tests: 9999, testRuns: 9999 } });
 }
 
 export function failedLiveCheckQuality(): string {
