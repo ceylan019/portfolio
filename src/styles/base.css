@@ -48,13 +48,13 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
 .row .title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.35; overflow-wrap: anywhere; }
 .row.expired .title { color: var(--muted); }
 /* 13px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
-.expired-label { display: inline-block; font-size: 14px; font-weight: 700; color: var(--muted); border: 1.5px solid var(--line); border-radius: 6px; padding: 0 8px; margin-left: 6px; vertical-align: 3px; }
+.expired-label { display: inline-block; font-size: 14px; font-weight: 700; color: var(--muted); border: 1.5px solid var(--line); border-radius: 6px; padding: 0 8px; margin-left: 8px; vertical-align: 3px; }
 @media (max-width: 899px) { .row, .req { grid-template-columns: 32px 1fr; } .row > :last-child, .req > :last-child { grid-column: 2; } }
 
-.cert-body { display: flex; gap: 16px; align-items: flex-start; }
-.cert-thumb { flex: none; display: block; width: 96px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.cert-thumb { display: block; width: 96px; margin-top: 12px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .cert-thumb:hover { border-color: var(--rose-text); }
 .cert-thumb img { display: block; width: 100%; height: auto; }
+@media (prefers-color-scheme: dark) { .cert-thumb img { filter: brightness(0.8); } }
 .cert-dialog { margin: auto; width: min(1088px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); }
 .cert-dialog::backdrop { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 .cert-dialog-inner { display: grid; gap: 16px; justify-items: start; padding: 16px 24px 24px; }
