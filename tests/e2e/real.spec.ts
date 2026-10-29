@@ -36,6 +36,26 @@ test('@real every non-hidden certification file is rendered', req('REQ-CERT-02')
   await expect(page.locator('.list .row')).toHaveCount(visible);
 });
 
+test('@real every certificate opens its WebP preview and its PDF is served', req('REQ-CERT-07'), async ({ page, request }) => {
+  const dir = 'src/content/certifications';
+  const withCertificate = readdirSync(dir).filter((f) => f.endsWith('.yaml'))
+    .map((f) => ({ id: f.replace(/\.yaml$/, ''), ...(parse(readFileSync(`${dir}/${f}`, 'utf8')) as { name: string; hidden?: boolean; certificateImage?: string; certificate?: string }) }))
+    .filter((c) => c.hidden !== true && c.certificateImage);
+  await page.goto('/');
+  await expect(page.locator('a[data-certificate]')).toHaveCount(withCertificate.length);
+  for (const c of withCertificate) {
+    await page.getByRole('link', { name: `View certificate: ${c.name}` }).click();
+    const dialog = page.getByRole('dialog', { name: c.name });
+    const img = dialog.getByRole('img');
+    await expect.poll(() => img.evaluate((i: HTMLImageElement) => (i.complete && i.naturalWidth > 0 ? i.currentSrc : ''))).toMatch(/\.webp$/);
+    await page.keyboard.press('Escape');
+    if (!c.certificate) continue;
+    const res = await request.get(`/certificates/${c.id}.pdf`);
+    expect(res.headers()['content-type']).toContain('application/pdf');
+    expect((await res.body()).subarray(0, 5).toString()).toBe('%PDF-');
+  }
+});
+
 test('@real unknown paths return 404', req('REQ-NF-01'), async ({ page }) => {
   expect((await page.goto('/definitely-missing'))!.status()).toBe(404);
   await expect(page.getByRole('link', { name: 'Go to the home page' })).toHaveAttribute('href', '/');

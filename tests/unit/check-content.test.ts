@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import sharp from 'sharp';
 import {
-  checkContent, checkImage, checkProfilePhoto, iptcProblemKeys, normalizePhotoFormat, xmpProblemKeys,
+  checkCertificates, checkContent, checkImage, checkProfilePhoto, iptcProblemKeys, normalizePhotoFormat, xmpProblemKeys,
 } from '../../scripts/check-content';
 import { resolvePhotoPath } from '../../src/lib/content-paths';
 
@@ -390,5 +390,53 @@ describe('resolvePhotoPath and checkProfilePhoto (@REQ-CONTENT-01)', () => {
   test('@REQ-CONTENT-01 normalizePhotoFormat leaves a HEIC-shaped heif rejected', () => {
     expect(normalizePhotoFormat({ format: 'heif', compression: 'hevc' })).toBe('heif');
     expect(normalizePhotoFormat({ format: 'heif' })).toBe('heif');
+  });
+});
+
+describe('checkCertificates', () => {
+  let dir: string;
+  const yaml = (fields: string) => writeFile(join(dir, 'certifications/a.yaml'), `name: A\nissuer: B\nissueDate: 2024-01-01\n${fields}`, 'utf8');
+  const image = (name: string, format: 'webp' | 'png') =>
+    sharp({ create: { width: 40, height: 30, channels: 3, background: { r: 255, g: 255, b: 255 } } })[format]().toFile(join(dir, 'assets', name));
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'check-certificates-'));
+    await mkdir(join(dir, 'certifications'));
+    await mkdir(join(dir, 'assets'));
+    await image('c.webp', 'webp');
+    await writeFile(join(dir, 'assets/c.pdf'), '%PDF-1.4\n', 'latin1');
+  });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  test('@REQ-CONTENT-01 a WebP image and a PDF next to the content pass', async () => {
+    await yaml('certificateImage: ../assets/c.webp\ncertificate: ../assets/c.pdf\n');
+    expect(await checkCertificates(dir)).toEqual([]);
+  });
+  test('@REQ-CONTENT-01 entries without a certificate are not checked', async () => {
+    await yaml('verifyUrl: https://v.example\n');
+    expect(await checkCertificates(dir)).toEqual([]);
+  });
+  test('@REQ-CONTENT-01 a missing certificate image or PDF is reported', async () => {
+    await yaml('certificateImage: ../assets/gone.webp\ncertificate: ../assets/gone.pdf\n');
+    const problems = await checkCertificates(dir);
+    expect(problems).toHaveLength(2);
+    expect(problems[0]).toMatch(/a\.yaml: could not read the certificate image .*gone\.webp\.$/);
+    expect(problems[1]).toMatch(/a\.yaml: could not read the certificate PDF .*gone\.pdf\.$/);
+  });
+  test('@REQ-CONTENT-01 a certificate image that is not really WebP is reported', async () => {
+    await image('fake.webp', 'png');
+    await yaml('certificateImage: ../assets/fake.webp\n');
+    expect(await checkCertificates(dir)).toEqual([expect.stringMatching(/a\.yaml: the certificate image .*fake\.webp must be WebP\.$/)]);
+  });
+  test('@REQ-CONTENT-01 a certificate PDF that is not really a PDF is reported', async () => {
+    await writeFile(join(dir, 'assets/fake.pdf'), 'not a pdf', 'utf8');
+    await yaml('certificateImage: ../assets/c.webp\ncertificate: ../assets/fake.pdf\n');
+    expect(await checkCertificates(dir)).toEqual([expect.stringMatching(/a\.yaml: .*fake\.pdf is not a PDF\.$/)]);
+  });
+  test('@REQ-CONTENT-01 the real and fixture certificates pass', async () => {
+    expect(await checkCertificates('src/content')).toEqual([]);
+    expect(await checkCertificates('tests/fixtures/content')).toEqual([]);
   });
 });

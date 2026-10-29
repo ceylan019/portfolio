@@ -9,6 +9,9 @@
 /cv.pdf
   Cache-Control: no-cache
 
+/certificates/*
+  Cache-Control: no-cache
+
 /quality.json
   Cache-Control: no-cache
 

@@ -1,6 +1,7 @@
 import { experimental_AstroContainer as AstroContainer } from 'astro/container';
 import Certifications from '../../src/components/Certifications.astro';
 import type { Certification } from '../../src/lib/certifications';
+import certificateImage from '../fixtures/content/assets/certificate.webp';
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
 const today = d('2026-09-27');
@@ -19,7 +20,7 @@ test('@REQ-CERT-04 verifiable entries get a tick and a uniquely named verify lin
   expect(html).not.toContain('target=');
 });
 test('@REQ-CERT-06 the tick note appears only when a tick is shown', async () => {
-  expect(await render([c({ verifyUrl: 'https://v.example' })])).toContain('A tick means you can verify it with the issuer.');
+  expect(await render([c({ verifyUrl: 'https://v.example' })])).toContain('A tick means you can verify it with the issuer or view the certificate.');
   expect(await render([c({})])).not.toContain('A tick means');
 });
 test('@REQ-CERT-05 validity dates and the expired label', async () => {
@@ -42,4 +43,41 @@ test('@REQ-A11Y-04 the section is labelled by its heading', async () => {
   const html = await render([c({})]);
   expect(html).toMatch(/<section[^>]*aria-labelledby="certifications-heading"/);
   expect(html).toContain('id="certifications-heading"');
+});
+test('@REQ-CERT-04 a certificate image earns the tick but no Verify link', async () => {
+  const html = await render([c({ name: 'AT*SQA API Testing', certificateImage })]);
+  expect(html).toContain('class="tick"');
+  expect(html).not.toContain('Verify credential');
+  expect(html).toContain('A tick means you can verify it with the issuer or view the certificate.');
+});
+test('@REQ-CERT-07 a certificate shows a WebP thumbnail that opens its preview, with the PDF linked', async () => {
+  const html = await render([c({ id: 'atsqa', name: 'AT*SQA API Testing', certificateImage, certificate: '/u/a.pdf' })]);
+  expect(html).toMatch(/<a class="cert-thumb" href="\/certificates\/atsqa\.pdf" data-certificate="certificate-atsqa" aria-label="View certificate: AT\*SQA API Testing">/);
+  expect(html).toMatch(/<dialog id="certificate-atsqa" class="cert-dialog" aria-labelledby="certificate-atsqa-title">/);
+  expect(html).toContain('<p id="certificate-atsqa-title" class="cert-dialog-title">AT*SQA API Testing</p>');
+  expect(html).toContain('<button type="button" class="cert-close" data-close>Close</button>');
+  expect(html).toContain('alt="Certificate: AT*SQA API Testing, issued by ISTQB"');
+  expect(html).toContain('<a class="lnk" href="/certificates/atsqa.pdf" aria-label="Open PDF: AT*SQA API Testing">Open PDF</a>');
+  expect(html).not.toMatch(/\sstyle=/);
+});
+test('@REQ-CERT-07 every certificate image is WebP and loads only when needed', async () => {
+  const html = await render([c({ id: 'atsqa', certificateImage, certificate: '/u/a.pdf' })]);
+  const imgs = html.match(/<img [^>]*>/g) ?? [];
+  expect(imgs).toHaveLength(2);
+  for (const img of imgs) {
+    expect(img).toContain('loading="lazy"');
+    const urls = [...img.matchAll(/(?:src|srcset)="([^"]+)"/g)].flatMap((m) => m[1]!.split(',').map((u) => u.trim().split(' ')[0]!));
+    expect(urls.length).toBeGreaterThan(0);
+    for (const url of urls) expect(url).toMatch(/[.=]webp(&|$)|\.webp$/);
+  }
+});
+test('@REQ-CERT-07 an image without a PDF links the thumbnail to the full image and offers no PDF', async () => {
+  const html = await render([c({ id: 'udemy', name: 'Playwright', certificateImage })]);
+  expect(html).toMatch(/<a class="cert-thumb" href="[^"]+webp[^"]*" data-certificate="certificate-udemy"/);
+  expect(html).not.toContain('Open PDF');
+});
+test('@REQ-CERT-07 an entry without a certificate has no thumbnail and no preview', async () => {
+  const html = await render([c({ verifyUrl: 'https://v.example' })]);
+  expect(html).not.toContain('cert-thumb');
+  expect(html).not.toContain('<dialog');
 });

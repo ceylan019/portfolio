@@ -20,6 +20,20 @@ for (const path of ['/', '/quality', '/404']) {
   }
 }
 
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`@axe the open certificate preview has no automated violations in ${colorScheme} mode`, req('REQ-A11Y-01', 'REQ-CERT-07'), async ({ page }, testInfo) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await page.goto('/');
+    await settled(page);
+    await page.locator('a[data-certificate]').first().click();
+    await expect(page.locator('dialog[open]')).toBeVisible();
+    const { violations, passes } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+    testInfo.annotations.push({ type: 'axe-violations', description: String(violations.length) });
+    expect(passes.length).toBeGreaterThan(0);
+    expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+}
+
 test('skip link, tab order and visible focus', req('REQ-A11Y-02'), async ({ page, browserName }) => {
   // WebKit follows Safari: plain Tab skips links unless the user turns on
   // "Press Tab to highlight each item", and Option+Tab (Alt+Tab) moves through

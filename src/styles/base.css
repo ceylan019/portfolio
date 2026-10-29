@@ -47,6 +47,21 @@ h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01e
 .expired-label { display: inline-block; font-size: 14px; font-weight: 700; color: var(--muted); border: 1.5px solid var(--line); border-radius: 6px; padding: 0 8px; margin-left: 6px; vertical-align: 3px; }
 @media (max-width: 899px) { .row { grid-template-columns: 32px 1fr; } .row > :last-child { grid-column: 2; } }
 
+.cert-body { display: flex; gap: 16px; align-items: flex-start; }
+.cert-thumb { flex: none; display: block; width: 96px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.cert-thumb:hover { border-color: var(--rose-text); }
+.cert-thumb img { display: block; width: 100%; height: auto; }
+.cert-dialog { margin: auto; width: min(1088px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); }
+.cert-dialog::backdrop { background: color-mix(in srgb, var(--bg) 90%, transparent); }
+.cert-dialog-inner { display: grid; gap: 16px; justify-items: start; padding: 16px 24px 24px; }
+.cert-dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; }
+.cert-dialog-title { font-weight: 700; }
+.cert-close { flex: none; min-height: 44px; padding: 0 16px; border: 1.5px solid var(--line); border-radius: 10px; background: transparent; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.cert-close:hover { border-color: var(--rose-text); }
+.cert-full { display: block; width: 100%; height: auto; max-height: calc(100dvh - 200px); object-fit: contain; }
+html:has(.cert-dialog[open]) { overflow: hidden; }
+@media (max-width: 899px) { .cert-thumb { width: 72px; } .cert-dialog-inner { padding: 12px 16px 16px; } }
+
 .tick-ink { fill: url(#tick-gradient); }
 .tick-stop-a { stop-color: var(--rose-mark); }
 .tick-stop-b { stop-color: var(--coral); }

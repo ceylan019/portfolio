@@ -46,3 +46,15 @@ test('without JavaScript /quality shows every fallback and working home and CV l
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ceylan Akyol Testname Longerthanusual Xy');
 });
+
+test('without JavaScript a certificate thumbnail links straight to its PDF', req('REQ-CERT-07'), async ({ page, request }) => {
+  await page.goto('/');
+  const thumb = page.getByRole('link', { name: 'View certificate: ISTQB Certified Tester, Foundation Level' });
+  await expect(thumb).toHaveAttribute('href', '/certificates/b-foundation.pdf');
+  await expect(thumb).not.toHaveAttribute('aria-haspopup', 'dialog');
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+  const res = await request.get('/certificates/b-foundation.pdf');
+  expect(res.status()).toBe(200);
+  expect(res.headers()['content-type']).toContain('application/pdf');
+  expect((await res.body()).subarray(0, 5).toString()).toBe('%PDF-');
+});

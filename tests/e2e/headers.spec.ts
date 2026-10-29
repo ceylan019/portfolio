@@ -2,14 +2,14 @@ import { test, expect, SECURITY_HEADERS } from './fixtures';
 import { req } from '../tag';
 
 test('security headers on every page', req('REQ-SEC-01'), async ({ request }) => {
-  for (const path of ['/', '/quality', '/404', '/this/does/not/exist', '/cv.pdf', '/og.png', '/quality.json']) {
+  for (const path of ['/', '/quality', '/404', '/this/does/not/exist', '/cv.pdf', '/og.png', '/quality.json', '/certificates/b-foundation.pdf']) {
     const h = (await request.get(path)).headers();
     for (const [name, value] of Object.entries(SECURITY_HEADERS)) expect({ path, name, value: h[name] }).toEqual({ path, name, value });
   }
 });
 
 test('mutable files revalidate, fingerprinted assets are immutable', req('REQ-CACHE-01'), async ({ request, page }) => {
-  for (const path of ['/cv.pdf', '/quality.json', '/og.png']) {
+  for (const path of ['/cv.pdf', '/quality.json', '/og.png', '/certificates/b-foundation.pdf']) {
     expect({ path, cache: (await request.get(path)).headers()['cache-control'] }).toEqual({ path, cache: 'no-cache' });
   }
   for (const path of ['/', '/quality']) {

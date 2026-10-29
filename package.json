@@ -18,7 +18,8 @@
     "serve:real": "wrangler dev --assets ./dist-served --port 8788 --local",
     "lhci": "lhci autorun",
     "assets:placeholders": "tsx scripts/make-placeholder-assets.ts",
-    "brush:extract": "tsx scripts/extract-brush-paths.ts"
+    "brush:extract": "tsx scripts/extract-brush-paths.ts",
+    "certificate:image": "tsx scripts/certificate-image.ts"
   },
   "dependencies": {
     "astro": "6.4.8",

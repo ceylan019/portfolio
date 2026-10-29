@@ -2,8 +2,10 @@ import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import { z } from 'astro/zod';
 import {
-  certificationRules, photoProblem, profileObject, PROFILE_FIELDS, CERTIFICATION_FIELDS,
+  certificationRules as certificationRulesWith, photoProblem, profileObject, PROFILE_FIELDS, CERTIFICATION_FIELDS,
 } from '../../src/content-schemas';
+
+const certificationRules = certificationRulesWith(() => z.string());
 
 const cert = (over: Record<string, unknown>) => ({ name: 'A', issuer: 'ISTQB', issueDate: '2024-03-01', ...over });
 
@@ -19,6 +21,20 @@ test('@REQ-CONTENT-01 an expiry before the issue date is rejected with a plain m
 });
 test('@REQ-CONTENT-01 a malformed verify URL is rejected', () => {
   expect(certificationRules.safeParse(cert({ verifyUrl: 'not a url' })).success).toBe(false);
+});
+test('@REQ-CONTENT-01 a certificate image may stand alone, with or without its PDF', () => {
+  expect(certificationRules.safeParse(cert({ certificateImage: '/u/a.webp' })).success).toBe(true);
+  expect(certificationRules.safeParse(cert({ certificateImage: '/u/a.webp', certificate: '/u/a.pdf' })).success).toBe(true);
+});
+test('@REQ-CONTENT-01 a certificate PDF without its image is rejected with a plain message', () => {
+  const r = certificationRules.safeParse(cert({ certificate: '/u/a.pdf' }));
+  expect(r.success).toBe(false);
+  if (!r.success) expect(r.error.issues[0]!.message).toBe('A certificate PDF needs its WebP image too: run pnpm certificate:image with the PDF.');
+});
+test('@REQ-CONTENT-01 the certificate file must be a PDF', () => {
+  const r = certificationRules.safeParse(cert({ certificateImage: '/u/a.webp', certificate: '/u/a.docx' }));
+  expect(r.success).toBe(false);
+  if (!r.success) expect(r.error.issues[0]!.message).toBe('The certificate file must be a PDF.');
 });
 test('@REQ-CONTENT-01 badge images are no longer accepted (G1)', () => {
   expect(CERTIFICATION_FIELDS.map((f) => f.name)).not.toContain('badge');

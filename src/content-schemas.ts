@@ -11,21 +11,28 @@ export function photoProblem(meta: { width: number; height: number; format: stri
   return null;
 }
 
-export const certificationObject = z.object({
+export const certificationObject = <T extends z.ZodType>(image: () => T) => z.object({
   name: z.string().min(1).max(120),
   issuer: z.string().min(1).max(80),
   issueDate: z.coerce.date(),
   expiryDate: z.coerce.date().optional(),
   credentialId: z.string().max(60).optional(),
   verifyUrl: z.url().optional(),
+  certificateImage: image().optional(),
+  certificate: z.string().regex(/\.pdf$/i, 'The certificate file must be a PDF.').optional(),
   hidden: z.boolean().default(false),
   placeholder: z.boolean().default(false),
 });
 
-export const certificationRules = certificationObject.refine(
-  (c) => !c.expiryDate || c.expiryDate >= c.issueDate,
-  { message: 'The expiry date cannot be before the issue date.', path: ['expiryDate'] },
-);
+export const certificationRules = <T extends z.ZodType>(image: () => T) => certificationObject(image)
+  .refine(
+    (c) => !c.expiryDate || c.expiryDate >= c.issueDate,
+    { message: 'The expiry date cannot be before the issue date.', path: ['expiryDate'] },
+  )
+  .refine(
+    (c) => !c.certificate || c.certificateImage !== undefined,
+    { message: 'A certificate PDF needs its WebP image too: run pnpm certificate:image with the PDF.', path: ['certificateImage'] },
+  );
 
 export const profileObject = (image: () => z.ZodType) => z.object({
   name: z.string().min(1).max(60),
@@ -47,4 +54,4 @@ const fieldsOf = (shape: Record<string, z.ZodType>) =>
 
 // z.string() stands in for image(): both are required, which is what the drift test compares.
 export const PROFILE_FIELDS = fieldsOf(profileObject(() => z.string()).shape);
-export const CERTIFICATION_FIELDS = fieldsOf(certificationObject.shape);
+export const CERTIFICATION_FIELDS = fieldsOf(certificationObject(() => z.string()).shape);

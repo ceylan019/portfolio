@@ -39,6 +39,13 @@ GitHub disables scheduled workflows in public repositories after 60 days without
 - The local pre-commit hook catches this earlier, before a commit is even made. Enable it once with `git config core.hooksPath .githooks`.
 - The CV is a public version: no phone number, no home address.
 
+## Certificates
+
+- A certification can show its certificate: a WebP thumbnail beside the entry that opens a full-size preview. A certificate image also gives the entry its tick, with or without a verify link.
+- From a PDF (macOS): put it in `src/assets/uploads/`, run `pnpm certificate:image src/assets/uploads/<name>.pdf`, and add the two lines it prints (`certificateImage` and `certificate`) to the certification's YAML file. The preview then links the PDF, served at `/certificates/<yaml file name>.pdf`.
+- From an image only: convert it to WebP, put it in `src/assets/uploads/`, and set only `certificateImage`.
+- In Pages CMS, upload the WebP to "Certificate image" and the PDF, if any, to "Certificate PDF". The build fails when a PDF has no image, when the image is not really WebP, or when a file is missing.
+
 ## Swapping in the custom domain
 
 1. Buy the domain (Cloudflare Registrar) and add it as a custom domain on the `cv` Worker.

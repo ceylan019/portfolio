@@ -38,7 +38,7 @@ const profile = defineCollection({
 
 const certifications = defineCollection({
   loader: glob({ pattern: '*.yaml', base: `${base}/certifications` }),
-  schema: certificationRules,
+  schema: ({ image }) => certificationRules(image),
 });
 
 export const collections = { profile, certifications };

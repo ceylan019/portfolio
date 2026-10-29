@@ -4,7 +4,7 @@
 // tagline or runs long (REQ-CONTENT-01). Exits 1 with one plain message per
 // problem found.
 import { existsSync, readFileSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { dirname, join, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import sharp from 'sharp';
 import exifr from 'exifr';
@@ -15,7 +15,7 @@ import { identifyingExifKeys, identifyingIptcKeys, identifyingXmpKeys } from '..
 import { walkFiles } from './node-fs';
 import { aboutProblems } from '../src/lib/content-rules';
 import { splitFrontmatter } from '../src/lib/frontmatter';
-import { resolvePhotoPath } from '../src/lib/content-paths';
+import { resolveContentPath, resolvePhotoPath } from '../src/lib/content-paths';
 import { photoProblem } from '../src/content-schemas';
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.heic']);
@@ -157,6 +157,39 @@ export async function checkProfilePhoto(photoPath: string): Promise<string | nul
   return problem ? `${photoPath}: ${problem}` : null;
 }
 
+const PDF_SIGNATURE = Buffer.from('%PDF-', 'latin1');
+
+async function certificateImageProblem(path: string): Promise<string | null> {
+  try {
+    const { format } = await sharp(path).metadata();
+    return format === 'webp' ? null : `the certificate image ${path} must be WebP.`;
+  } catch {
+    return `could not read the certificate image ${path}.`;
+  }
+}
+
+function certificatePdfProblem(path: string): string | null {
+  try {
+    return readFileSync(path).subarray(0, PDF_SIGNATURE.length).equals(PDF_SIGNATURE) ? null : `${path} is not a PDF.`;
+  } catch {
+    return `could not read the certificate PDF ${path}.`;
+  }
+}
+
+export async function checkCertificates(contentDir: string): Promise<string[]> {
+  const problems: string[] = [];
+  for (const file of walk(join(contentDir, 'certifications')).filter((f) => extname(f) === '.yaml')) {
+    const { certificateImage, certificate } = parseYaml(readFileSync(file, 'utf8')) as { certificateImage?: unknown; certificate?: unknown };
+    const at = (path: string) => resolveContentPath(dirname(file), path);
+    const found = [
+      typeof certificateImage === 'string' ? await certificateImageProblem(at(certificateImage)) : null,
+      typeof certificate === 'string' ? certificatePdfProblem(at(certificate)) : null,
+    ];
+    problems.push(...found.filter((p) => p !== null).map((p) => `${file}: ${p}`));
+  }
+  return problems;
+}
+
 /** Runs the content checks for the given CLI arguments and returns the problems found.
  * Never throws for a content problem: those come back as strings for the caller to print
  * and exit on. */
@@ -188,6 +221,7 @@ export async function checkContent(args: string[]): Promise<string[]> {
         if (photoProblemMessage) problems.push(photoProblemMessage);
       }
     }
+    problems.push(...(await checkCertificates(dir)));
   }
 
   return problems;

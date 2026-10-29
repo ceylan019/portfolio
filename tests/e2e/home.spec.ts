@@ -1,5 +1,6 @@
 import { test, expect, settled } from './fixtures';
 import { req } from '../tag';
+import type { Locator } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => { await page.goto('/'); await settled(page); });
 
@@ -63,7 +64,49 @@ test('certifications are ordered, filtered and labelled', req('REQ-CERT-01', 'RE
   await expect(rows.nth(3).locator('.tick')).toHaveCount(0);
   await expect(rows.nth(3).locator('a')).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Verify credential: ISTQB Certified Tester, Foundation Level' })).toHaveAttribute('href', 'https://verify.example/ctfl');
-  await expect(page.getByText('A tick means you can verify it with the issuer.')).toBeVisible();
+  await expect(page.getByText('A tick means you can verify it with the issuer or view the certificate.')).toBeVisible();
+});
+
+const loadedWebp = (img: Locator) => img.evaluate((i: HTMLImageElement) => (i.complete && i.naturalWidth > 0 ? i.currentSrc : ''));
+
+test('a certificate thumbnail opens a WebP preview that closes with Esc, the close button or a click outside', req('REQ-CERT-07'), async ({ page }) => {
+  const name = 'ISTQB Certified Tester, Foundation Level';
+  const thumb = page.getByRole('link', { name: `View certificate: ${name}` });
+  await thumb.scrollIntoViewIfNeeded();
+  await expect.poll(() => loadedWebp(thumb.locator('img'))).toMatch(/\.webp$/);
+  await expect(thumb).toHaveAttribute('aria-haspopup', 'dialog');
+  const dialog = page.getByRole('dialog', { name });
+  await expect(dialog).toBeHidden();
+
+  await thumb.click();
+  await expect(dialog).toBeVisible();
+  await expect.poll(() => loadedWebp(dialog.getByRole('img', { name: `Certificate: ${name}, issued by ISTQB` }))).toMatch(/\.webp$/);
+  await expect(dialog.getByRole('link', { name: `Open PDF: ${name}` })).toHaveAttribute('href', '/certificates/b-foundation.pdf');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(thumb).toBeFocused();
+
+  await thumb.click();
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(thumb).toBeFocused();
+
+  await thumb.click();
+  await page.mouse.click(4, 4);
+  await expect(dialog).toBeHidden();
+  await expect(thumb).toBeFocused();
+});
+
+test('the certificate preview opens from the keyboard and holds focus until closed', req('REQ-CERT-07', 'REQ-A11Y-02'), async ({ page }) => {
+  const thumb = page.getByRole('link', { name: 'View certificate: ISTQB Certified Tester, Foundation Level' });
+  await thumb.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'ISTQB Certified Tester, Foundation Level' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(thumb).toBeFocused();
 });
 
 test('availability line shows when switched on', req('REQ-AVAIL-01'), async ({ page }) => {

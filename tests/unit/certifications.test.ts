@@ -1,13 +1,14 @@
 import { formatMonthYear, utcDay } from '../../src/lib/dates';
 import {
   type Certification, isExpired, validity, validityLabel,
-  visibleCertifications, hasVerification, showTickNote,
+  visibleCertifications, hasVerification, showTickNote, hasTick, certificatePdfHref,
 } from '../../src/lib/certifications';
 
 const d = (iso: string) => new Date(`${iso}T00:00:00Z`);
 const cert = (over: Partial<Certification>): Certification => ({
   id: 'x', name: 'Cert', issuer: 'ISTQB', issueDate: d('2024-03-01'), ...over,
 });
+const image = { src: '/_astro/c.webp', width: 2400, height: 1697, format: 'webp' } as const;
 
 describe('dates', () => {
   test('@REQ-CERT-05 formats month and year in English, UTC', () => {
@@ -90,6 +91,24 @@ describe('ticks', () => {
     expect(showTickNote([cert({})])).toBe(false);
     expect(showTickNote([cert({ verifyUrl: 'https://v.example', hidden: true })])).toBe(false);
     expect(showTickNote([])).toBe(false);
+  });
+  test('@REQ-CERT-04 a tick with a verify URL or a certificate image, and not otherwise', () => {
+    expect(hasTick(cert({ verifyUrl: 'https://verify.example/1' }))).toBe(true);
+    expect(hasTick(cert({ certificateImage: image }))).toBe(true);
+    expect(hasTick(cert({ verifyUrl: '' }))).toBe(false);
+    expect(hasTick(cert({}))).toBe(false);
+  });
+  test('@REQ-CERT-06 a certificate image alone is enough for the tick note', () => {
+    expect(showTickNote([cert({ certificateImage: image })])).toBe(true);
+    expect(showTickNote([cert({ certificateImage: image, hidden: true })])).toBe(false);
+  });
+});
+
+describe('certificates', () => {
+  test('@REQ-CERT-07 the PDF is served under the certification id, only when there is one', () => {
+    expect(certificatePdfHref(cert({ id: 'istqb-api', certificateImage: image, certificate: '/u/a.pdf' }))).toBe('/certificates/istqb-api.pdf');
+    expect(certificatePdfHref(cert({ certificateImage: image }))).toBeNull();
+    expect(certificatePdfHref(cert({ certificate: '' }))).toBeNull();
   });
 });
 

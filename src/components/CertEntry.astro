@@ -1,22 +1,49 @@
 ---
+import { Image, getImage } from 'astro:assets';
 import Tick from './Tick.astro';
 import { formatMonthYear } from '../lib/dates';
-import { hasVerification, validity, validityLabel, type Certification } from '../lib/certifications';
+import { certificatePdfHref, hasTick, hasVerification, validity, validityLabel, type Certification } from '../lib/certifications';
 interface Props { entry: Certification; today: Date }
 const { entry, today } = Astro.props;
 const v = validity(entry, today);
 const label = validityLabel(v);
-const verifiable = hasVerification(entry);
 const meta = `Issued by ${entry.issuer}, ${formatMonthYear(entry.issueDate)}${label ? `. ${label}` : ''}`;
+const image = entry.certificateImage;
+const pdf = certificatePdfHref(entry);
+const fullImage = image && (await getImage({ src: image, format: 'webp' })).src;
+const dialogId = `certificate-${entry.id}`;
 ---
 <li class:list={['row', { expired: v.kind === 'expired' }]}>
-  {verifiable ? <Tick size={30} /> : <span />}
-  <div>
-    <span class="title">{entry.name}</span>{v.kind === 'expired' && <> <span class="expired-label">Expired</span></>}
-    <span class="meta">{meta}</span>
-    {entry.credentialId && <span class="cid">Credential ID <span class="cid-token">{entry.credentialId}</span></span>}
+  {hasTick(entry) ? <Tick size={30} /> : <span />}
+  <div class="cert-body">
+    {image && (
+      <a class="cert-thumb" href={pdf ?? fullImage} data-certificate={dialogId} aria-label={`View certificate: ${entry.name}`}>
+        <Image src={image} alt="" format="webp" widths={[96, 192, 288]} sizes="(max-width: 899px) 72px, 96px" loading="lazy" />
+      </a>
+    )}
+    <div>
+      <span class="title">{entry.name}</span>{v.kind === 'expired' && <> <span class="expired-label">Expired</span></>}
+      <span class="meta">{meta}</span>
+      {entry.credentialId && <span class="cid">Credential ID <span class="cid-token">{entry.credentialId}</span></span>}
+    </div>
+    {image && (
+      <dialog id={dialogId} class="cert-dialog" aria-labelledby={`${dialogId}-title`}>
+        <div class="cert-dialog-inner">
+          <div class="cert-dialog-head">
+            <p id={`${dialogId}-title`} class="cert-dialog-title">{entry.name}</p>
+            <button type="button" class="cert-close" data-close>Close</button>
+          </div>
+          <Image class="cert-full" src={image} alt={`Certificate: ${entry.name}, issued by ${entry.issuer}`} format="webp" widths={[800, 1600, 2400]} sizes="(max-width: 899px) 100vw, 1040px" loading="lazy" />
+          {pdf && <a class="lnk" href={pdf} aria-label={`Open PDF: ${entry.name}`}>Open PDF</a>}
+        </div>
+      </dialog>
+    )}
   </div>
-  {verifiable ? (
+  {hasVerification(entry) ? (
     <a class="lnk" href={entry.verifyUrl} aria-label={`Verify credential: ${entry.name}`}>Verify credential</a>
   ) : <span />}
 </li>
+<script>
+  import { wireCertificateDialogs } from '../lib/certificate-dialog';
+  wireCertificateDialogs(document);
+</script>

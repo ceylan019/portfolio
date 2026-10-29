@@ -1,3 +1,4 @@
+import type { ImageMetadata } from 'astro';
 import { formatMonthYear, utcDay } from './dates';
 
 export interface Certification {
@@ -8,6 +9,8 @@ export interface Certification {
   expiryDate?: Date;
   credentialId?: string;
   verifyUrl?: string;
+  certificateImage?: ImageMetadata;
+  certificate?: string;
   hidden?: boolean;
 }
 
@@ -49,6 +52,14 @@ export function hasVerification(c: Certification): boolean {
   return typeof c.verifyUrl === 'string' && c.verifyUrl.length > 0;
 }
 
+export function hasTick(c: Certification): boolean {
+  return hasVerification(c) || c.certificateImage !== undefined;
+}
+
+export function certificatePdfHref(c: Certification): string | null {
+  return c.certificate ? `/certificates/${c.id}.pdf` : null;
+}
+
 export function showTickNote(list: Certification[]): boolean {
-  return visibleCertifications(list).some(hasVerification);
+  return visibleCertifications(list).some(hasTick);
 }

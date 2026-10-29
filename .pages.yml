@@ -1,6 +1,6 @@
 media:
   - name: uploads
-    label: Photos and CV
+    label: Photos, CV and certificates
     input: src/assets/uploads
     output: /src/assets/uploads
     extensions: [jpg, jpeg, png, webp, avif, pdf]
@@ -39,5 +39,7 @@ content:
       - { name: expiryDate, label: Expiry date, type: date }
       - { name: credentialId, label: Credential ID, type: string }
       - { name: verifyUrl, label: Verification URL, type: string }
+      - { name: certificateImage, label: Certificate image (WebP; for a PDF, make it with pnpm certificate:image), type: image, options: { media: uploads, extensions: [webp] } }
+      - { name: certificate, label: Certificate PDF (needs the certificate image too), type: file, options: { media: uploads, extensions: [pdf] } }
       - { name: hidden, label: Hide from the site, type: boolean, default: false }
       - { name: placeholder, label: Placeholder (blocks deploy), type: boolean, default: false }

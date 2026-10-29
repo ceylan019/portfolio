@@ -1,4 +1,5 @@
 name: "AT*SQA API Testing: REST API, gRPC and graphQL Micro-Credential"
 issuer: ISTQB
 issueDate: 2026-08-02
-verifyUrl: https://www.atsqa.org/
+certificateImage: /src/assets/uploads/atsqa-api-testing.webp
+certificate: /src/assets/uploads/atsqa-api-testing.pdf
