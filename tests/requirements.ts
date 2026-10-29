@@ -10,7 +10,7 @@ export const REQUIREMENTS: Requirement[] = [
   { id: 'REQ-CERT-02', text: 'Hidden certifications are not rendered', source: '§5' },
   { id: 'REQ-CERT-03', text: 'Expired only when expiry is strictly before today; expired entries are labeled', source: '§5' },
   { id: 'REQ-CERT-04', text: 'A tick appears when there is a verify URL or a certificate image; the Verify link only when there is a verify URL', source: '§5' },
-  { id: 'REQ-CERT-05', text: 'Entries with an expiry date show "Valid until" or "Expired" with the month and year; expired titles are muted', source: 'G4' },
+  { id: 'REQ-CERT-05', text: 'Entries with an expiry date show “Valid until” or “Expired” with the month and year; expired titles are muted', source: 'G4' },
   { id: 'REQ-CERT-06', text: 'The tick note appears only when at least one visible entry has a tick', source: 'G5' },
   { id: 'REQ-CERT-07', text: 'A certificate image shows as a WebP thumbnail that opens a full-size preview, linked to the PDF when there is one; the preview closes with Esc, the close button or a click outside and returns focus', source: '§5' },
   { id: 'REQ-CV-02', text: 'Both CV links download as Ceylan-Akyol-CV.pdf; Contact includes the CV link', source: 'G8' },

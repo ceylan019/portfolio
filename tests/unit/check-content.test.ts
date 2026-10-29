@@ -280,7 +280,7 @@ describe('checkContent (CLI orchestration)', () => {
     expect(problems[0]).toContain('contains identifying metadata');
   });
 
-  test('@REQ-CONTENT-01 a missing "photo" field fails closed', async () => {
+  test('@REQ-CONTENT-01 a missing “photo” field fails closed', async () => {
     const contentDir = join(root, 'no-photo-field');
     await writeProfile(
       contentDir,
@@ -324,7 +324,7 @@ describe('resolvePhotoPath and checkProfilePhoto (@REQ-CONTENT-01)', () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  test('a relative photo path resolves against profile.md\'s own directory', () => {
+  test('a relative photo path resolves against profile.md’s own directory', () => {
     const profilePath = join(dir, 'profile/profile.md');
     expect(resolvePhotoPath(profilePath, '../assets/photo.jpg')).toBe(join(dir, 'assets/photo.jpg'));
   });

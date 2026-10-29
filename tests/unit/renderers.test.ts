@@ -19,7 +19,7 @@ const squash = (s: string | null) => (s ?? '').replace(/\s+/g, ' ').trim();
 
 test('@REQ-QUAL-01 proof strip sentence uses the exact approved wording', () => {
   const l = live(); renderProofStrip(l, fixture('valid'));
-  expect(squash(l.textContent)).toBe("This site's code passed 312 test runs across 3 browser engines and 5 device profiles, with 0 automated accessibility violations (axe) and a Lighthouse mobile score of 100 in CI.");
+  expect(squash(l.textContent)).toBe("This site’s code passed 312 test runs across 3 browser engines and 5 device profiles, with 0 automated accessibility violations (axe) and a Lighthouse mobile score of 100 in CI.");
   expect(l.querySelectorAll('b')).toHaveLength(3);
 });
 test('@REQ-QUAL-01 plurals and thousands separators', () => {
@@ -146,7 +146,7 @@ test('@REQ-QUAL-01 integrity markup for a verified, a single-file and a failed l
   );
   expect(squash(html((l) => renderIntegrity(l, { ...d, liveCheck: { ...d.liveCheck!, files: 1 } })))).toContain('(1 file, checked');
   expect(html((l) => renderIntegrity(l, { ...d, liveCheck: { ...d.liveCheck!, ok: false } }))).toBe(
-    '<p class="integrity">The previous deploy\'s live check found files that did not match the tested build. '
+    '<p class="integrity">The previous deploy’s live check found files that did not match the tested build. '
     + '<a href="https://github.com/example/ceylan-akyol-site/actions" class="lnk">See the CI history</a></p>',
   );
 });
@@ -227,10 +227,10 @@ test('@REQ-QUAL-01 mutation markup links the dashboard report, and says time for
 test('@REQ-QUAL-01 proof strip markup, with singular forms for counts of one', () => {
   const d = fixture('valid');
   expect(html((l) => renderProofStrip(l, { ...d, counts: { ...d.counts, testRuns: 1, axeViolations: 1 } }))).toBe(
-    '<p class="big">This site\'s code passed <b>1 test run</b> across 3 browser engines and 5 device profiles, with <b>1 automated accessibility violation</b> (axe) and a Lighthouse mobile score of <b>100</b> in CI.</p>',
+    '<p class="big">This site’s code passed <b>1 test run</b> across 3 browser engines and 5 device profiles, with <b>1 automated accessibility violation</b> (axe) and a Lighthouse mobile score of <b>100</b> in CI.</p>',
   );
 });
-test('@REQ-SEC-02 el keeps only allowlisted attributes and adds lnk to an anchor\'s own class', () => {
+test('@REQ-SEC-02 el keeps only allowlisted attributes and adds lnk to an anchor’s own class', () => {
   const div = el('div', 'x', { class: 'c', id: 'i', onclick: 'alert(1)', style: 'color:red', 'aria-label': 'l' });
   expect(div.outerHTML).toBe('<div class="c" aria-label="l">x</div>');
   expect(el('p', 'y', { class: 'lede' }).outerHTML).toBe('<p class="lede">y</p>');

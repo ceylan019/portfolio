@@ -26,7 +26,7 @@ test('mutable files revalidate, fingerprinted assets are immutable', req('REQ-CA
 test('unknown paths return the custom 404 page with status 404', req('REQ-NF-01'), async ({ page }) => {
   const res = await page.goto('/this/does/not/exist');
   expect(res!.status()).toBe(404);
-  await expect(page.getByText("This page doesn't exist. It may have moved, or the link has a typo.")).toBeVisible();
+  await expect(page.getByText("This page doesn’t exist. It may have moved, or the link has a typo.")).toBeVisible();
   await expect(page.getByRole('link', { name: 'Go to the home page' })).toHaveAttribute('href', '/');
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
 });

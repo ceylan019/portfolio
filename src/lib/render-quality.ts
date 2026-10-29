@@ -46,7 +46,7 @@ export const renderIntegrity: Renderer = (live, d) => {
       `The previous deploy was verified live: every file served matched the tested build (${plural(d.liveCheck.files, 'file', 'files')}, checked ${formatDeployTime(d.liveCheck.checkedAt)}).`,
     );
   } else {
-    p.append("The previous deploy's live check found files that did not match the tested build. ", el('a', 'See the CI history', { href: `${d.repoUrl}/actions` }));
+    p.append('The previous deploy’s live check found files that did not match the tested build. ', el('a', 'See the CI history', { href: `${d.repoUrl}/actions` }));
   }
   live.append(p);
 };

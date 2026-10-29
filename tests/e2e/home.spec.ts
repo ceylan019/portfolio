@@ -134,6 +134,6 @@ test('sections follow the approved order, each labelled by its heading', req('RE
 test('proof strip upgrades to the numbered sentence', req('REQ-QUAL-01'), async ({ page }) => {
   const strip = page.locator('[data-block="proof-strip"]');
   await expect(strip).toHaveAttribute('data-state', 'ready');
-  await expect(strip.locator('[data-slot="live"]')).toHaveText("This site's code passed 312 test runs across 3 browser engines and 5 device profiles, with 0 automated accessibility violations (axe) and a Lighthouse mobile score of 100 in CI.");
+  await expect(strip.locator('[data-slot="live"]')).toHaveText("This site’s code passed 312 test runs across 3 browser engines and 5 device profiles, with 0 automated accessibility violations (axe) and a Lighthouse mobile score of 100 in CI.");
   await expect(strip.locator('[data-slot="fallback"]')).toBeHidden();
 });
