@@ -1,7 +1,7 @@
 import type { Renderer } from './quality-client';
 import { FIXTURE_PROJECTS, REAL_PROJECT, type MatrixRow, type QualityReport } from './quality-schema';
 import { el, svgEl, tick } from './dom';
-import { plural } from './format';
+import { curlyQuotes, plural } from './format';
 import { formatDeployTime, verdictParts } from './verdict-copy';
 
 const nf = new Intl.NumberFormat('en-US');
@@ -85,7 +85,7 @@ function coverage(row: MatrixRow, d: QualityReport): HTMLElement {
     const list = el('ul');
     for (const t of row.tests) {
       const li = el('li');
-      li.append(el('a', t.title, { href: permalink(d, t.file, t.line) }));
+      li.append(el('a', curlyQuotes(t.title), { href: permalink(d, t.file, t.line) }));
       list.append(li);
     }
     details.append(list);
@@ -99,7 +99,7 @@ export const renderMatrix: Renderer = (live, d) => {
   for (const row of d.matrix) {
     const li = el('li', undefined, { class: 'req' });
     const main = el('div');
-    main.append(el('span', row.id, { class: 'rq-id' }), el('p', row.text, { class: 'rq-text' }));
+    main.append(el('span', row.id, { class: 'rq-id' }), el('p', curlyQuotes(row.text), { class: 'rq-text' }));
     const checked = row.phase === 'pre-deploy' || d.liveCheck?.ok === true;
     // An unchecked row keeps an empty first cell, so the grid columns still line up.
     li.append(checked ? tick(30) : el('span'), main, coverage(row, d));

@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { TICK_PATH } from '../../src/lib/brush-tick';
 import { el, svgEl, tick } from '../../src/lib/dom';
-import { plural } from '../../src/lib/format';
+import { curlyQuotes, plural } from '../../src/lib/format';
 import { parseQualityReport, type QualityReport } from '../../src/lib/quality-schema';
 import { renderProofStrip } from '../../src/lib/render-home';
 import {
@@ -26,6 +26,23 @@ test('@REQ-QUAL-01 proof strip sentence uses the exact approved wording', () => 
 test('@REQ-QUAL-01 plurals and thousands separators', () => {
   expect(plural(1, 'test run', 'test runs')).toBe('1 test run');
   expect(plural(1234, 'test run', 'test runs')).toBe('1,234 test runs');
+});
+test('@REQ-COPY-01 straight quotes become curly ones', () => {
+  expect(curlyQuotes('a "fail" annotation')).toBe('a “fail” annotation');
+  expect(curlyQuotes('"smoke" alone')).toBe('“smoke” alone');
+  expect(curlyQuotes('("a")')).toBe('(“a”)');
+  expect(curlyQuotes("profile.md's own directory")).toBe('profile.md’s own directory');
+  expect(curlyQuotes("'quoted' and 'more'")).toBe('‘quoted’ and ‘more’');
+  expect(curlyQuotes("('a')")).toBe('(‘a’)');
+  expect(curlyQuotes('no quotes')).toBe('no quotes');
+});
+test('@REQ-COPY-01 requirement texts and test titles from the report render with curly quotes', () => {
+  const d = fixture('valid');
+  const [first, ...rest] = d.matrix;
+  const row = { ...first, text: 'Show "Valid until" or "Expired"', tests: first.tests.map((t) => ({ ...t, title: `profile.md's "photo" field` })) };
+  const l = live(); renderMatrix(l, { ...d, matrix: [row, ...rest] });
+  expect(l.querySelector('.rq-text')!.textContent).toBe('Show “Valid until” or “Expired”');
+  expect(l.querySelector('a[href*="/blob/"]')!.textContent).toBe('profile.md’s “photo” field');
 });
 test('@REQ-QUAL-01 verdict states requirements, tests and test runs', () => {
   const l = live(); renderVerdict(l, fixture('valid'));
