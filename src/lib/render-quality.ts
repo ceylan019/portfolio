@@ -12,6 +12,8 @@ export function formatDeployTime(iso: string): string {
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
 }
 
+const deployTime = (iso: string) => el('time', formatDeployTime(iso), { datetime: iso });
+
 const permalink = (d: QualityReport, file: string, line: number) =>
   `${d.repoUrl}/blob/${d.commit}/${file.split('/').map(encodeURIComponent).join('/')}#L${line}`;
 
@@ -27,27 +29,28 @@ export const renderVerdict: Renderer = (live, d) => {
     ' (', el('b', plural(d.counts.testRuns, 'test run', 'test runs')), '), and nothing ships unless every one passes.',
   );
   const meta = el('p', undefined, { class: 'meta2' });
-  meta.append(
-    `Deployed ${formatDeployTime(d.builtAt)}`, el('br'),
-    'Commit ', el('a', d.commit.slice(0, 7), { href: `${d.repoUrl}/commit/${d.commit}` }), el('br'),
-    el('a', 'View this CI run', { href: d.ciRunUrl }), el('br'),
-    el('a', 'Browse the source', { href: d.repoUrl }),
-  );
-  live.append(p, meta);
+  meta.append('Deployed ', deployTime(d.builtAt), ', commit ', el('a', d.commit.slice(0, 7), { href: `${d.repoUrl}/commit/${d.commit}` }));
+  const links = el('div', undefined, { class: 'links' });
+  links.append(el('a', 'View this CI run', { href: d.ciRunUrl }), el('a', 'Browse the source', { href: d.repoUrl }));
+  live.append(p, meta, links);
 };
 
 export const renderIntegrity: Renderer = (live, d) => {
   const p = el('p', undefined, { class: 'integrity' });
+  const text = el('span');
   if (!d.liveCheck) {
-    p.append('The live file check runs after this deploy.');
+    text.append('The live file check runs after this deploy.');
   } else if (d.liveCheck.ok) {
-    p.append(
-      tick(22),
-      `The previous deploy was verified live: every file served matched the tested build (${plural(d.liveCheck.files, 'file', 'files')}, checked ${formatDeployTime(d.liveCheck.checkedAt)}).`,
+    p.append(tick(22));
+    text.append(
+      `The previous deploy was verified live: every file served matched the tested build (${plural(d.liveCheck.files, 'file', 'files')}, checked `,
+      deployTime(d.liveCheck.checkedAt),
+      ').',
     );
   } else {
-    p.append('The previous deploy’s live check found files that did not match the tested build. ', el('a', 'See the CI history', { href: `${d.repoUrl}/actions` }));
+    text.append('The previous deploy’s live check found files that did not match the tested build. ', el('a', 'See the CI history', { href: `${d.repoUrl}/actions` }));
   }
+  p.append(text);
   live.append(p);
 };
 

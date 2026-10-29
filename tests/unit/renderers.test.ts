@@ -128,10 +128,8 @@ const html = (render: (l: HTMLElement) => void) => { const l = live(); render(l)
 test('@REQ-QUAL-01 verdict markup: classes, deploy time and every link', () => {
   expect(html((l) => renderVerdict(l, fixture('valid')))).toBe(
     '<p class="lede">Every promise this site makes is tied to the checks that prove it. This build covered <b>all 3 pre-deploy requirements</b> with <b>148 tests</b> (<b>312 test runs</b>), and nothing ships unless every one passes.</p>'
-    + '<p class="meta2">Deployed 27 September 2026, 09:14 UTC<br>'
-    + 'Commit <a href="https://github.com/example/ceylan-akyol-site/commit/e5cdb92a1b2c3d4e5f60718293a4b5c6d7e8f901" class="lnk">e5cdb92</a><br>'
-    + '<a href="https://github.com/example/ceylan-akyol-site/actions/runs/1" class="lnk">View this CI run</a><br>'
-    + '<a href="https://github.com/example/ceylan-akyol-site" class="lnk">Browse the source</a></p>',
+    + '<p class="meta2">Deployed <time datetime="2026-09-27T09:14:00Z">27 September 2026, 09:14 UTC</time>, commit <a href="https://github.com/example/ceylan-akyol-site/commit/e5cdb92a1b2c3d4e5f60718293a4b5c6d7e8f901" class="lnk">e5cdb92</a></p>'
+    + '<div class="links"><a href="https://github.com/example/ceylan-akyol-site/actions/runs/1" class="lnk">View this CI run</a><a href="https://github.com/example/ceylan-akyol-site" class="lnk">Browse the source</a></div>',
   );
 });
 test('@REQ-QUAL-01 verdict uses singular forms for counts of one', () => {
@@ -142,12 +140,12 @@ test('@REQ-QUAL-01 verdict uses singular forms for counts of one', () => {
 test('@REQ-QUAL-01 integrity markup for a verified, a single-file and a failed live check', () => {
   const d = fixture('valid');
   expect(html((l) => renderIntegrity(l, d))).toBe(
-    `<p class="integrity">${TICK(22, 18)}The previous deploy was verified live: every file served matched the tested build (64 files, checked 26 September 2026, 09:20 UTC).</p>`,
+    `<p class="integrity">${TICK(22, 18)}<span>The previous deploy was verified live: every file served matched the tested build (64 files, checked <time datetime="2026-09-26T09:20:00Z">26 September 2026, 09:20 UTC</time>).</span></p>`,
   );
   expect(squash(html((l) => renderIntegrity(l, { ...d, liveCheck: { ...d.liveCheck!, files: 1 } })))).toContain('(1 file, checked');
   expect(html((l) => renderIntegrity(l, { ...d, liveCheck: { ...d.liveCheck!, ok: false } }))).toBe(
-    '<p class="integrity">The previous deploy’s live check found files that did not match the tested build. '
-    + '<a href="https://github.com/example/ceylan-akyol-site/actions" class="lnk">See the CI history</a></p>',
+    '<p class="integrity"><span>The previous deploy’s live check found files that did not match the tested build. '
+    + '<a href="https://github.com/example/ceylan-akyol-site/actions" class="lnk">See the CI history</a></span></p>',
   );
 });
 test('@REQ-QUAL-01 matrix markup for tested, check-only and post-deploy rows', () => {

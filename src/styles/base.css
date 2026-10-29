@@ -139,28 +139,18 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
 .topline { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 48px; font-size: 16px; }
 .homelink { font-weight: 800; letter-spacing: -0.02em; font-size: 18px; color: var(--ink); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
 .qhead .qh1 { font-size: 64px; font-weight: 800; line-height: .95; letter-spacing: -0.035em; max-width: 9em; }
-.lede { font-size: 21px; line-height: 1.5; margin-top: 22px; max-width: 46ch; }
+.lede { font-size: 21px; line-height: 1.5; margin-top: 24px; max-width: 46ch; }
 .lede b { font-weight: 800; }
-/* The verdict block's live slot is a two column grid (lede, then deploy meta)
-   so the meta line sits beside the verdict sentence.
-   renderVerdict appends the two paragraphs as
-   siblings, so the grid, not the renderer, does the column split. */
-[data-block="verdict"] [data-slot="live"] { display: grid; grid-template-columns: 1fr 260px; gap: 48px; align-items: start; }
-/* Reserve most of the ready verdict's height (the fallback sits in reserved
-   space), so swapping in the live verdict does not push the page down. Without
-   it the shift scored CLS 0.13 and held /quality's Lighthouse performance at 94.
-   The ready verdict measures about 212px at 1280px and 348px at 412px; the
-   reservation stays a few pixels below that, so font rendering differences
-   between platforms never make it taller than the ready verdict, and the
-   settled layout (and its visual baselines) is unchanged. */
-[data-block="verdict"] { min-height: 204px; }
-@media (max-width: 899px) { [data-block="verdict"] { min-height: 336px; } }
-.meta2 { font-size: 16px; color: var(--muted); line-height: 1.8; margin-top: 22px; }
+[data-block="verdict"] { min-height: 216px; }
+@media (max-width: 899px) { [data-block="verdict"] { min-height: 249px; } }
+.meta2 { margin-top: 8px; font-size: 16px; line-height: 1.5; color: var(--muted); }
+time { white-space: nowrap; }
 /* The glossary line uses the DESIGN.md "Labels, IDs, glossary" size
    (14px) and a 62ch cap, not 15px / 66ch. */
 .gloss { font-size: 14px; color: var(--muted); margin-top: 16px; max-width: 62ch; }
 .gloss b { color: var(--ink); }
-.integrity { display: flex; gap: 10px; align-items: center; margin-top: 32px; font-size: 16px; }
+.integrity { display: flex; align-items: flex-start; gap: 12px; margin-top: 16px; font-size: 16px; }
+.integrity .tick { flex: none; margin-top: 4px; }
 [data-block="duration"] { margin-top: 32px; }
 /* 13px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
 .rq-id { display: block; font-size: 14px; font-weight: 700; line-height: 2; color: var(--muted); }
@@ -195,7 +185,6 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
   .lede { font-size: 18px; }
   .rq-text { font-size: 17px; }
   .trends, .suites { grid-template-columns: 1fr; }
-  [data-block="verdict"] [data-slot="live"] { grid-template-columns: 1fr; gap: 8px; }
 }
 
 /* /404: the numeral uses the DESIGN.md "Name" display size (96px

@@ -68,13 +68,13 @@ test('@REQ-QUAL-01 the matrix, integrity, trends and mutation fallbacks each lin
   }
 });
 
-test('@REQ-NAV-01 /quality follows the section order: top line, verdict, matrix, integrity, trends, mutation, suites, duration', async () => {
+test('@REQ-NAV-01 /quality follows the section order: top line, verdict, live check, matrix, trends, mutation, suites, duration', async () => {
   const html = await renderPage();
   const order = [
     'class="topline"',
     'data-block="verdict"',
-    'id="req-heading"',
     'data-block="integrity"',
+    'id="req-heading"',
     'id="trend-heading"',
     'id="mut-heading"',
     'id="suites-heading"',
@@ -82,6 +82,17 @@ test('@REQ-NAV-01 /quality follows the section order: top line, verdict, matrix,
   ].map((marker) => html.indexOf(marker));
   expect(order.every((i) => i > -1)).toBe(true);
   expect(order).toEqual([...order].sort((a, b) => a - b));
+});
+
+test('@REQ-LAYOUT-01 the live check sits in the header under the glossary and the duration under the suites list', async () => {
+  const html = await renderPage();
+  const header = html.slice(html.indexOf('<header class="qhead">'), html.indexOf('</header>'));
+  expect(header).toContain('class="gloss"');
+  expect(header.indexOf('data-block="integrity"')).toBeGreaterThan(header.indexOf('class="gloss"'));
+  const start = html.indexOf('aria-labelledby="suites-heading"');
+  const suites = html.slice(start, html.indexOf('</section>', start));
+  expect(suites).toContain('data-block="duration"');
+  expect(suites.indexOf('data-block="duration"')).toBeGreaterThan(suites.indexOf('</dl>'));
 });
 
 test('@REQ-A11Y-04 every labelled section on /quality points at its own heading', async () => {
