@@ -99,7 +99,6 @@ export function oversizedQuality(): string {
   return text;
 }
 
-/** Valid, with the first requirement covered by four tests, two short titles in a row and a long one that wraps. */
 export function manyTestsQuality(): string {
   const doc = validQuality();
   const row = doc.matrix[0]!;
@@ -113,7 +112,6 @@ export function manyTestsQuality(): string {
   return mustParse({ ...doc, matrix: [{ ...row, tests }, ...doc.matrix.slice(1)] });
 }
 
-/** Every straight apostrophe or quotation mark in a page's visible text, title, descriptions and alt, label and title attributes. */
 export async function straightQuotes(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const found: string[] = [];

@@ -14,7 +14,7 @@ img, svg { display: block; max-width: 100%; }
 
 .lnk, .prose a, .list a, .reqs a { color: var(--rose-text); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, var(--rose-text) 40%, transparent); font-weight: 500; }
 .lnk:visited, .prose a:visited, .list a:visited, .reqs a:visited { color: var(--visited); text-decoration-color: var(--muted); }
-.lnk { display: inline-flex; align-items: center; min-height: 44px; }
+.lnk { display: inline-flex; align-items: center; min-height: 44px; text-wrap: pretty; }
 
 /* 22px snapped to the 24px spacing-scale step (4, 8, 12, 16, 24, 32, 48, 64, 96). */
 .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px; border-radius: 10px; background: var(--rose-mark); color: var(--on-rose); font-weight: 700; text-decoration: none; }
@@ -23,6 +23,8 @@ img, svg { display: block; max-width: 100%; }
 
 .muted { color: var(--muted); }
 h1, h2 { text-wrap: balance; }
+.wide-break { display: none; }
+@media (min-width: 900px) { .wide-break { display: inline; } }
 h2 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
 
 .sec { display: grid; grid-template-columns: var(--label-col) 1fr; gap: var(--col-gap); margin-top: var(--section-gap); }
@@ -139,18 +141,25 @@ html:has(.cert-dialog[open]) { overflow: hidden; }
 /* /quality */
 .topline { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--line); margin-bottom: 48px; }
 .homelink { font-weight: 800; letter-spacing: -0.02em; color: var(--ink); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
-.qhead .qh1 { font-size: 64px; font-weight: 800; line-height: .95; letter-spacing: -0.035em; max-width: 9em; }
+.qhead .qh1 { font-size: 64px; font-weight: 800; line-height: .95; letter-spacing: -0.035em; }
 .lede { font-size: 21px; line-height: 1.5; margin-top: 24px; max-width: 46ch; }
 .lede b { font-weight: 800; }
-[data-block="verdict"] { min-height: 216px; }
-@media (max-width: 899px) { [data-block="verdict"] { min-height: 249px; } }
+[data-block="verdict"] { min-height: 200px; }
+@media (max-width: 899px) { [data-block="verdict"] { min-height: 182px; } }
+@media (max-width: 469px) { [data-block="verdict"] { min-height: 206px; } }
+@media (max-width: 450px) { [data-block="verdict"] { min-height: 233px; } }
+@media (max-width: 372px) { [data-block="verdict"] { min-height: 260px; } }
+@media (max-width: 339px) { [data-block="verdict"] { min-height: 284px; } }
+@media (max-width: 332px) { [data-block="verdict"] { min-height: 328px; } }
+@media (max-width: 317px) { [data-block="verdict"] { min-height: 355px; } }
 .meta2 { margin-top: 8px; font-size: 16px; line-height: 1.5; color: var(--muted); }
+.meta2 .lnk { display: inline; min-height: 0; padding-block: 16px; }
 time { white-space: nowrap; }
 /* The glossary line uses the DESIGN.md "Labels, IDs, glossary" size
    (14px) and a 62ch cap, not 15px / 66ch. */
 .gloss { font-size: 14px; color: var(--muted); margin-top: 16px; max-width: 62ch; }
 .gloss b { color: var(--ink); }
-.integrity { display: flex; align-items: flex-start; gap: 12px; margin-top: 16px; font-size: 16px; }
+.integrity { display: flex; max-width: 62ch; align-items: flex-start; gap: 12px; margin-top: 16px; font-size: 16px; }
 .integrity .tick { flex: none; margin-top: 4px; }
 [data-block="duration"] { margin-top: 32px; }
 /* 13px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
@@ -167,13 +176,11 @@ time { white-space: nowrap; }
 .rq-cov details:not([open]) .when-open, .rq-cov details[open] .when-closed { display: none; }
 .rq-cov details ul { list-style: none; padding: 0; }
 .rq-cov details a { display: block; min-height: 0; padding-block: 12px; }
-.trends { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.trends { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px var(--col-gap); }
 /* 15px snapped to the 14px type-scale row ("Labels, IDs, glossary"). */
 .trend h3 { font-size: 14px; font-weight: 700; }
 .trend .now { font-size: 40px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; }
 .trend .cap { font-size: 14px; color: var(--muted); }
-/* Not bundled with .trend .cap at 15px; snapped instead to
-   the 16px "Meta" row, matching .sub and .integrity. */
 .unav { font-size: 16px; color: var(--muted); margin-top: 16px; }
 .spark { width: 100%; height: 56px; margin-top: 8px; overflow: visible; }
 .spark-line { stroke: var(--rose-mark); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }

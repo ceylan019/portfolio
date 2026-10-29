@@ -146,11 +146,11 @@ for (const { name, size } of [{ name: 'desktop', size: DESKTOP }, { name: 'mobil
           if (lines.length > 1) expect(lines.at(-1)!.split(' ').length, `${path} ${lines.join(' / ')}`).toBeGreaterThan(1);
         }
       }
-      if (!desktop) return;
       await open(page, '/');
       const home = await wordsPerLine(page.locator('[aria-labelledby="proof-heading"] h2'));
+      expect(home).toEqual(desktop ? ['How this site', 'is tested'] : ['How this site is tested']);
       await open(page, '/quality');
-      expect(await wordsPerLine(page.locator('.qh1'))).toEqual(home);
+      expect(await wordsPerLine(page.locator('.qh1'))).toEqual(['How this site', 'is tested']);
     });
 
     test('every certificate title starts at one left edge and the thumbnail sits under the meta lines', req('REQ-LAYOUT-01', 'REQ-CERT-07'), async ({ page }) => {
@@ -218,12 +218,18 @@ for (const { name, size } of [{ name: 'desktop', size: DESKTOP }, { name: 'mobil
       await open(page, '/quality');
       const details = page.locator('li.req details').first();
       const summary = details.locator('summary');
+      const marker = () => summary.evaluate((element) => getComputedStyle(element, '::before').transform);
+      const visibleLabelDecoration = () => summary.locator('span:visible').evaluate((label) => getComputedStyle(label).textDecorationLine);
       expect(await summary.evaluate((element) => getComputedStyle(element, '::before').content)).not.toBe('none');
       expect((await summary.boundingBox())!.height).toBeGreaterThanOrEqual(44);
       await expect(summary).toHaveText(/^Show the test/, { useInnerText: true });
+      const closedMarker = await marker();
+      expect(await visibleLabelDecoration()).toContain('underline');
       await summary.click();
       await expect(details).toHaveJSProperty('open', true);
       await expect(summary).toHaveText(/^Hide the test/, { useInnerText: true });
+      expect(await marker()).not.toBe(closedMarker);
+      expect(await visibleLabelDecoration()).toContain('underline');
       const snapshot = await details.ariaSnapshot();
       expect(snapshot.match(/Hide the test/g)).toHaveLength(1);
       expect(snapshot).not.toContain('Show the test');
@@ -282,6 +288,15 @@ for (const { name, size } of [{ name: 'desktop', size: DESKTOP }, { name: 'mobil
       }
     });
 
+    test('the three trend columns are one layout column gap apart', req('REQ-LAYOUT-01'), async ({ page }) => {
+      test.skip(!desktop, 'the trends stack on mobile');
+      await open(page, '/quality');
+      const gap = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--col-gap')));
+      const trends = await page.locator('.trend').evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect()));
+      expect(trends).toHaveLength(3);
+      for (const [index, trend] of trends.slice(1).entries()) expect(trend.left - trends[index]!.right).toBeCloseTo(gap, 0);
+    });
+
     test('the ring meets the content edge it faces', req('REQ-LAYOUT-01'), async ({ page }) => {
       await open(page, '/');
       const edges = await page.evaluate(() => {
@@ -311,6 +326,7 @@ for (const { name, size } of [{ name: 'desktop', size: DESKTOP }, { name: 'mobil
       await expect(meta).toHaveText(/^Deployed .+ UTC, commit [0-9a-f]{7}$/);
       await expect(meta.locator('time')).toHaveCount(1);
       expect(await meta.locator('time').evaluate((element) => element.getClientRects().length)).toBe(1);
+      expect((await meta.locator('a').boundingBox())!.height).toBeGreaterThanOrEqual(44);
       expect(await meta.evaluate((element) => [getComputedStyle(element).fontSize, getComputedStyle(element).color === getComputedStyle(document.querySelector('.gloss')!).color])).toEqual(['16px', true]);
       await expect(page.locator('[data-block="verdict"] .links a')).toHaveText(['View this CI run', 'Browse the source']);
     });
@@ -322,6 +338,15 @@ for (const { name, size } of [{ name: 'desktop', size: DESKTOP }, { name: 'mobil
       const integrity = await rect(page, '[data-block="integrity"]');
       expect(integrity.left).toBeCloseTo(gloss.left, 0);
       expect(integrity.top).toBeGreaterThanOrEqual(gloss.bottom - 1);
+      const check = await page.locator('.integrity').evaluate((element) => {
+        const probe = document.createElement('div');
+        probe.style.cssText = 'flex: none; width: 62ch; height: 0; visibility: hidden';
+        element.append(probe);
+        const measure = probe.getBoundingClientRect().width;
+        probe.remove();
+        return { measure, width: element.getBoundingClientRect().width };
+      });
+      expect(check.width).toBeLessThanOrEqual(check.measure + 0.5);
       await expect(page.locator('[aria-labelledby="suites-heading"] [data-block="duration"]')).toHaveCount(1);
       const suites = await rect(page, '.suites');
       const duration = await rect(page, '[data-block="duration"]');
@@ -376,18 +401,91 @@ test.describe('between mobile and desktop', () => {
   });
 });
 
-test.describe('verdict reservation', () => {
-  test('the desktop reservation stays just below the ready verdict', req('REQ-LAYOUT-01'), async ({ page, isMobile }, testInfo) => {
-    test.skip(isMobile, 'measured at desktop width');
-    await page.setViewportSize(DESKTOP);
-    await open(page, '/quality');
-    await expectReservation(page, testInfo.project.name === 'chromium');
-  });
+const RESERVATION_WIDTHS = [320, 360, 375, 390, 412, 600, 768, 899, 900, 1280];
+const TITLE_WIDTHS = [320, 360, 390, 700, 899, 900, 1280];
 
-  test('the mobile reservation stays just below the ready verdict', req('REQ-LAYOUT-01'), async ({ page, isMobile }, testInfo) => {
+test.describe('verdict reservation', () => {
+  test.skip(({ isMobile }) => isMobile, 'the mobile device profiles keep their own width');
+
+  for (const width of RESERVATION_WIDTHS) {
+    test(`the reservation stays just below the ready verdict at ${width}px`, req('REQ-LAYOUT-01'), async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      await open(page, '/quality');
+      await expectReservation(page, testInfo.project.name === 'chromium');
+    });
+  }
+});
+
+test.describe('verdict reservation on the mobile profile', () => {
+  test('the reservation stays just below the ready verdict at the profile width', req('REQ-LAYOUT-01'), async ({ page, isMobile }, testInfo) => {
     test.skip(testInfo.project.name !== 'pixel' || !isMobile, 'measured at the Lighthouse mobile width, 412px');
     await open(page, '/quality');
     await expectReservation(page, true);
+  });
+});
+
+test.describe('title breaks', () => {
+  test.skip(({ isMobile }) => isMobile, 'the mobile device profiles keep their own width');
+
+  for (const width of TITLE_WIDTHS) {
+    test(`both titles break after site where they wrap at ${width}px`, req('REQ-LAYOUT-01'), async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await open(page, '/quality');
+      expect(await wordsPerLine(page.locator('.qh1'))).toEqual(['How this site', 'is tested']);
+      await open(page, '/');
+      const lines = await wordsPerLine(page.locator('[aria-labelledby="proof-heading"] h2'));
+      expect(lines).toEqual(width >= 900 ? ['How this site', 'is tested'] : ['How this site is tested']);
+    });
+  }
+});
+
+for (const width of [375, 390]) {
+  test.describe(`standalone links at ${width}px`, () => {
+    test.skip(({ isMobile }) => isMobile, 'the mobile device profiles keep their own width');
+
+    test('a wrapped standalone link never leaves one word alone on its last line', req('REQ-LAYOUT-01'), async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      let wrapped = 0;
+      for (const path of ['/', '/quality', '/404']) {
+        await open(page, path);
+        for (const link of await page.locator('a.lnk:visible, .links a:visible, .btn:visible').all()) {
+          const lines = await wordsPerLine(link);
+          if (lines.length < 2) continue;
+          wrapped++;
+          expect(lines.at(-1)!.split(' ').length, `${path} ${lines.join(' / ')}`).toBeGreaterThan(1);
+        }
+      }
+      expect(wrapped).toBeGreaterThan(0);
+    });
+  });
+}
+
+for (const width of [390, 320]) {
+  test.describe(`live blocks at ${width}px`, () => {
+    test.use({ viewport: { width, height: 844 } });
+    test.skip(({ isMobile }) => isMobile, 'the mobile device profiles keep their own width');
+
+    test('every time in the live blocks stays on one line', req('REQ-LAYOUT-01'), async ({ page }) => {
+      await open(page, '/quality');
+      const lineCounts = await page.locator('[data-slot="live"] time').evaluateAll((times) => times.map((time) => time.getClientRects().length));
+      expect(lineCounts.length).toBeGreaterThanOrEqual(2);
+      for (const count of lineCounts) expect(count).toBe(1);
+    });
+  });
+}
+
+test.describe('verdict meta line on a small screen', () => {
+  test.use({ viewport: MOBILE });
+
+  test('the meta line wraps on even line spacing while the commit link keeps a 44px target', req('REQ-LAYOUT-01'), async ({ page }) => {
+    await open(page, '/quality');
+    const meta = page.locator('[data-block="verdict"] .meta2');
+    const lines = await lineCenters(meta);
+    expect(lines.length).toBeGreaterThan(1);
+    const lineHeight = await meta.evaluate((element) => parseFloat(getComputedStyle(element).lineHeight));
+    for (const [index, center] of lines.slice(1).entries()) expect(center - lines[index]!).toBeCloseTo(lineHeight, 0);
+    expect((await meta.boundingBox())!.height).toBeCloseTo(lines.length * lineHeight, 0);
+    expect((await meta.locator('a').boundingBox())!.height).toBeGreaterThanOrEqual(44);
   });
 });
 
@@ -397,7 +495,7 @@ async function expectReservation(page: Page, strictUpperBound: boolean): Promise
     ready: block.querySelector('[data-slot="live"]')!.lastElementChild!.getBoundingClientRect().bottom - block.getBoundingClientRect().top,
   }));
   expect(reserved).toBeLessThanOrEqual(ready);
-  if (strictUpperBound) expect(ready - reserved).toBeLessThanOrEqual(12);
+  if (strictUpperBound) expect(ready - reserved).toBeLessThanOrEqual(8);
 }
 
 test.describe('dark mode', () => {
@@ -407,7 +505,7 @@ test.describe('dark mode', () => {
   test('the certificate thumbnail is dimmed and the full preview is not', req('REQ-LAYOUT-01', 'REQ-CERT-07'), async ({ page }) => {
     await open(page, '/');
     const thumb = page.locator('.cert-thumb img').first();
-    expect(await thumb.evaluate((image) => getComputedStyle(image).filter)).toContain('brightness');
+    expect(await thumb.evaluate((image) => getComputedStyle(image).filter)).toBe('brightness(0.8)');
     await page.locator('.cert-thumb').first().click();
     expect(await page.locator('.cert-full').first().evaluate((image) => getComputedStyle(image).filter)).toBe('none');
   });
