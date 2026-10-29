@@ -19,4 +19,5 @@ const { name, fallback, links = [], fallbackClass = 'unav' } = Astro.props;
     ))}</p>
   </div>
   <div data-slot="live"></div>
+  {Astro.slots.has('sizer') && <div data-slot="sizer" aria-hidden="true" inert data-nosnippet><slot name="sizer" /></div>}
 </div>

@@ -59,6 +59,21 @@ export function sparseQuality(): string {
   return mustParse({ ...doc, history: doc.history.slice(0, 2) });
 }
 
+export function liveSizedQuality(): string {
+  const doc = validQuality();
+  return mustParse({ ...doc, builtAt: '2026-09-30T20:48:00Z', counts: { ...doc.counts, requirements: 34, tests: 412, testRuns: 2096 } });
+}
+
+export function widestVerdictQuality(): string {
+  const doc = validQuality();
+  return mustParse({ ...doc, builtAt: '2030-09-30T00:00:00Z', commit: '0'.repeat(40), counts: { ...doc.counts, requirements: 200, tests: 9999, testRuns: 9999 } });
+}
+
+export function failedLiveCheckQuality(): string {
+  const doc = validQuality();
+  return mustParse({ ...doc, liveCheck: { ...doc.liveCheck!, ok: false } });
+}
+
 /** Valid, from a run whose start time and previous live check were both unknown:
  * no pipelineSeconds and no liveCheck. */
 export function firstRunQuality(): string {
@@ -97,4 +112,39 @@ export function oversizedQuality(): string {
     throw new Error(`oversized variant must fail only the matrix limit: ${JSON.stringify(issues.map((i) => [i.code, i.path.join('.')]))}`);
   }
   return text;
+}
+
+export function manyTestsQuality(): string {
+  const doc = validQuality();
+  const row = doc.matrix[0]!;
+  const covering = (title: string) => ({ ...row.tests[0]!, title });
+  const tests = [
+    covering('Short title'),
+    covering('Another short title'),
+    covering('A much longer test title that wraps onto several lines in the narrow coverage column of a requirement row'),
+    covering('The last short title'),
+  ];
+  return mustParse({ ...doc, matrix: [{ ...row, tests }, ...doc.matrix.slice(1)] });
+}
+
+export async function straightQuotes(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const found: string[] = [];
+    const check = (where: string, text: string | null) => {
+      if (text && /['"]/.test(text)) found.push(`${where}: ${text.trim()}`);
+    };
+    check('title', document.title);
+    for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="description"], meta[property^="og:"]')) {
+      check(meta.getAttribute('name') ?? meta.getAttribute('property') ?? 'meta', meta.content);
+    }
+    for (const element of document.querySelectorAll('[alt], [aria-label], [title]')) {
+      for (const attribute of ['alt', 'aria-label', 'title']) check(`${element.tagName.toLowerCase()}[${attribute}]`, element.getAttribute(attribute));
+    }
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const tag = node.parentElement?.tagName ?? '';
+      if (tag !== 'SCRIPT' && tag !== 'STYLE') check(tag.toLowerCase(), node.textContent);
+    }
+    return found;
+  });
 }

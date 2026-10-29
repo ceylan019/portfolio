@@ -81,3 +81,16 @@ test('@REQ-CERT-07 an entry without a certificate has no thumbnail and no previe
   expect(html).not.toContain('cert-thumb');
   expect(html).not.toContain('<dialog');
 });
+test('@REQ-LAYOUT-01 the certifications section is a list section, so its heading lines up with the first row', async () => {
+  expect(await render([c({})])).toMatch(/<section class="sec sec-list" aria-labelledby="certifications-heading">/);
+});
+test('@REQ-CERT-07 the thumbnail comes after the title, the meta lines and the credential ID', async () => {
+  const html = await render([c({ id: 'atsqa', name: 'AT*SQA API Testing', credentialId: 'ID-9', certificateImage, certificate: '/u/a.pdf' })]);
+  const thumb = html.indexOf('class="cert-thumb"');
+  expect(thumb).toBeGreaterThan(-1);
+  for (const marker of ['class="title"', 'class="meta"', 'Credential ID']) {
+    expect(html.indexOf(marker)).toBeGreaterThan(-1);
+    expect(html.indexOf(marker)).toBeLessThan(thumb);
+  }
+  expect(html).not.toContain('cert-body');
+});

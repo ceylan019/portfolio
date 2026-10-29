@@ -289,7 +289,7 @@ describe('normalizer edge cases', () => {
     config: { rootDir: '/repo/tests' },
   }, '/repo');
 
-  test('@REQ-TRACE-01 playwright project "smoke" alone marks a test as smoke', () => {
+  test('@REQ-TRACE-01 playwright project “smoke” alone marks a test as smoke', () => {
     expect(pwSpec({ tags: ['REQ-CV-01'] }, { projectName: 'smoke' })[0]!.suite).toBe('smoke');
   });
   test('@REQ-TRACE-01 playwright skips non-object suites at any depth', () => {
@@ -351,7 +351,7 @@ describe('buildMatrix edge cases', () => {
     const failedOnly = [...REQUIRED.filter((p) => p !== 'pixel').map((p) => r({ project: p, tags: ['REQ-X-01'] })), r({ project: 'pixel', tags: ['REQ-X-01'], status: 'failed' })];
     expect(buildMatrix([req('REQ-X-01')], failedOnly, []).problems).not.toContainEqual(expect.objectContaining({ kind: 'missing-projects' }));
   });
-  test('@REQ-TRACE-01 an expected failure (a "fail" annotation) never counts as passing coverage or a test run', () => {
+  test('@REQ-TRACE-01 an expected failure (a “fail” annotation) never counts as passing coverage or a test run', () => {
     const results = [
       ...allProjects({ title: 'ok', tags: ['REQ-X-01'] }),
       ...FIXTURE_PROJECTS.map((p) => r({ title: 'known bug', project: p, tags: ['REQ-CV-01'], annotations: [{ type: 'fail' }] })),

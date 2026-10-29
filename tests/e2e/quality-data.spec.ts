@@ -47,7 +47,7 @@ test('schema-valid HTML strings render as text and never execute', req('REQ-SEC-
   await expect(matrix.locator('a', { hasText: "</script><script>document.body.dataset.pwned='1'</script>" })).toHaveCount(1);
   // Only the elements the renderers build: no img, script, iframe or anything else from the data.
   const tags = await page.locator('[data-slot="live"] *').evaluateAll((els) => [...new Set(els.map((e) => e.tagName.toLowerCase()))].sort());
-  expect(tags.filter((t) => !['a', 'b', 'br', 'details', 'div', 'h3', 'li', 'p', 'path', 'polyline', 'span', 'strong', 'summary', 'svg', 'ul'].includes(t))).toEqual([]);
+  expect(tags.filter((t) => !['a', 'b', 'details', 'div', 'h3', 'li', 'p', 'path', 'polyline', 'span', 'strong', 'summary', 'svg', 'time', 'ul'].includes(t))).toEqual([]);
   const hrefs = await page.locator('[data-slot="live"] a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
   expect(hrefs.length).toBeGreaterThan(0);
   expect(hrefs.filter((h) => !h?.startsWith('https://'))).toEqual([]);

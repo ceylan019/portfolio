@@ -45,6 +45,26 @@ test('@REQ-QUAL-01 the verdict fallback links both the repository and its Action
   expect(block).toMatch(/<a class="lnk" href="https:\/\/github\.com\/example\/ceylan-akyol-site\/actions\/workflows\/ci\.yml">View the CI history<\/a>/);
 });
 
+test('@REQ-LAYOUT-01 the verdict block carries a hidden, inert, unlinked copy of the ready verdict with the widest figures', async () => {
+  const html = await renderPage();
+  const block = html.slice(html.indexOf('data-block="verdict"'), html.indexOf('data-block="integrity"'));
+  const sizer = block.slice(block.indexOf('data-slot="sizer"'));
+  expect(block.indexOf('data-slot="sizer"')).toBeGreaterThan(block.indexOf('data-slot="live"'));
+  const opening = block.match(/<div data-slot="sizer"[^>]*>/)![0];
+  for (const attribute of ['aria-hidden="true"', 'inert', 'data-nosnippet']) expect(opening).toContain(attribute);
+  expect(sizer).toContain('all 200 pre-deploy requirements');
+  expect(sizer).toContain('9,999 tests');
+  expect(sizer).toContain('9,999 test runs');
+  expect(sizer).toContain('30 September 2026, 00:00 UTC');
+  expect(sizer).toContain('commit <span class="lnk">0000000</span>');
+  expect(sizer).not.toMatch(/href|<a[ >]/);
+});
+
+test('@REQ-LAYOUT-01 only the verdict block carries a sizer', async () => {
+  const html = await renderPage();
+  expect(html.match(/data-slot="sizer"/g)).toHaveLength(1);
+});
+
 test('@REQ-QUAL-01 the duration block has a true, number-free fallback that is never empty', async () => {
   const html = await renderPage();
   const block = html.slice(html.indexOf('data-block="duration"'));
@@ -68,13 +88,13 @@ test('@REQ-QUAL-01 the matrix, integrity, trends and mutation fallbacks each lin
   }
 });
 
-test('@REQ-NAV-01 /quality follows the section order: top line, verdict, matrix, integrity, trends, mutation, suites, duration', async () => {
+test('@REQ-NAV-01 /quality follows the section order: top line, verdict, live check, matrix, trends, mutation, suites, duration', async () => {
   const html = await renderPage();
   const order = [
     'class="topline"',
     'data-block="verdict"',
-    'id="req-heading"',
     'data-block="integrity"',
+    'id="req-heading"',
     'id="trend-heading"',
     'id="mut-heading"',
     'id="suites-heading"',
@@ -84,10 +104,22 @@ test('@REQ-NAV-01 /quality follows the section order: top line, verdict, matrix,
   expect(order).toEqual([...order].sort((a, b) => a - b));
 });
 
+test('@REQ-LAYOUT-01 the live check sits in the header under the glossary and the duration under the suites list', async () => {
+  const html = await renderPage();
+  const header = html.slice(html.indexOf('<header class="qhead">'), html.indexOf('</header>'));
+  expect(header).toContain('class="gloss"');
+  expect(header.indexOf('data-block="integrity"')).toBeGreaterThan(header.indexOf('class="gloss"'));
+  const start = html.indexOf('aria-labelledby="suites-heading"');
+  const suites = html.slice(start, html.indexOf('</section>', start));
+  expect(suites).toContain('data-block="duration"');
+  expect(suites.indexOf('data-block="duration"')).toBeGreaterThan(suites.indexOf('</dl>'));
+});
+
 test('@REQ-A11Y-04 every labelled section on /quality points at its own heading', async () => {
   const html = await renderPage();
   for (const id of ['req-heading', 'trend-heading', 'mut-heading', 'suites-heading']) {
-    expect(html).toMatch(new RegExp(`<section class="sec" aria-labelledby="${id}">`));
+    const classes = id === 'req-heading' ? 'sec sec-list' : 'sec';
+    expect(html).toMatch(new RegExp(`<section class="${classes}" aria-labelledby="${id}">`));
     expect(html).toContain(`id="${id}"`);
   }
 });

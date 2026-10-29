@@ -6,8 +6,9 @@ import { plural } from '../../src/lib/format';
 import { parseQualityReport, type QualityReport } from '../../src/lib/quality-schema';
 import { renderProofStrip } from '../../src/lib/render-home';
 import {
-  formatDeployTime, renderDuration, renderIntegrity, renderMatrix, renderMutation, renderTrends, renderVerdict,
+  renderDuration, renderIntegrity, renderMatrix, renderMutation, renderTrends, renderVerdict,
 } from '../../src/lib/render-quality';
+import { LARGEST_VERDICT_FIGURES, formatDeployTime, verdictParts } from '../../src/lib/verdict-copy';
 
 const fixture = (name: string): QualityReport => {
   const r = parseQualityReport(JSON.parse(readFileSync(`tests/fixtures/quality/${name}.json`, 'utf8')));
@@ -19,7 +20,7 @@ const squash = (s: string | null) => (s ?? '').replace(/\s+/g, ' ').trim();
 
 test('@REQ-QUAL-01 proof strip sentence uses the exact approved wording', () => {
   const l = live(); renderProofStrip(l, fixture('valid'));
-  expect(squash(l.textContent)).toBe("This site's code passed 312 test runs across 3 browser engines and 5 device profiles, with 0 automated accessibility violations (axe) and a Lighthouse mobile score of 100 in CI.");
+  expect(squash(l.textContent)).toBe("This site’s code passed 312 test runs across 3 browser engines and 5 device profiles, with 0 automated accessibility violations (axe) and a Lighthouse mobile score of 100 in CI.");
   expect(l.querySelectorAll('b')).toHaveLength(3);
 });
 test('@REQ-QUAL-01 plurals and thousands separators', () => {
@@ -32,6 +33,13 @@ test('@REQ-QUAL-01 verdict states requirements, tests and test runs', () => {
   const commit = l.querySelector('a[href*="/commit/"]')!;
   expect(commit.getAttribute('href')).toBe('https://github.com/example/ceylan-akyol-site/commit/e5cdb92a1b2c3d4e5f60718293a4b5c6d7e8f901');
   expect(commit.textContent).toBe('e5cdb92');
+});
+test('@REQ-LAYOUT-01 the sizer wording is the live verdict wording with the largest figures', () => {
+  const sizer = verdictParts(LARGEST_VERDICT_FIGURES);
+  const d = fixture('valid');
+  const l = live(); renderVerdict(l, { ...d, counts: { ...d.counts, requirements: LARGEST_VERDICT_FIGURES.requirements, tests: LARGEST_VERDICT_FIGURES.tests, testRuns: LARGEST_VERDICT_FIGURES.testRuns }, builtAt: LARGEST_VERDICT_FIGURES.builtAt, commit: LARGEST_VERDICT_FIGURES.commit });
+  const sizerText = [...sizer.lede.map((s) => (typeof s === 'string' ? s : s.strong)), sizer.deployedPrefix, sizer.deployedAt, sizer.commitPrefix, sizer.commit, sizer.ciRunLabel, sizer.sourceLabel].join('');
+  expect(squash(l.textContent)).toBe(squash(sizerText));
 });
 test('@REQ-QUAL-01 deploy time reads as day month year, UTC', () => {
   expect(formatDeployTime('2026-09-27T09:14:00Z')).toBe('27 September 2026, 09:14 UTC');
@@ -128,10 +136,8 @@ const html = (render: (l: HTMLElement) => void) => { const l = live(); render(l)
 test('@REQ-QUAL-01 verdict markup: classes, deploy time and every link', () => {
   expect(html((l) => renderVerdict(l, fixture('valid')))).toBe(
     '<p class="lede">Every promise this site makes is tied to the checks that prove it. This build covered <b>all 3 pre-deploy requirements</b> with <b>148 tests</b> (<b>312 test runs</b>), and nothing ships unless every one passes.</p>'
-    + '<p class="meta2">Deployed 27 September 2026, 09:14 UTC<br>'
-    + 'Commit <a href="https://github.com/example/ceylan-akyol-site/commit/e5cdb92a1b2c3d4e5f60718293a4b5c6d7e8f901" class="lnk">e5cdb92</a><br>'
-    + '<a href="https://github.com/example/ceylan-akyol-site/actions/runs/1" class="lnk">View this CI run</a><br>'
-    + '<a href="https://github.com/example/ceylan-akyol-site" class="lnk">Browse the source</a></p>',
+    + '<p class="meta2">Deployed <time datetime="2026-09-27T09:14:00Z">27 September 2026, 09:14 UTC</time>, commit <a href="https://github.com/example/ceylan-akyol-site/commit/e5cdb92a1b2c3d4e5f60718293a4b5c6d7e8f901" class="lnk">e5cdb92</a></p>'
+    + '<div class="links"><a href="https://github.com/example/ceylan-akyol-site/actions/runs/1" class="lnk">View this CI run</a><a href="https://github.com/example/ceylan-akyol-site" class="lnk">Browse the source</a></div>',
   );
 });
 test('@REQ-QUAL-01 verdict uses singular forms for counts of one', () => {
@@ -142,12 +148,12 @@ test('@REQ-QUAL-01 verdict uses singular forms for counts of one', () => {
 test('@REQ-QUAL-01 integrity markup for a verified, a single-file and a failed live check', () => {
   const d = fixture('valid');
   expect(html((l) => renderIntegrity(l, d))).toBe(
-    `<p class="integrity">${TICK(22, 18)}The previous deploy was verified live: every file served matched the tested build (64 files, checked 26 September 2026, 09:20 UTC).</p>`,
+    `<p class="integrity">${TICK(22, 18)}<span>The previous deploy was verified live: every file served matched the tested build (64 files, checked <time datetime="2026-09-26T09:20:00Z">26 September 2026, 09:20 UTC</time>).</span></p>`,
   );
   expect(squash(html((l) => renderIntegrity(l, { ...d, liveCheck: { ...d.liveCheck!, files: 1 } })))).toContain('(1 file, checked');
   expect(html((l) => renderIntegrity(l, { ...d, liveCheck: { ...d.liveCheck!, ok: false } }))).toBe(
-    '<p class="integrity">The previous deploy\'s live check found files that did not match the tested build. '
-    + '<a href="https://github.com/example/ceylan-akyol-site/actions" class="lnk">See the CI history</a></p>',
+    '<p class="integrity"><span>The previous deploy’s live check found files that did not match the tested build. '
+    + '<a href="https://github.com/example/ceylan-akyol-site/actions" class="lnk">See the CI history</a></span></p>',
   );
 });
 test('@REQ-QUAL-01 matrix markup for tested, check-only and post-deploy rows', () => {
@@ -157,10 +163,10 @@ test('@REQ-QUAL-01 matrix markup for tested, check-only and post-deploy rows', (
     '<ul class="reqs">'
     + `<li class="req">${tick}<div><span class="rq-id">REQ-CV-01</span><p class="rq-text">CV downloads in one click from the hero</p></div>`
     + '<div class="rq-cov"><strong>1 test</strong><span>e2e</span><span class="dim">5 device profiles</span>'
-    + `<details><summary>Show the test</summary><ul><li><a href="${blob}/tests/e2e/home.spec.ts#L12" class="lnk">hero CV link returns a PDF</a></li></ul></details></div></li>`
+    + `<details><summary><span class="when-closed">Show the test</span><span class="when-open">Hide the test</span></summary><ul><li><a href="${blob}/tests/e2e/home.spec.ts#L12" class="lnk">hero CV link returns a PDF</a></li></ul></details></div></li>`
     + `<li class="req">${tick}<div><span class="rq-id">REQ-CERT-03</span><p class="rq-text">Expired only when expiry is strictly before today</p></div>`
     + '<div class="rq-cov"><strong>1 test</strong><span>unit</span>'
-    + `<details><summary>Show the test</summary><ul><li><a href="${blob}/tests/unit/certifications.test.ts#L27" class="lnk">expiring today is still valid</a></li></ul></details></div></li>`
+    + `<details><summary><span class="when-closed">Show the test</span><span class="when-open">Hide the test</span></summary><ul><li><a href="${blob}/tests/unit/certifications.test.ts#L27" class="lnk">expiring today is still valid</a></li></ul></details></div></li>`
     + `<li class="req">${tick}<div><span class="rq-id">REQ-PERF-01</span><p class="rq-text">Mobile Lighthouse in CI: performance at least 95</p></div>`
     + '<div class="rq-cov"><strong>Lighthouse CI</strong></div></li>'
     + `<li class="req">${tick}<div><span class="rq-id">REQ-DEPLOY-01</span><p class="rq-text">Every file served live matches the tested build</p></div>`
@@ -179,7 +185,7 @@ test('@REQ-QUAL-01 matrix coverage joins several tests, suites and checks, and c
   const l = live(); renderMatrix(l, { ...d, matrix: rows });
   const [a, b] = [...l.querySelectorAll('.rq-cov')];
   expect(a!.innerHTML.replace(/<ul>.*<\/ul>/, '<ul></ul>')).toBe(
-    '<strong>3 tests, link check</strong><span>e2e, unit</span><span class="dim">1 device profile</span><details><summary>Show the 3 tests</summary><ul></ul></details>',
+    '<strong>3 tests, link check</strong><span>e2e, unit</span><span class="dim">1 device profile</span><details><summary><span class="when-closed">Show the 3 tests</span><span class="when-open">Hide the 3 tests</span></summary><ul></ul></details>',
   );
   expect(a!.querySelectorAll('li')).toHaveLength(3);
   expect(b!.innerHTML).toBe('<strong>Lighthouse CI, built HTML scan</strong>');
@@ -189,22 +195,22 @@ const trendHistory = (runs: number[], mutation: number[], lighthouse: number[]):
 test('@REQ-STATE-01 trends markup with exactly 3 points: labels, current values and line coordinates', () => {
   const d = fixture('valid');
   const trend = (label: string, now: string, points: string, cap: string) =>
-    `<div class="trend"><h3>${label}</h3><p class="now">${now}</p><svg viewBox="0 0 220 56" class="spark" aria-hidden="true">`
+    `<div class="trend"><h3>${label}</h3><p class="now">${now}</p><svg viewBox="0 0 220 56" preserveAspectRatio="none" class="spark" aria-hidden="true">`
     + `<polyline points="${points}" class="spark-line" fill="none"></polyline></svg><p class="cap">${cap}</p></div>`;
-  // x runs from 8 to 212; y maps the lowest value to 48 and the top of the
+  // x runs from 0 to 220; y maps the lowest value to 48 and the top of the
   // range to 8. The range top is the series maximum, or 100 for percentages.
   expect(html((l) => renderTrends(l, { ...d, history: trendHistory([1000, 1500, 2000], [80, 85, 90], [96, 98, 100]) }))).toBe(
     '<div class="trends">'
-    + trend('Test runs passed', '2,000', '8.0,48.0 110.0,28.0 212.0,8.0', 'Across 5 device profiles')
-    + trend('Mutation score', '90%', '8.0,48.0 110.0,38.0 212.0,28.0', 'Share of planted bugs the tests caught')
-    + trend('Lighthouse mobile score', '100', '8.0,48.0 110.0,28.0 212.0,8.0', 'Median of 3 runs in CI')
+    + trend('Test runs passed', '2,000', '0.0,48.0 110.0,28.0 220.0,8.0', 'Across 5 device profiles')
+    + trend('Mutation score', '90%', '0.0,48.0 110.0,38.0 220.0,28.0', 'Share of planted bugs the tests caught')
+    + trend('Lighthouse mobile score', '100', '0.0,48.0 110.0,28.0 220.0,8.0', 'Median of 3 runs in CI')
     + '</div>',
   );
 });
 test('@REQ-STATE-01 a flat trend draws a level line at the bottom, not NaN', () => {
   const l = live(); renderTrends(l, { ...fixture('valid'), history: trendHistory([300, 300, 300], [100, 100, 100], [100, 100, 100]) });
   expect([...l.querySelectorAll('polyline')].map((p) => p.getAttribute('points'))).toEqual([
-    '8.0,48.0 110.0,48.0 212.0,48.0', '8.0,48.0 110.0,48.0 212.0,48.0', '8.0,48.0 110.0,48.0 212.0,48.0',
+    '0.0,48.0 110.0,48.0 220.0,48.0', '0.0,48.0 110.0,48.0 220.0,48.0', '0.0,48.0 110.0,48.0 220.0,48.0',
   ]);
 });
 test('@REQ-STATE-01 sparse trends message markup', () => {
@@ -227,10 +233,10 @@ test('@REQ-QUAL-01 mutation markup links the dashboard report, and says time for
 test('@REQ-QUAL-01 proof strip markup, with singular forms for counts of one', () => {
   const d = fixture('valid');
   expect(html((l) => renderProofStrip(l, { ...d, counts: { ...d.counts, testRuns: 1, axeViolations: 1 } }))).toBe(
-    '<p class="big">This site\'s code passed <b>1 test run</b> across 3 browser engines and 5 device profiles, with <b>1 automated accessibility violation</b> (axe) and a Lighthouse mobile score of <b>100</b> in CI.</p>',
+    '<p class="big">This site’s code passed <b>1 test run</b> across 3 browser engines and 5 device profiles, with <b>1 automated accessibility violation</b> (axe) and a Lighthouse mobile score of <b>100</b> in CI.</p>',
   );
 });
-test('@REQ-SEC-02 el keeps only allowlisted attributes and adds lnk to an anchor\'s own class', () => {
+test('@REQ-SEC-02 el keeps only allowlisted attributes and adds lnk to an anchor’s own class', () => {
   const div = el('div', 'x', { class: 'c', id: 'i', onclick: 'alert(1)', style: 'color:red', 'aria-label': 'l' });
   expect(div.outerHTML).toBe('<div class="c" aria-label="l">x</div>');
   expect(el('p', 'y', { class: 'lede' }).outerHTML).toBe('<p class="lede">y</p>');

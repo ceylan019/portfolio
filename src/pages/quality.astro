@@ -11,7 +11,7 @@ const { data: profile } = await loadProfile();
 const today = buildToday(import.meta.env.BUILD_KIND ?? process.env.BUILD_KIND, new Date());
 const repo = process.env.REPO_URL ?? 'https://github.com/example/ceylan-akyol-site';
 ---
-<Base title={`How ${profile.name}'s site is tested`} description="Every promise this site makes is tied to the checks that prove it." path="/quality">
+<Base title={`How ${profile.name}’s site is tested`} description="Every promise this site makes is tied to the checks that prove it." path="/quality">
   <QualityReport name={profile.name} year={today.getUTCFullYear()} repo={repo} />
 </Base>
 <script>

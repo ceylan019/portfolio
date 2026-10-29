@@ -3,7 +3,7 @@ name: Ceylan Akyol
 title: Senior QA Automation Engineer
 tagline: I build test automation that teams can read, trust and keep running.
 photo: ../../assets/uploads/photo.jpg
-photoAlt: Ceylan Akyol's photo
+photoAlt: Ceylan Akyol’s photo
 email: akyl.cyln@gmail.com
 linkedinUrl: https://linkedin.com/in/ceylan-akyol
 githubUrl: https://github.com/ceylan019

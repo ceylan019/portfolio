@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { parse } from 'yaml';
-import { test, expect, settled, SECURITY_HEADERS } from './fixtures';
+import { test, expect, settled, straightQuotes, SECURITY_HEADERS } from './fixtures';
 import { req } from '../tag';
 
 test('@real hero renders from real content', req('REQ-HERO-01'), async ({ page }) => {
@@ -65,5 +65,13 @@ test('@real security headers are served', req('REQ-SEC-01'), async ({ request })
   for (const path of ['/', '/quality', '/cv.pdf']) {
     const h = (await request.get(path)).headers();
     for (const [name, value] of Object.entries(SECURITY_HEADERS)) expect({ path, name, value: h[name] }).toEqual({ path, name, value });
+  }
+});
+
+test('@real every page uses curly apostrophes and quotation marks', req('REQ-COPY-01'), async ({ page }) => {
+  for (const path of ['/', '/quality', '/definitely-missing']) {
+    await page.goto(path);
+    await settled(page);
+    expect(await straightQuotes(page), path).toEqual([]);
   }
 });

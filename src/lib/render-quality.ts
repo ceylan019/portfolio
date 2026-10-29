@@ -1,53 +1,43 @@
 import type { Renderer } from './quality-client';
 import { FIXTURE_PROJECTS, REAL_PROJECT, type MatrixRow, type QualityReport } from './quality-schema';
 import { el, svgEl, tick } from './dom';
-import { MONTHS } from './dates';
 import { plural } from './format';
+import { formatDeployTime, verdictParts } from './verdict-copy';
 
 const nf = new Intl.NumberFormat('en-US');
-const pad = (n: number) => String(n).padStart(2, '0');
 
-export function formatDeployTime(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
-}
+const deployTime = (iso: string) => el('time', formatDeployTime(iso), { datetime: iso });
 
 const permalink = (d: QualityReport, file: string, line: number) =>
   `${d.repoUrl}/blob/${d.commit}/${file.split('/').map(encodeURIComponent).join('/')}#L${line}`;
 
 export const renderVerdict: Renderer = (live, d) => {
-  const p = el('p', undefined, { class: 'lede' });
-  p.append(
-    'Every promise this site makes is tied to the checks that prove it. This build covered ',
-    // counts.requirements holds the pre-deploy requirements only: the post-deploy
-    // live check runs after this build, so the build never covers it.
-    el('b', `all ${plural(d.counts.requirements, 'pre-deploy requirement', 'pre-deploy requirements')}`),
-    ' with ',
-    el('b', plural(d.counts.tests, 'test', 'tests')),
-    ' (', el('b', plural(d.counts.testRuns, 'test run', 'test runs')), '), and nothing ships unless every one passes.',
-  );
+  const parts = verdictParts({ ...d.counts, builtAt: d.builtAt, commit: d.commit });
+  const lede = el('p', undefined, { class: 'lede' });
+  lede.append(...parts.lede.map((segment) => (typeof segment === 'string' ? segment : el('b', segment.strong))));
   const meta = el('p', undefined, { class: 'meta2' });
-  meta.append(
-    `Deployed ${formatDeployTime(d.builtAt)}`, el('br'),
-    'Commit ', el('a', d.commit.slice(0, 7), { href: `${d.repoUrl}/commit/${d.commit}` }), el('br'),
-    el('a', 'View this CI run', { href: d.ciRunUrl }), el('br'),
-    el('a', 'Browse the source', { href: d.repoUrl }),
-  );
-  live.append(p, meta);
+  meta.append(parts.deployedPrefix, deployTime(d.builtAt), parts.commitPrefix, el('a', parts.commit, { href: `${d.repoUrl}/commit/${d.commit}` }));
+  const links = el('div', undefined, { class: 'links' });
+  links.append(el('a', parts.ciRunLabel, { href: d.ciRunUrl }), el('a', parts.sourceLabel, { href: d.repoUrl }));
+  live.append(lede, meta, links);
 };
 
 export const renderIntegrity: Renderer = (live, d) => {
   const p = el('p', undefined, { class: 'integrity' });
+  const text = el('span');
   if (!d.liveCheck) {
-    p.append('The live file check runs after this deploy.');
+    text.append('The live file check runs after this deploy.');
   } else if (d.liveCheck.ok) {
-    p.append(
-      tick(22),
-      `The previous deploy was verified live: every file served matched the tested build (${plural(d.liveCheck.files, 'file', 'files')}, checked ${formatDeployTime(d.liveCheck.checkedAt)}).`,
+    p.append(tick(22));
+    text.append(
+      `The previous deploy was verified live: every file served matched the tested build (${plural(d.liveCheck.files, 'file', 'files')}, checked `,
+      deployTime(d.liveCheck.checkedAt),
+      ').',
     );
   } else {
-    p.append("The previous deploy's live check found files that did not match the tested build. ", el('a', 'See the CI history', { href: `${d.repoUrl}/actions` }));
+    text.append('The previous deploy’s live check found files that did not match the tested build. ', el('a', 'See the CI history', { href: `${d.repoUrl}/actions` }));
   }
+  p.append(text);
   live.append(p);
 };
 
@@ -88,7 +78,10 @@ function coverage(row: MatrixRow, d: QualityReport): HTMLElement {
   if (where) box.append(el('span', where, { class: 'dim' }));
   if (row.tests.length > 0) {
     const details = el('details');
-    details.append(el('summary', `Show ${row.tests.length === 1 ? 'the test' : `the ${row.tests.length} tests`}`));
+    const label = row.tests.length === 1 ? 'the test' : `the ${row.tests.length} tests`;
+    const summary = el('summary');
+    summary.append(el('span', `Show ${label}`, { class: 'when-closed' }), el('span', `Hide ${label}`, { class: 'when-open' }));
+    details.append(summary);
     const list = el('ul');
     for (const t of row.tests) {
       const li = el('li');
@@ -132,9 +125,9 @@ export const renderTrends: Renderer = (live, d) => {
     const values = h.map((p) => p[s.key]);
     const lo = Math.min(...values);
     const hi = Math.max(...values, s.max ?? 0, lo + 1);
-    const points = values.map((v, i) => `${(8 + (i * 204) / (values.length - 1)).toFixed(1)},${(48 - ((v - lo) / (hi - lo)) * 40).toFixed(1)}`).join(' ');
+    const points = values.map((v, i) => `${((i * 220) / (values.length - 1)).toFixed(1)},${(48 - ((v - lo) / (hi - lo)) * 40).toFixed(1)}`).join(' ');
     const item = el('div', undefined, { class: 'trend' });
-    const svg = svgEl('svg', { viewBox: '0 0 220 56', class: 'spark', 'aria-hidden': 'true' });
+    const svg = svgEl('svg', { viewBox: '0 0 220 56', preserveAspectRatio: 'none', class: 'spark', 'aria-hidden': 'true' });
     svg.append(svgEl('polyline', { points, class: 'spark-line', fill: 'none' }));
     const current = values[values.length - 1]!;
     item.append(el('h3', s.label), el('p', s.max === 100 ? `${current}${s.key === 'mutationScore' ? '%' : ''}` : nf.format(current), { class: 'now' }), svg, el('p', s.caption, { class: 'cap' }));

@@ -61,7 +61,7 @@ test('@REQ-PREV-01 the ring and photo stay on canvas for a 40-character name, sa
 // to a literal filesystem-root path and threw ENOENT. profilePhotoPng now resolves through
 // the shared resolvePhotoPath (src/lib/content-paths.ts), the same helper
 // scripts/check-content.ts uses, so both cases work here too.
-test('@REQ-PREV-01 profilePhotoPng resolves a relative photo path against profile.md\'s own directory', async () => {
+test('@REQ-PREV-01 profilePhotoPng resolves a relative photo path against profile.md’s own directory', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'og-photo-relative-'));
   try {
     await mkdir(join(dir, 'profile'), { recursive: true });

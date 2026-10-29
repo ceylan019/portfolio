@@ -1,0 +1,8 @@
+---
+import { LARGEST_VERDICT_FIGURES, verdictParts } from '../lib/verdict-copy';
+
+const parts = verdictParts(LARGEST_VERDICT_FIGURES);
+---
+<p class="lede">{parts.lede.map((segment) => (typeof segment === 'string' ? segment : <b>{segment.strong}</b>))}</p>
+<p class="meta2">{parts.deployedPrefix}<time>{parts.deployedAt}</time>{parts.commitPrefix}<span class="lnk">{parts.commit}</span></p>
+<div class="links"><span class="lnk">{parts.ciRunLabel}</span><span class="lnk">{parts.sourceLabel}</span></div>

@@ -29,3 +29,8 @@ test('@REQ-CERT-04 the tick is decorative', async () => {
   expect(html).toContain('aria-hidden="true"');
   expect(html).toContain('class="tick-ink"');
 });
+test('@REQ-LAYOUT-01 the ring viewBox is cropped to the ring, so the frame edge is the ring edge', async () => {
+  const c = await AstroContainer.create();
+  const html = await c.renderToString(PhotoFrame, { props: { photo, alt: 'x' } });
+  expect(html).toContain('viewBox="15.7 15.7 268.3 268.3"');
+});

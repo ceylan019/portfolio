@@ -15,17 +15,15 @@ const dialogId = `certificate-${entry.id}`;
 ---
 <li class:list={['row', { expired: v.kind === 'expired' }]}>
   {hasTick(entry) ? <Tick size={30} /> : <span />}
-  <div class="cert-body">
+  <div>
+    <span class="title">{entry.name}</span>{v.kind === 'expired' && <> <span class="expired-label">Expired</span></>}
+    <span class="meta">{meta}</span>
+    {entry.credentialId && <span class="cid">Credential ID <span class="cid-token">{entry.credentialId}</span></span>}
     {image && (
       <a class="cert-thumb" href={pdf ?? fullImage} data-certificate={dialogId} aria-label={`View certificate: ${entry.name}`}>
         <Image src={image} alt="" format="webp" widths={[96, 192, 288]} sizes="(max-width: 899px) 72px, 96px" loading="lazy" />
       </a>
     )}
-    <div>
-      <span class="title">{entry.name}</span>{v.kind === 'expired' && <> <span class="expired-label">Expired</span></>}
-      <span class="meta">{meta}</span>
-      {entry.credentialId && <span class="cid">Credential ID <span class="cid-token">{entry.credentialId}</span></span>}
-    </div>
     {image && (
       <dialog id={dialogId} class="cert-dialog" aria-labelledby={`${dialogId}-title`}>
         <div class="cert-dialog-inner">

@@ -44,3 +44,6 @@ test('@REQ-A11Y-04 the footer is a landmark with only name and year', async () =
   const html = await render(Footer, { name: 'Ceylan Akyol', year: 2026 });
   expect(html).toMatch(/<footer class="foot">\s*Ceylan Akyol, 2026\s*<\/footer>/);
 });
+test('@REQ-LAYOUT-01 the proof strip section sits like About, with no box class of its own', async () => {
+  expect(await render(ProofStrip, {})).toMatch(/<section class="sec" aria-labelledby="proof-heading">/);
+});
