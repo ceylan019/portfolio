@@ -98,3 +98,40 @@ export function oversizedQuality(): string {
   }
   return text;
 }
+
+/** Valid, with the first requirement covered by four tests, two short titles in a row and a long one that wraps. */
+export function manyTestsQuality(): string {
+  const doc = validQuality();
+  const row = doc.matrix[0]!;
+  const covering = (title: string) => ({ ...row.tests[0]!, title });
+  const tests = [
+    covering('Short title'),
+    covering('Another short title'),
+    covering('A much longer test title that wraps onto several lines in the narrow coverage column of a requirement row'),
+    covering('The last short title'),
+  ];
+  return mustParse({ ...doc, matrix: [{ ...row, tests }, ...doc.matrix.slice(1)] });
+}
+
+/** Every straight apostrophe or quotation mark in a page's visible text, title, descriptions and alt, label and title attributes. */
+export async function straightQuotes(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const found: string[] = [];
+    const check = (where: string, text: string | null) => {
+      if (text && /['"]/.test(text)) found.push(`${where}: ${text.trim()}`);
+    };
+    check('title', document.title);
+    for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="description"], meta[property^="og:"]')) {
+      check(meta.getAttribute('name') ?? meta.getAttribute('property') ?? 'meta', meta.content);
+    }
+    for (const element of document.querySelectorAll('[alt], [aria-label], [title]')) {
+      for (const attribute of ['alt', 'aria-label', 'title']) check(`${element.tagName.toLowerCase()}[${attribute}]`, element.getAttribute(attribute));
+    }
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const tag = node.parentElement?.tagName ?? '';
+      if (tag !== 'SCRIPT' && tag !== 'STYLE') check(tag.toLowerCase(), node.textContent);
+    }
+    return found;
+  });
+}

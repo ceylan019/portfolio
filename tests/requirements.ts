@@ -39,6 +39,8 @@ export const REQUIREMENTS: Requirement[] = [
   { id: 'REQ-QUAL-03', text: 'History survives transient fetch failures (retry, last-main fallback) and resets only when no history exists', source: 'E19' },
   { id: 'REQ-PREV-01', text: 'Pages have Open Graph and JSON-LD metadata, and the preview image is served', source: 'D7' },
   { id: 'REQ-HEALTH-01', text: 'No console errors (including CSP violations) on any page and data state', source: '§8' },
+  { id: 'REQ-LAYOUT-01', text: 'Every page follows one set of rules for separators, spacing, alignment, link sizes and radii, at desktop and mobile widths', source: 'DESIGN.md' },
+  { id: 'REQ-COPY-01', text: 'Visible text, page titles and alt text use curly apostrophes and quotation marks, never straight ones', source: 'DESIGN.md' },
   { id: 'REQ-VIS-01', text: 'Pages match approved visual baselines for each viewport and theme', source: '§8' },
   { id: 'REQ-TRACE-01', text: 'The traceability builder, evidence checks and gate compute coverage correctly', source: 'D6' },
   { id: 'REQ-GATE-01', text: 'The dist scanner detects every forbidden pattern', source: 'E8' },
