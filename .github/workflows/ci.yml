@@ -89,7 +89,7 @@ jobs:
             2??) echo "Published as main: https://dashboard.stryker-mutator.io/reports/github.com/${{ github.repository }}/main" ;;
             *) echo "::warning::Publishing the mutation report as main failed (HTTP $code); the commit report is unaffected." ;;
           esac
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: logic-reports
           overwrite: true
@@ -144,7 +144,7 @@ jobs:
       - name: Lighthouse scores in the job summary
         if: always() && steps.lhci.outcome != 'skipped'
         run: pnpm tsx scripts/lighthouse-summary.ts fixture
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: fixture-${{ matrix.project }}
@@ -153,7 +153,7 @@ jobs:
             reports/playwright-fixture-${{ matrix.project }}.json
             reports/dist-scan-fixture.json
             test-results/
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: matrix.project == 'chromium'
         with:
           name: lhci-fixture
@@ -192,9 +192,9 @@ jobs:
       - run: pnpm tsx scripts/write-manifest.ts dist manifest/manifest.json
       - name: site-real carries no quality.json
         run: test ! -e dist/quality.json
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: site-real, path: dist, include-hidden-files: true, overwrite: true }
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: manifest-real, path: manifest/manifest.json, overwrite: true }
       - name: Serve the real build with a stand-in quality.json
         run: |
@@ -218,7 +218,7 @@ jobs:
         run: pnpm tsx scripts/lighthouse-summary.ts real
       - name: Internal link check
         run: pnpm exec linkinator http://localhost:8788 --recurse --format json --skip "^(?!http://localhost:8788)" > reports/links.json
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: real-reports
@@ -227,7 +227,7 @@ jobs:
             reports/playwright-real.json
             reports/dist-scan-real.json
             reports/links.json
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: lhci-real, path: .lighthouseci, include-hidden-files: true, overwrite: true }
 
   report:
@@ -286,9 +286,9 @@ jobs:
         env:
           STRYKER_URL: ${{ needs.logic.outputs.stryker_url }}
       - run: pnpm exec esbuild scripts/gate-cli.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist-gate/gate-cli.mjs
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: quality-json, path: out/quality.json, overwrite: true }
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: gate-cli, path: dist-gate/gate-cli.mjs, overwrite: true }
 
   deploy:
